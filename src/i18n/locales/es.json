@@ -1,0 +1,325 @@
+{
+  "sidebar": {
+    "dashboard": "Tablero",
+    "users": "Usuarios",
+    "specialists": "Especialistas",
+    "membership": "Membresías",
+    "agenda": "Agenda Global",
+    "notifications": "Notificaciones",
+    "sendNotifications": "Enviar Notificaciones",
+    "receivedNotifications": "Notificaciones Recibidas",
+    "configuration": "Mi Perfil",
+    "support": "Soporte",
+    "patients": "Mis Pacientes",
+    "transactions": "Transacciones"
+  },
+  "dashboard": {
+    "welcome": "¡Hola, {name}!",
+    "subtitle": "Aquí tenés un resumen del rendimiento y control de hoy.",
+    "metrics": {
+      "totalUsers": "Usuarios Totales",
+      "activeToday": "Activos Hoy",
+      "patients": "Alumnos",
+      "proElite": "Pro & Elite",
+      "sessionsToday": "Sesiones Hoy",
+      "monthlyIncome": "Ingresos Mes"
+    },
+    "todo": {
+      "title": "Lista de Pendientes",
+      "noTasks": "¡Buen trabajo! No tenés acciones inmediatas prioritarias.",
+      "urgent": "Acción Urgente",
+      "completed": "Completada"
+    },
+    "quickAccess": {
+      "title": "Accesos Rápidos",
+      "viewAgenda": "Ver Agenda Global",
+      "manageUsers": "Gestionar Usuarios",
+      "createNotification": "Crear Notificación"
+    }
+  },
+  "common": {
+    "actions": {
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "delete": "Eliminar",
+      "edit": "Editar",
+      "close": "Cerrar",
+      "back": "Volver",
+      "approve": "Aprobar",
+      "reject": "Rechazar",
+      "block": "Bloquear",
+      "suspend": "Suspender"
+    },
+    "labels": {
+      "name": "Nombre",
+      "email": "Email",
+      "role": "Rol",
+      "status": "Estado",
+      "date": "Fecha",
+      "actions": "Acciones",
+      "loading": "Cargando...",
+      "noData": "No hay datos disponibles"
+    }
+  },
+  "landing": {
+    "header": {
+      "features": "Características",
+      "plans": "Planes",
+      "pricing": "Precios",
+      "coaches": "Coaches",
+      "support": "Soporte",
+      "join": "Unirse",
+      "login": "Iniciar Sesión",
+      "adminPortal": "Portal Administrador",
+      "specialistPortal": "Portal Especialista"
+    },
+    "hero": {
+      "title": "Entrenar puede ser fácil",
+      "subtitle": "Te ayudamos en lo que necesites como atleta con planes de entrenamiento personalizados para alcanzar tus objetivos, desde entrenar para tu primer 5k hasta conquistar un ultra trail.",
+      "bullet1": "Planes de entrenamiento dinámicos y adaptativos",
+      "bullet2": "Coaching clínico por médicos y fisioterapeutas",
+      "bullet3": "Prevención activa de lesiones",
+      "bullet4": "Integración con tus dispositivos favoritos",
+      "ctaPortal": "Acceder a mi Portal",
+      "appStore": "Descargar en App Store",
+      "googlePlay": "Descargar en Google Play",
+      "mockupHello": "¡Hola, Falcao!",
+      "mockupTrainingTitle": "Sesión de Cuesta",
+      "mockupTrainingProgress": "Progreso: 75%",
+      "mockupHydrationLog": "Hidratación: 1.5L / 2.5L",
+      "mockupPainAlert": "Alerta de Dolor: Rodilla derecha (2/10)"
+    },
+    "calculator": {
+      "title": "Supera tu mejor marca personal",
+      "level": "Nivel",
+      "levelDescription": "Elige tu nivel actual de forma física.",
+      "levels": {
+        "beginner": "Principiante",
+        "intermediate": "Intermedio",
+        "advanced": "Avanzado"
+      },
+      "distance": "Distancia",
+      "distanceDescription": "Selecciona la distancia de tu objetivo.",
+      "distances": {
+        "5k": "5K",
+        "10k": "10K",
+        "half": "Media Maratón",
+        "marathon": "Maratón"
+      },
+      "weeks": "Semanas",
+      "weeksLabel": "Semanas",
+      "weeksDescription": "Define las semanas para tu preparación.",
+      "cta": "Batir tu RP"
+    },
+    "testimonials": {
+      "title": "Opiniones de los usuarios",
+      "appStoreRating": "Apple App Store",
+      "googlePlayRating": "Google Play Store",
+      "ratingCountApple": "76,000+ ratings",
+      "ratingCountGoogle": "17,000+ ratings",
+      "quote1": {
+        "text": "Fitnflai cambió mi forma de entrenar. La prevención de lesiones es un salvavidas para mí.",
+        "author": "Stephanie L."
+      },
+      "quote2": {
+        "text": "Los planes personalizados y el apoyo clínico son inigualables. ¡Altamente recomendado!",
+        "author": "Arjun S."
+      }
+    },
+    "deviceIntegration": {
+      "title": "Compatible con tus dispositivos preferidos",
+      "brands": {
+        "garmin": "Garmin",
+        "strava": "Strava",
+        "healthConnect": "Health Connect",
+        "appleHealth": "Apple Health",
+        "huaweiHealth": "Huawei Health"
+      }
+    },
+    "whyFitnflai": {
+      "title": "¿Por qué Fitnflai?",
+      "item1": {
+        "title": "Planes personalizados sólo para ti",
+        "description": "Entrenamiento dinámico que se adapta a tu fatiga y progreso diario."
+      },
+      "item2": {
+        "title": "Sincroniza con tus dispositivos favoritos",
+        "description": "Compatible con Garmin, Strava, Health Connect, Apple Health, Huawei Health."
+      },
+      "item3": {
+        "title": "Fuerza integrada",
+        "description": "Workouts complementando tu resistencia para prevenir lesiones."
+      },
+      "item4": {
+        "title": "Soporte clínico holístico",
+        "description": "Contacto directo con médicos deportivos y fisioterapeutas."
+      }
+    },
+    "community": {
+      "title": "Nuestra Comunidad Fitnflai"
+    },
+    "becomeFitnflai": {
+      "title": "Conviértete en un Fitnflai",
+      "item1": {
+        "title": "Únete a la Comunidad",
+        "description": "Mantente motivado con miles de atletas."
+      },
+      "item2": {
+        "title": "Consigue descuentos & ofertas",
+        "description": "Descuentos exclusivos de socios premium."
+      },
+      "item3": {
+        "title": "Seguimiento por especialista",
+        "description": "Recibe acompañamiento continuo y ajustes personalizados en tus rutinas de la mano de deportólogos, fisioterapeutas o entrenadores dedicados."
+      },
+      "item4": {
+        "title": "Agenda citas con tu especialista",
+        "description": "Reserva consultas individuales y sesiones de seguimiento de forma directa desde la app para optimizar tu rendimiento y salud activa."
+      },
+      "mockupTitle": "Ofertas Premium",
+      "mockupDiscount1": "15% dto. Equipamiento Fitnflai",
+      "mockupDiscount2": "20% dto. Suplementos Deportivos",
+      "mockupDiscount3": "Envío gratis en tu primer pedido"
+    },
+    "howItWorks": {
+      "title": "¿Cómo Funciona?",
+      "step1": {
+        "title": "1. Creación de Perfil",
+        "description": "Ingresa tu historial de lesiones, objetivos personales y preferencias de entrenamiento."
+      },
+      "step2": {
+        "title": "2. Sincronización de Dispositivos",
+        "description": "Conecta Apple Health, Garmin, Strava o Polar. Tus datos se sincronizan automáticamente con un clic."
+      },
+      "step3": {
+        "title": "3. Entrenamiento Inteligente",
+        "description": "Recibe planes dinámicos, revisa tu progreso con tu entrenador y ajusta según tus necesidades."
+      }
+    },
+    "trainingPlans": {
+      "title": "Nuestros Planes de Entrenamiento",
+      "running": {
+        "title": "Running",
+        "description": "Desde tu primer 5k hasta maratones épicas. Entrenamientos personalizados para cada distancia.",
+        "badge": "Popular"
+      },
+      "trailRunning": {
+        "title": "Trail Running",
+        "description": "Conquista montañas y senderos. Planes técnicos de elevación, altitud y resistencia para la naturaleza.",
+        "badge": "Desafío"
+      },
+      "cycling": {
+        "title": "Ciclismo",
+        "description": "Ruta, MTB o Gran Fondo. Maximiza tu potencia y resistencia en cada pedalada.",
+        "badge": "Potencia"
+      },
+      "swimming": {
+        "title": "Natación",
+        "description": "Mejora tu técnica y eficiencia en aguas abiertas o piscina. Entrenamientos que te impulsan.",
+        "badge": "Fluidez"
+      }
+    },
+    "pricing": {
+      "title": "Planes de Membresía Flexibles",
+      "essential": {
+        "title": "Essential",
+        "price": "$9.99/mes",
+        "features": "Acceso completo a planes de entrenamiento básicos, Seguimiento de progreso personal, Soporte comunitario activo, Sincronización con dispositivos (limitada)",
+        "cta": "Empezar con Essential"
+      },
+      "pro": {
+        "title": "Pro",
+        "price": "$19.99/mes",
+        "features": "Todo lo incluido en Essential, Planes de entrenamiento avanzados y personalizados, Monitoreo de fatiga y riesgo de lesiones, Check-ins semanales con tu entrenador asignado, Acceso a biblioteca de ejercicios de fuerza",
+        "cta": "Empezar con Pro"
+      },
+      "elite": {
+        "title": "Elite",
+        "price": "$29.99/mes",
+        "features": "Todo lo incluido en Pro, Coaching clínico personalizado con médicos deportivos, Soporte prioritario 24/7, Reportes de rendimiento detallados y análisis avanzados, Sesiones de fisioterapia online (1/mes)",
+        "cta": "Empezar con Elite"
+      }
+    },
+    "footer": {
+      "copyright": "© 2026 Fitnflai. Todos los derechos reservados.",
+      "adminPortal": "Portal Administrador",
+      "specialistPortal": "Portal Especialista"
+    }
+  },
+  "registerCoach": {
+    "title": "¿Sos un profesional de la salud o del deporte?",
+    "subtitle": "Únete a nuestro equipo de especialistas. Ofrece tus servicios personalizados a una comunidad de atletas motivados.",
+    "ctaButton": "Únete como Especialista",
+    "alreadyRegistered": "¿Ya eres un especialista?",
+    "loginLink": "Inicia Sesión aquí",
+    "errors": {
+      "emailInvalid": "Email inválido",
+      "passwordMismatch": "Las contraseñas no coinciden",
+      "passwordShort": "Mínimo 6 caracteres",
+      "required": "Este campo es requerido",
+      "experiencePositive": "Debe ser un número positivo",
+      "filesRequired": "Ambos lados del documento son requeridos"
+    },
+    "modal": {
+      "title": "Registro de Especialista",
+      "successTitle": "¡Registro enviado!",
+      "successSubtitle": "Tu perfil ha sido registrado con éxito y se encuentra en estado 'Pendiente' para revisión por el administrador.",
+      "buttons": {
+        "next": "Siguiente",
+        "prev": "Anterior",
+        "submit": "Enviar Postulación",
+        "finish": "Entendido"
+      },
+      "steps": {
+        "step1": "Credenciales",
+        "step2": "Perfil",
+        "step3": "Identificación",
+        "step4": "Trayectoria"
+      },
+      "step1": {
+        "title": "Información de la Cuenta",
+        "name": "Nombre Completo",
+        "email": "Email Profesional",
+        "tel": "Teléfono",
+        "password": "Contraseña",
+        "confirmPassword": "Confirmar Contraseña",
+        "languages": "Idiomas (ej. Español, Inglés)"
+      },
+      "step2": {
+        "title": "Perfil y Biografía",
+        "specialty": "Especialidad principal",
+        "experience": "Años de experiencia",
+        "city": "Ciudad, País",
+        "bio": "Biografía breve",
+        "linkedin": "Enlace de LinkedIn (opcional)",
+        "web": "Sitio Web (opcional)"
+      },
+      "step3": {
+        "title": "Verificación de Identidad",
+        "docTipo": "Tipo de Documento",
+        "docNumero": "Número de Documento",
+        "docDelantero": "Parte delantera del documento",
+        "docTrasero": "Parte trasera del documento",
+        "uploadFront": "Subir frente (DNI/Pasaporte)",
+        "uploadBack": "Subir dorso (DNI/Pasaporte)"
+      },
+      "step4": {
+        "title": "Trayectoria y Certificaciones",
+        "addTrajectory": "+ Agregar Experiencia",
+        "addCertification": "+ Agregar Certificación",
+        "trajectoryTitle": "Trayectoria Laboral",
+        "certificationTitle": "Certificaciones",
+        "jobTitle": "Cargo / Rol",
+        "institution": "Institución / Empresa",
+        "start": "Año Inicio",
+        "end": "Año Fin",
+        "description": "Descripción breve",
+        "certName": "Nombre del Certificado",
+        "org": "Organización Emisora",
+        "year": "Año Obtención",
+        "venc": "Vencimiento (ej. 2028 o 'Sin vencimiento')",
+        "certId": "ID de Certificación (opcional)"
+      }
+    }
+  }
+}

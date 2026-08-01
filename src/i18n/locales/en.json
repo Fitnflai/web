@@ -1,0 +1,325 @@
+{
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "users": "Users",
+    "specialists": "Specialists",
+    "membership": "Memberships",
+    "agenda": "Global Agenda",
+    "notifications": "Notifications",
+    "sendNotifications": "Send Notifications",
+    "receivedNotifications": "Received Notifications",
+    "configuration": "My Profile",
+    "support": "Support",
+    "patients": "My Patients",
+    "transactions": "Transactions"
+  },
+  "dashboard": {
+    "welcome": "Hello, {name}!",
+    "subtitle": "Here is a summary of today's performance and control.",
+    "metrics": {
+      "totalUsers": "Total Users",
+      "activeToday": "Active Today",
+      "patients": "Students",
+      "proElite": "Pro & Elite",
+      "sessionsToday": "Sessions Today",
+      "monthlyIncome": "Monthly Income"
+    },
+    "todo": {
+      "title": "To-Do List",
+      "noTasks": "Great job! You have no immediate priority actions.",
+      "urgent": "Urgent Action",
+      "completed": "Completed"
+    },
+    "quickAccess": {
+      "title": "Quick Access",
+      "viewAgenda": "View Global Agenda",
+      "manageUsers": "Manage Users",
+      "createNotification": "Create Notification"
+    }
+  },
+  "common": {
+    "actions": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "edit": "Edit",
+      "close": "Close",
+      "back": "Back",
+      "approve": "Approve",
+      "reject": "Reject",
+      "block": "Block",
+      "suspend": "Suspend"
+    },
+    "labels": {
+      "name": "Name",
+      "email": "Email",
+      "role": "Role",
+      "status": "Status",
+      "date": "Date",
+      "actions": "Actions",
+      "loading": "Loading...",
+      "noData": "No data available"
+    }
+  },
+  "landing": {
+    "header": {
+      "features": "Features",
+      "plans": "Plans",
+      "pricing": "Pricing",
+      "coaches": "Coaches",
+      "support": "Support",
+      "join": "Join",
+      "login": "Login",
+      "adminPortal": "Admin Portal",
+      "specialistPortal": "Specialist Portal"
+    },
+    "hero": {
+      "title": "Training can be easy",
+      "subtitle": "We help you with everything you need as an athlete with personalized training plans to achieve your goals, from training for your first 5k to conquering an ultra trail.",
+      "bullet1": "Dynamic & adaptive training plans",
+      "bullet2": "Clinical coaching by doctors & physiotherapists",
+      "bullet3": "Active injury prevention",
+      "bullet4": "Integration with your favorite devices",
+      "ctaPortal": "Access My Portal",
+      "appStore": "Download on the App Store",
+      "googlePlay": "Get it on Google Play",
+      "mockupHello": "Hello, Falcao!",
+      "mockupTrainingTitle": "Hill Session",
+      "mockupTrainingProgress": "Progress: 75%",
+      "mockupHydrationLog": "Hydration: 1.5L / 2.5L",
+      "mockupPainAlert": "Pain Alert: Right knee (2/10)"
+    },
+    "calculator": {
+      "title": "Beat your personal best",
+      "level": "Level",
+      "levelDescription": "Choose your current fitness level.",
+      "levels": {
+        "beginner": "Beginner",
+        "intermediate": "Intermediate",
+        "advanced": "Advanced"
+      },
+      "distance": "Distance",
+      "distanceDescription": "Select your target distance.",
+      "distances": {
+        "5k": "5K",
+        "10k": "10K",
+        "half": "Half Marathon",
+        "marathon": "Marathon"
+      },
+      "weeks": "Weeks",
+      "weeksLabel": "Weeks",
+      "weeksDescription": "Define the weeks for your preparation.",
+      "cta": "Beat your PB"
+    },
+    "testimonials": {
+      "title": "User Testimonials",
+      "appStoreRating": "Apple App Store",
+      "googlePlayRating": "Google Play Store",
+      "ratingCountApple": "76,000+ ratings",
+      "ratingCountGoogle": "17,000+ ratings",
+      "quote1": {
+        "text": "Fitnflai changed the way I train. Injury prevention is a lifesaver for me.",
+        "author": "Stephanie L."
+      },
+      "quote2": {
+        "text": "The personalized plans and clinical support are unmatched. Highly recommended!",
+        "author": "Arjun S."
+      }
+    },
+    "deviceIntegration": {
+      "title": "Compatible with your favorite devices",
+      "brands": {
+        "garmin": "Garmin",
+        "strava": "Strava",
+        "healthConnect": "Health Connect",
+        "appleHealth": "Apple Health",
+        "huaweiHealth": "Huawei Health"
+      }
+    },
+    "whyFitnflai": {
+      "title": "Why Fitnflai?",
+      "item1": {
+        "title": "Personalized plans just for you",
+        "description": "Dynamic training that adapts to your daily fatigue and progress."
+      },
+      "item2": {
+        "title": "Sync with your favorite devices",
+        "description": "Compatible with Garmin, Strava, Health Connect, Apple Health, Huawei Health."
+      },
+      "item3": {
+        "title": "Integrated Strength",
+        "description": "Workouts complementing your endurance to prevent injury."
+      },
+      "item4": {
+        "title": "Holistic Clinical Support",
+        "description": "Direct contact with sports doctors and physiotherapists."
+      }
+    },
+    "community": {
+      "title": "Our Fitnflai Community"
+    },
+    "becomeFitnflai": {
+      "title": "Become a Fitnflai",
+      "item1": {
+        "title": "Join the Community",
+        "description": "Stay motivated with thousands of athletes."
+      },
+      "item2": {
+        "title": "Get discounts & offers",
+        "description": "Exclusive premium partner discounts."
+      },
+      "item3": {
+        "title": "Specialist follow-up",
+        "description": "Receive continuous support and personalized adjustments to your routines from dedicated sports doctors, physiotherapists, or coaches."
+      },
+      "item4": {
+        "title": "Schedule appointments with your specialist",
+        "description": "Book individual consultations and follow-up sessions directly from the app to optimize your performance and active health."
+      },
+      "mockupTitle": "Premium Offers",
+      "mockupDiscount1": "15% off Fitnflai Gear",
+      "mockupDiscount2": "20% off Sports Supplements",
+      "mockupDiscount3": "Free shipping on your first order"
+    },
+    "howItWorks": {
+      "title": "How It Works?",
+      "step1": {
+        "title": "1. Profile Creation",
+        "description": "Enter your injury history, personal goals, and training preferences."
+      },
+      "step2": {
+        "title": "2. Device Sync",
+        "description": "Connect Apple Health, Garmin, Strava, or Polar. Your data syncs automatically with one click."
+      },
+      "step3": {
+        "title": "3. Smart Training",
+        "description": "Receive dynamic plans, review your progress with your coach, and adjust as needed."
+      }
+    },
+    "trainingPlans": {
+      "title": "Our Training Plans",
+      "running": {
+        "title": "Running",
+        "description": "From your first 5k to epic marathons. Personalized training for every distance.",
+        "badge": "Popular"
+      },
+      "trailRunning": {
+        "title": "Trail Running",
+        "description": "Conquer mountains and trails. Technical elevation, altitude, and endurance plans for nature.",
+        "badge": "Challenge"
+      },
+      "cycling": {
+        "title": "Cycling",
+        "description": "Road, MTB, or Gran Fondo. Maximize your power and endurance with every pedal stroke.",
+        "badge": "Power"
+      },
+      "swimming": {
+        "title": "Swimming",
+        "description": "Improve your technique and efficiency in open water or the pool. Workouts that push you.",
+        "badge": "Flow"
+      }
+    },
+    "pricing": {
+      "title": "Flexible Membership Plans",
+      "essential": {
+        "title": "Essential",
+        "price": "$9.99/mo",
+        "features": "Full access to basic training plans, Personal progress tracking, Active community support, Device synchronization (limited)",
+        "cta": "Start with Essential"
+      },
+      "pro": {
+        "title": "Pro",
+        "price": "$19.99/mo",
+        "features": "All Essential features included, Advanced and personalized training plans, Fatigue and injury risk monitoring, Weekly check-ins with your assigned coach, Access to strength exercise library",
+        "cta": "Start with Pro"
+      },
+      "elite": {
+        "title": "Elite",
+        "price": "$29.99/mo",
+        "features": "All Pro features included, Personalized clinical coaching with sports doctors, 24/7 priority support, Detailed performance reports and advanced analytics, Online physiotherapy sessions (1/month)",
+        "cta": "Start with Elite"
+      }
+    },
+    "footer": {
+      "copyright": "© 2026 Fitnflai. All rights reserved.",
+      "adminPortal": "Admin Portal",
+      "specialistPortal": "Specialist Portal"
+    }
+  },
+  "registerCoach": {
+    "title": "Are you a health or sports professional?",
+    "subtitle": "Join our team of specialists. Offer your personalized services to a community of motivated athletes.",
+    "ctaButton": "Join as a Specialist",
+    "alreadyRegistered": "Already a specialist?",
+    "loginLink": "Log In here",
+    "errors": {
+      "emailInvalid": "Invalid email",
+      "passwordMismatch": "Passwords do not match",
+      "passwordShort": "Minimum 6 characters",
+      "required": "This field is required",
+      "experiencePositive": "Must be a positive number",
+      "filesRequired": "Both sides of the document are required"
+    },
+    "modal": {
+      "title": "Specialist Registration",
+      "successTitle": "Registration Sent!",
+      "successSubtitle": "Your profile has been successfully registered and is currently in 'Pending' status for administrator review.",
+      "buttons": {
+        "next": "Next",
+        "prev": "Previous",
+        "submit": "Submit Application",
+        "finish": "Got it"
+      },
+      "steps": {
+        "step1": "Credentials",
+        "step2": "Profile",
+        "step3": "Identity",
+        "step4": "Trajectory"
+      },
+      "step1": {
+        "title": "Account Information",
+        "name": "Full Name",
+        "email": "Professional Email",
+        "tel": "Phone Number",
+        "password": "Password",
+        "confirmPassword": "Confirm Password",
+        "languages": "Languages (e.g. English, Spanish)"
+      },
+      "step2": {
+        "title": "Profile and Biography",
+        "specialty": "Main Specialty",
+        "experience": "Years of Experience",
+        "city": "City, Country",
+        "bio": "Short Biography",
+        "linkedin": "LinkedIn Link (optional)",
+        "web": "Website (optional)"
+      },
+      "step3": {
+        "title": "Identity Verification",
+        "docTipo": "Document Type",
+        "docNumero": "Document Number",
+        "docDelantero": "Front side of document",
+        "docTrasero": "Back side of document",
+        "uploadFront": "Upload front (ID/Passport)",
+        "uploadBack": "Upload back (ID/Passport)"
+      },
+      "step4": {
+        "title": "Trajectory and Certifications",
+        "addTrajectory": "+ Add Experience",
+        "addCertification": "+ Add Certification",
+        "trajectoryTitle": "Work Trajectory",
+        "certificationTitle": "Certifications",
+        "jobTitle": "Role / Position",
+        "institution": "Institution / Company",
+        "start": "Start Year",
+        "end": "End Year",
+        "description": "Short Description",
+        "certName": "Certificate Name",
+        "org": "Issuing Organization",
+        "year": "Year Obtained",
+        "venc": "Expiration (e.g. 2028 or 'No expiration')",
+        "certId": "Certification ID (optional)"
+      }
+    }
+  }
+}

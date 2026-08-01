@@ -1,0 +1,97 @@
+:root {
+  --color-bg: 248, 250, 252;        /* slate-50 */
+  --color-panel: 255, 255, 255;     /* white */
+  --color-card: 241, 245, 249;      /* slate-100 */
+  --color-card2: 226, 232, 240;     /* slate-200 */
+  --color-border: 203, 213, 225;    /* slate-300 */
+  --color-text: 15, 23, 42;         /* slate-900 */
+  --color-muted: 100, 116, 139;     /* slate-500 */
+}
+
+.dark {
+  --color-bg: 26, 26, 26;           /* #1a1a1a */
+  --color-panel: 36, 36, 36;        /* #242424 */
+  --color-card: 44, 44, 44;         /* #2c2c2c */
+  --color-card2: 49, 49, 49;        /* #313131 */
+  --color-border: 56, 56, 56;       /* #383838 */
+  --color-text: 255, 255, 255;      /* #ffffff */
+  --color-muted: 136, 136, 139;     /* #888888 */
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { 
+    @apply bg-surface-bg; 
+    color: rgba(var(--color-text), 1);
+    font-family: 'Outfit', sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 300;
+  }
+  button, select {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 400;
+  }
+  * { @apply box-border; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { @apply bg-surface-panel; }
+  ::-webkit-scrollbar-thumb { @apply bg-surface-border rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-surface-muted; }
+}
+
+@layer components {
+  .nav-item {
+    font-family: 'Outfit', sans-serif;
+    @apply flex items-center gap-2.5 px-2.5 py-2 mx-1.5 rounded-lg cursor-pointer text-[13px] text-surface-muted transition-all duration-150 hover:bg-surface-card hover:text-white;
+  }
+  .nav-item.active {
+    @apply bg-brand-orange text-white;
+  }
+  .card-base {
+    @apply bg-surface-card border border-surface-border rounded-xl p-4;
+  }
+  .badge {
+    font-family: 'Outfit', sans-serif;
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium;
+  }
+  .badge-green  { @apply bg-brand-green/15 text-brand-green; }
+  .badge-orange { @apply bg-brand-orange/15 text-brand-orange; }
+  .badge-blue   { @apply bg-brand-blue/15 text-brand-blue; }
+  .badge-yellow { @apply bg-brand-yellow/15 text-brand-yellow; }
+  .badge-red    { @apply bg-brand-red/15 text-brand-red; }
+  .badge-purple { @apply bg-brand-purple/15 text-brand-purple; }
+  .badge-muted  { background: rgba(255,255,255,0.07); @apply text-surface-muted; }
+  .form-label {
+    font-family: 'Outfit', sans-serif;
+    @apply block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1;
+  }
+  .form-input {
+    @apply w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-orange;
+  }
+  .stat-card {
+    @apply bg-surface-card border border-surface-border rounded-xl p-3.5;
+  }
+  .frow {
+    @apply flex items-center justify-between py-2 border-b border-surface-border text-[12px] last:border-0 gap-2;
+  }
+  .fkey { @apply text-surface-muted shrink-0 min-w-[140px] text-[11px]; }
+  .section-title {
+    font-family: 'Outfit', sans-serif;
+    @apply text-[10px] text-surface-muted uppercase tracking-[0.8px] font-semibold mb-2.5;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .backface-hidden {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+}
