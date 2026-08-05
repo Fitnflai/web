@@ -38,6 +38,159 @@ const ShieldIcon = ({ text }: { text: string }) => (
   </div>
 );
 
+// High-fidelity responsive SVG Radar Chart component for evaluation progress (Image 1)
+function RadarChart({ isSpanish }: { isSpanish: boolean }) {
+  const center = 150;
+  const maxRadius = 100;
+  const numAxes = 6;
+  
+  const axes = [
+    { labelEs: 'Fuerza', labelEn: 'Strength' },
+    { labelEs: 'Resistencia', labelEn: 'Endurance' },
+    { labelEs: 'Cardio', labelEn: 'Cardio' },
+    { labelEs: 'Equilibrio', labelEn: 'Balance' },
+    { labelEs: 'Movilidad', labelEn: 'Mobility' },
+    { labelEs: 'Core', labelEn: 'Core' }
+  ];
+
+  const getCoordinates = (index: number, value: number) => {
+    const angle = (index * 2 * Math.PI) / numAxes - Math.PI / 2;
+    const radius = (value / 100) * maxRadius;
+    const x = center + radius * Math.cos(angle);
+    const y = center + radius * Math.sin(angle);
+    return { x, y };
+  };
+
+  const week1Values = [40, 50, 45, 35, 55, 30];
+  const week6Values = [85, 90, 80, 75, 85, 80];
+
+  const getPointsString = (values: number[]) => {
+    return values
+      .map((val, idx) => {
+        const { x, y } = getCoordinates(idx, val);
+        return `${x},${y}`;
+      })
+      .join(' ');
+  };
+
+  const week1Points = getPointsString(week1Values);
+  const week6Points = getPointsString(week6Values);
+  const gridLevels = [25, 50, 75, 100];
+
+  return (
+    <div className="relative w-full max-w-[280px] mx-auto select-none">
+      <svg viewBox="0 0 300 300" className="w-full h-auto overflow-visible">
+        {/* Background Grids: Concentric Hexagons */}
+        {gridLevels.map((level) => {
+          const points = getPointsString(Array(numAxes).fill(level));
+          return (
+            <polygon
+              key={level}
+              points={points}
+              fill="none"
+              stroke="#2d3748"
+              strokeWidth="1"
+              strokeDasharray="4 4"
+            />
+          );
+        })}
+
+        {/* Axis Lines */}
+        {axes.map((_, idx) => {
+          const { x, y } = getCoordinates(idx, 100);
+          return (
+            <line
+              key={idx}
+              x1={center}
+              y1={center}
+              x2={x}
+              y2={y}
+              stroke="#2d3748"
+              strokeWidth="1"
+            />
+          );
+        })}
+
+        {/* Semana 6 (Orange Progress) Polygon */}
+        <polygon
+          points={week6Points}
+          fill="rgba(234, 88, 12, 0.25)"
+          stroke="#ea580c"
+          strokeWidth="2.5"
+          className="transition-all duration-500 ease-in-out hover:fill-opacity-40"
+        />
+        {/* Semana 6 vertices dots */}
+        {week6Values.map((val, idx) => {
+          const { x, y } = getCoordinates(idx, val);
+          return (
+            <circle
+              key={`w6-${idx}`}
+              cx={x}
+              cy={y}
+              r="4"
+              fill="#ea580c"
+              className="transition-all duration-300 hover:scale-150"
+            />
+          );
+        })}
+
+        {/* Semana 1 (Red Initial) Polygon */}
+        <polygon
+          points={week1Points}
+          fill="rgba(239, 68, 68, 0.25)"
+          stroke="#ef4444"
+          strokeWidth="2"
+          className="transition-all duration-500 ease-in-out hover:fill-opacity-40"
+        />
+        {/* Semana 1 vertices dots */}
+        {week1Values.map((val, idx) => {
+          const { x, y } = getCoordinates(idx, val);
+          return (
+            <circle
+              key={`w1-${idx}`}
+              cx={x}
+              cy={y}
+              r="3.5"
+              fill="#ef4444"
+              className="transition-all duration-300 hover:scale-150"
+            />
+          );
+        })}
+
+        {/* Axis Labels */}
+        {axes.map((axis, idx) => {
+          const { x, y } = getCoordinates(idx, 120);
+          const label = isSpanish ? axis.labelEs : axis.labelEn;
+          
+          let textAnchor: 'start' | 'middle' | 'end' = 'middle';
+          if (x < center - 10) textAnchor = 'end';
+          if (x > center + 10) textAnchor = 'start';
+
+          let dy = '0.35em';
+          if (y < center - 40) dy = '-0.2em';
+          if (y > center + 40) dy = '1em';
+
+          return (
+            <text
+              key={idx}
+              x={x}
+              y={y}
+              textAnchor={textAnchor}
+              dy={dy}
+              fill="#a0aec0"
+              fontSize="12"
+              fontWeight="bold"
+              className="transition-colors duration-300 hover:fill-white font-sans"
+            >
+              {label}
+            </text>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
 // Premium Interactive Calculator replicating the 3-phone screen stage layouts (Image 2)
 function TrainingCalculator({ onPortalEntry }: { onPortalEntry: (role: 'admin' | 'specialist') => void }) {
   const { language } = useAppStore()
@@ -242,14 +395,8 @@ export const athleticNutritionProfiles = [
       { name: { en: "Proteins", es: "Proteínas" }, percentage: 25, color: "bg-emerald-500" },
       { name: { en: "Fats", es: "Grasas" }, percentage: 20, color: "bg-sky-500" }
     ],
-    preWorkoutRecommendation: {
-      en: "Oatmeal with berries and a banana",
-      es: "Avena con bayas y un plátano"
-    },
-    postWorkoutRecommendation: {
-      en: "Protein shake with milk and a handful of nuts",
-      es: "Batido de proteínas con leche y un puñado de frutos secos"
-    },
+
+
     image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=256&h=256&q=80"
   },
   {
@@ -273,14 +420,8 @@ export const athleticNutritionProfiles = [
       { name: { en: "Proteins", es: "Proteínas" }, percentage: 20, color: "bg-emerald-500" },
       { name: { en: "Fats", es: "Grasas" }, percentage: 20, color: "bg-sky-500" }
     ],
-    preWorkoutRecommendation: {
-      en: "Energy bar and electrolyte drink",
-      es: "Barrita energética y bebida electrolítica"
-    },
-    postWorkoutRecommendation: {
-      en: "Recovery shake with high carbs and protein",
-      es: "Batido de recuperación con alto contenido de carbohidratos y proteínas"
-    },
+
+
     image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=256&h=256&q=80"
   },
   {
@@ -304,14 +445,8 @@ export const athleticNutritionProfiles = [
       { name: { en: "Proteins", es: "Proteínas" }, percentage: 30, color: "bg-emerald-500" },
       { name: { en: "Fats", es: "Grasas" }, percentage: 20, color: "bg-sky-500" }
     ],
-    preWorkoutRecommendation: {
-      en: "Banana and a small coffee",
-      es: "Plátano y un café pequeño"
-    },
-    postWorkoutRecommendation: {
-      en: "Quinoa salad with chicken breast",
-      es: "Ensalada de quinoa con pechuga de pollo"
-    },
+
+
     image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=256&h=256&q=80"
   }
 ];
@@ -345,6 +480,15 @@ const USAFlag = () => (
 
 
 export function LandingPage() {
+  const scienceSliderRef = useRef<HTMLDivElement>(null)
+  const scrollScience = (direction: 'left' | 'right') => {
+    if (scienceSliderRef.current) {
+      const { scrollLeft } = scienceSliderRef.current
+      const offset = direction === 'left' ? -320 : 320
+      scienceSliderRef.current.scrollTo({ left: scrollLeft + offset, behavior: 'smooth' })
+    }
+  }
+
   const [activeProfileIndex, setActiveProfileIndex] = useState(0);
   const [profileImgError, setProfileImgError] = useState(false);
   const navigate = useNavigate()
@@ -357,7 +501,6 @@ export function LandingPage() {
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [activeBenefit, setActiveBenefit] = useState<1 | 2 | 3 | 4>(1)
-  const [activeWhy, setActiveWhy] = useState<1 | 2 | 3 | 4>(1)
 
   // Autoplay benefits carousel (5 seconds interval, restarts on activeBenefit change)
   useEffect(() => {
@@ -366,14 +509,6 @@ export function LandingPage() {
     }, 5000)
     return () => clearInterval(timer)
   }, [activeBenefit])
-
-  // Autoplay "¿Por qué Fitnflai?" carousel (5 seconds interval, restarts on activeWhy change)
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setActiveWhy((prev) => (prev === 4 ? 1 : (prev + 1) as 1 | 2 | 3 | 4))
-    }, 5000)
-    return () => clearInterval(timer)
-  }, [activeWhy])
 
   // Autoplay testimonials carousel (6 seconds interval, restarts on activeProfileIndex change or manual click)
   useEffect(() => {
@@ -518,7 +653,7 @@ export function LandingPage() {
     <div className="min-h-screen text-white font-sans antialiased relative overflow-hidden">
       {/* Background Image Watermark */}
       <div
-        className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-[0.20] bg-cover bg-center z-0"
+        className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-[0.12] bg-cover bg-center z-0"
         style={{
                     backgroundImage: "url('/images/home-bg.png')",
           backgroundAttachment: 'fixed'
@@ -717,11 +852,24 @@ export function LandingPage() {
 
         <div className="container mx-auto px-6 relative z-10">
           {/* Centered Headlines */}
-          <T.H1 className="text-5xl lg:text-7xl font-extrabold leading-tight tracking-tight text-white mb-6 max-w-4xl mx-auto">
-            {t('landing.hero.title')}
+          <T.H1 className="text-5xl lg:text-7xl font-extrabold leading-tight tracking-tight text-white mb-4 max-w-4xl mx-auto">
+            {isSpanish ? (
+              <>
+                El entrenamiento <span className="text-orange-500 block sm:inline">que te entiende</span>
+              </>
+            ) : (
+              <>
+                Training <span className="text-orange-500 block sm:inline">that understands you</span>
+              </>
+            )}
           </T.H1>
-          <T.P className="text-xl lg:text-2xl text-gray-300 mb-10 max-w-3xl mx-auto leading-relaxed">
-            {t('landing.hero.subtitle')}
+          <div className="text-lg lg:text-2xl font-extrabold text-orange-500 mb-6 tracking-tight max-w-3xl mx-auto">
+            {isSpanish ? 'Wellness completo, a tu ritmo.' : 'Complete wellness, at your own pace.'}
+          </div>
+          <T.P className="text-sm lg:text-lg text-gray-300 mb-10 max-w-3xl mx-auto leading-relaxed font-medium">
+            {isSpanish 
+              ? 'No te manda ejercicios: te entiende. Primero conoce tu cuerpo, tu altitud, tu tiempo y tu energía — y recién ahí construye un plan con ciencia deportiva real que se adapta a tu vida, no al revés.' 
+              : "It doesn't just assign exercises: it understands you. First it knows your body, your altitude, your time, and your energy — and only then does it build a plan backed by real sports science that adapts to your life, not the other way around."}
           </T.P>
 
           {/* Centered Main CTA Buttons */}
@@ -826,6 +974,575 @@ export function LandingPage() {
         </div>
       </section>
 
+      {/* El Problema Section */}
+      <section className="py-24 bg-gray-950/70 text-white relative z-10 border-t border-gray-900" id="problema">
+        <div className="container mx-auto px-6 max-w-5xl text-center">
+          <span className="text-orange-500 text-xs font-black uppercase tracking-widest block mb-3">
+            {isSpanish ? 'EL PROBLEMA' : 'THE PROBLEM'}
+          </span>
+          <T.H2 className="text-4xl lg:text-5xl font-extrabold text-white tracking-tight mb-6 max-w-3xl mx-auto leading-tight">
+            {isSpanish ? 'Las apps genéricas no te conocen' : "Generic apps don't know you"}
+          </T.H2>
+          <T.P className="text-lg text-gray-400 max-w-3xl mx-auto mb-16 leading-relaxed">
+            {isSpanish 
+              ? 'La gente no abandona por falta de disciplina. Abandona porque las soluciones importadas no se adaptan a su realidad. Esto es lo que hacen mal — y lo que Fitnflai hace distinto.' 
+              : "People don't quit because of a lack of discipline. They quit because imported solutions don't adapt to their reality. This is what they get wrong — and what Fitnflai does differently."}
+          </T.P>
+
+          {/* Stacked Cards */}
+          <div className="flex flex-col gap-4 max-w-4xl mx-auto">
+            {[
+              {
+                num: '01',
+                titleEs: 'No te conocen',
+                titleEn: "They don't know you",
+                descEs: 'Te dan un plan sin saber cómo está tu cuerpo hoy. Nosotros te evaluamos primero.',
+                descEn: 'They give you a plan without knowing how your body is today. We evaluate you first.'
+              },
+              {
+                num: '02',
+                titleEs: 'Ignoran tu realidad',
+                titleEn: 'They ignore your reality',
+                descEs: 'Que vives a 2.850m, que hoy tienes 20 minutos, que tu energía cambia con tu ciclo. Fitnflai lo sabe.',
+                descEn: 'That you live at 2,850m, that today you only have 20 minutes, that your energy changes with your cycle. Fitnflai knows it.'
+              },
+              {
+                num: '03',
+                titleEs: 'Te abandonan',
+                titleEn: 'They abandon you',
+                descEs: 'Te dan un plan y desaparecen. Fitnflai te acompaña y ajusta semana a semana.',
+                descEn: 'They give you a plan and disappear. Fitnflai accompanies you and adjusts week by week.'
+              },
+              {
+                num: '04',
+                titleEs: 'No te explican nada',
+                titleEn: "They don't explain anything",
+                descEs: 'Ejercicios sin porqué. Aquí, si no se puede explicar, no se manda.',
+                descEn: 'Exercises with no "why". Here, if it cannot be explained, it is not prescribed.'
+              },
+              {
+                num: '05',
+                titleEs: 'Te generan culpa',
+                titleEn: 'They make you feel guilty',
+                descEs: 'Si faltas, te castigan. Fitnflai nunca te juzga: el plan simplemente se ajusta.',
+                descEn: 'If you miss a workout, they punish you. Fitnflai never judges you: the plan simply adjusts.'
+              }
+            ].map((item, idx) => (
+              <div 
+                key={idx}
+                className="bg-gradient-to-r from-[#141416]/80 to-orange-950/15 border border-orange-500/10 rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8 text-left hover:border-orange-500/30 transition-all duration-300 hover:scale-[1.015] shadow-lg hover:shadow-orange-950/10"
+              >
+                <div className="sm:w-1/3 shrink-0">
+                  <h3 className="text-orange-500 font-extrabold text-base flex items-center gap-2 uppercase tracking-wide">
+                    <span className="text-orange-500/60 font-mono text-sm">{item.num}</span>
+                    <span>•</span>
+                    <span>{isSpanish ? item.titleEs : item.titleEn}</span>
+                  </h3>
+                </div>
+                <div className="text-gray-300 text-sm leading-relaxed sm:border-l sm:border-gray-800/80 sm:pl-8 flex-grow">
+                  {isSpanish ? item.descEs : item.descEn}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Primero te conocemos Section */}
+      <section className="py-24 bg-gray-950/70 text-white relative z-10 border-t border-gray-900" id="evaluacion">
+        <div className="container mx-auto px-6 max-w-5xl flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-16">
+          
+          {/* Left Side: Content */}
+          <div className="w-full lg:w-1/2 text-left">
+            <span className="text-orange-500 text-xs font-black uppercase tracking-widest block mb-3">
+              {isSpanish ? 'PRIMERO TE CONOCEMOS' : 'FIRST WE KNOW YOU'}
+            </span>
+            <T.H2 className="text-4xl font-extrabold text-white tracking-tight mb-6 leading-tight">
+              {isSpanish 
+                ? 'Tu objetivo importa. Pero primero entendemos desde dónde partes.' 
+                : 'Your goal matters. But first we understand where you start from.'}
+            </T.H2>
+            <T.P className="text-gray-300 text-base leading-relaxed mb-8">
+              {isSpanish 
+                ? 'Antes de darte un solo ejercicio, Fitnflai te evalúa con 6 pruebas funcionales que haces en casa, sin equipo. Con ellas construimos tu radar de 6 dimensiones: un mapa real de tu cuerpo hoy.' 
+                : 'Before giving you a single exercise, Fitnflai evaluates you with 6 functional tests that you can do at home, with no equipment. With them, we build your 6-dimensional radar: a real map of your body today.'}
+            </T.P>
+
+            {/* Checkpoints List */}
+            <ul className="space-y-4">
+              {[
+                {
+                  es: '6 tests funcionales: sentadillas, Cooper, flexiones, plancha, flexibilidad y equilibrio',
+                  en: '6 functional tests: squats, Cooper, push-ups, plank, flexibility, and balance'
+                },
+                {
+                  es: 'Composición corporal con medidas simples, sin laboratorio',
+                  en: 'Body composition with simple measurements, no lab required'
+                },
+                {
+                  es: 'La IA asigna tu nivel real (0 a 3) y detecta debilidades y molestias',
+                  en: 'AI assigns your real level (0 to 3) and detects weaknesses and discomforts'
+                },
+                {
+                  es: '"Nunca una app me había mostrado esto."',
+                  en: '"Never before has an app shown me this."',
+                  isQuote: true
+                }
+              ].map((bullet, idx) => (
+                <li key={idx} className="flex items-start gap-3">
+                  <span className="text-emerald-400 font-extrabold text-base flex-shrink-0 mt-0.5">✓</span>
+                  <p className={`text-sm leading-relaxed ${bullet.isQuote ? 'italic text-gray-400' : 'text-gray-300'}`}>
+                    {isSpanish ? bullet.es : bullet.en}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Right Side: Radar Chart */}
+          <div className="w-full lg:w-1/2 flex justify-center">
+            <div className="w-full max-w-[380px] bg-[#141416]/60 border border-gray-800/80 rounded-3xl p-8 flex flex-col items-center justify-center shadow-2xl relative overflow-hidden">
+              {/* Radar Chart SVG helper */}
+              <RadarChart isSpanish={isSpanish} />
+
+              {/* Legend */}
+              <div className="flex items-center justify-center gap-6 mt-6 border-t border-gray-800/60 pt-4 w-full">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444] shadow-md"></span>
+                  <span className="text-xs font-bold text-gray-400">
+                    {isSpanish ? 'Semana 1' : 'Week 1'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#ea580c] shadow-md"></span>
+                  <span className="text-xs font-bold text-gray-400">
+                    {isSpanish ? 'Semana 6' : 'Week 6'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Subtext */}
+              <span className="text-xs font-black uppercase tracking-wider text-gray-500 mt-4 block text-center">
+                {isSpanish ? 'Tu progreso, visual e innegable.' : 'Your progress, visual and undeniable.'}
+              </span>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* La Ciencia Detrás Section */}
+      <section className="py-24 bg-gray-950/70 text-white relative z-10 border-t border-gray-900" id="ciencia">
+        <div className="container mx-auto px-6 max-w-5xl text-center relative">
+          <span className="text-orange-500 text-xs font-black uppercase tracking-widest block mb-3">
+            {isSpanish ? 'LA CIENCIA DETRÁS' : 'THE SCIENCE BEHIND IT'}
+          </span>
+          <T.H2 className="text-4xl lg:text-5xl font-extrabold text-white tracking-tight mb-6 max-w-3xl mx-auto leading-tight">
+            {isSpanish ? 'No es una app más. Es ciencia aplicada.' : 'Not just another app. Applied science.'}
+          </T.H2>
+          <T.P className="text-lg text-gray-400 max-w-3xl mx-auto mb-12 leading-relaxed">
+            {isSpanish 
+              ? 'Cada plan sigue un protocolo clínico de entrenamiento validado con criterios de medicina deportiva. La ciencia está detrás — lo que tú sientes son resultados.' 
+              : 'Each plan follows a clinical training protocol validated with sports medicine criteria. Science is at the core — what you experience are real results.'}
+          </T.P>
+
+          {/* Carousel Wrapper */}
+          <div className="relative group max-w-5xl mx-auto mb-16">
+            {/* Left Button */}
+            <button 
+              onClick={() => scrollScience('left')}
+              className="absolute left-[-20px] top-1/2 transform -translate-y-1/2 w-10 h-10 rounded-full bg-black/85 border border-gray-800 flex items-center justify-center text-white hover:text-orange-500 hover:border-orange-500 hover:bg-black transition-all cursor-pointer z-20 shadow-2xl opacity-0 group-hover:opacity-100 hidden sm:flex"
+              aria-label="Anterior"
+            >
+              <IconChevronLeft size={20} />
+            </button>
+
+            {/* Right Button */}
+            <button 
+              onClick={() => scrollScience('right')}
+              className="absolute right-[-20px] top-1/2 transform -translate-y-1/2 w-10 h-10 rounded-full bg-black/85 border border-gray-800 flex items-center justify-center text-white hover:text-orange-500 hover:border-orange-500 hover:bg-black transition-all cursor-pointer z-20 shadow-2xl opacity-0 group-hover:opacity-100 hidden sm:flex"
+              aria-label="Siguiente"
+            >
+              <IconChevronRight size={20} />
+            </button>
+
+            {/* Horizontal Slider (Scroll Snap Container) */}
+            <div 
+              ref={scienceSliderRef}
+              className="flex gap-6 overflow-x-auto no-scrollbar snap-x snap-mandatory px-4 py-4 select-none"
+            >
+              {[
+                {
+                  metric: '10%',
+                  titleEs: 'Regla de progresión',
+                  titleEn: 'Progression rule',
+                  descEs: 'Ninguna carga sube más del 10% por semana. El estándar clínico más validado para prevenir lesiones.',
+                  descEn: 'No training volume increases by more than 10% per week. The most validated clinical standard for injury prevention.'
+                },
+                {
+                  metric: '9',
+                  titleEs: 'Modalidades',
+                  titleEn: 'Disciplines',
+                  descEs: 'Running, ciclismo, triatlón, fuerza, HIIT, movilidad, cardio, senderismo y MTB — cada una con su lógica.',
+                  descEn: 'Running, cycling, triathlon, strength, HIIT, mobility, cardio, hiking, and MTB — each with its own logic.'
+                },
+                {
+                  metric: '6',
+                  titleEs: 'Tests de evaluación',
+                  titleEn: 'Evaluation tests',
+                  descEs: 'Tu nivel real sale de pruebas funcionales, no de lo que crees que puedes hacer.',
+                  descEn: 'Your real fitness level is determined by functional testing, not by what you guess you can do.'
+                },
+                {
+                  metric: '70%',
+                  titleEs: 'El sueño cuenta',
+                  titleEn: 'Sleep matters',
+                  descEs: 'Con menos de 6h, el riesgo de lesión sube 70%. Por eso el sueño ajusta tu sesión antes de empezar.',
+                  descEn: 'With less than 6h of sleep, injury risk increases by 70%. That\'s why sleep duration adjusts your workout before starting.'
+                },
+                {
+                  metric: '5',
+                  titleEs: 'Fases de retorno',
+                  titleEn: 'Return phases',
+                  descEs: 'Si te lesionas, un protocolo de retorno seguro por fases evita la recaída — la mayoría ocurre en las 2 primeras semanas.',
+                  descEn: 'If you get injured, a safe multi-phase return protocol prevents relapse — most of which occur in the first 2 weeks.'
+                },
+                {
+                  metric: '✓',
+                  titleEs: 'Tapering y descarga',
+                  titleEn: 'Tapering and deload',
+                  descEs: 'Periodización con semanas de descarga y afinamiento incluidas — no un PDF que solo sube la carga.',
+                  descEn: 'Periodization with taper and deload weeks built-in — not a static PDF that only dials up volume.'
+                }
+              ].map((card, idx) => (
+                <div 
+                  key={idx}
+                  className="w-[280px] h-[280px] shrink-0 bg-gradient-to-br from-[#141416]/80 to-orange-950/15 border border-orange-500/10 rounded-3xl p-8 flex flex-col justify-start text-left snap-start hover:border-orange-500/30 transition-all duration-300 hover:scale-[1.02] shadow-xl"
+                >
+                  <span className="text-4xl font-extrabold text-orange-500 mb-4 block font-mono">
+                    {card.metric}
+                  </span>
+                  <h4 className="text-white font-extrabold text-lg mb-3 leading-snug">
+                    {isSpanish ? card.titleEs : card.titleEn}
+                  </h4>
+                  <p className="text-gray-400 text-sm leading-relaxed">
+                    {isSpanish ? card.descEs : card.descEn}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Wide Endorsement Banner (Dr. Mario Ochoa) */}
+          <div className="bg-[#141416]/60 text-white rounded-3xl p-6 sm:p-8 max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6 sm:gap-8 text-left border border-gray-800/60 shadow-xl">
+            <div className="flex items-center gap-6">
+              {/* Circular Avatar */}
+              <div className="w-16 h-16 rounded-full bg-orange-500 flex items-center justify-center font-black text-xl text-black shrink-0 shadow-md">
+                MO
+              </div>
+              <div className="flex-grow">
+                <span className="text-[10px] uppercase font-black tracking-widest text-orange-500 block mb-1">
+                  {isSpanish ? 'AVAL DE MEDICINA DEPORTIVA' : 'SPORTS MEDICINE ENDORSEMENT'}
+                </span>
+                <T.H3 className="text-xl font-extrabold text-white leading-tight mb-2">
+                  Dr. Mario Ochoa
+                </T.H3>
+                <T.P className="text-gray-400 text-xs leading-relaxed max-w-2xl">
+                  {isSpanish 
+                    ? 'El protocolo clínico de Fitnflai está construido y validado con criterios de medicina deportiva. En el plan Signature, el especialista revisa tu plan cada mes.' 
+                    : 'The Fitnflai clinical protocol is built and validated with sports medicine criteria. In the Signature plan, the specialist reviews your plan every month.'}
+                </T.P>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Altitud Inteligente Section */}
+      <section className="py-24 bg-gray-950/70 text-white relative z-10 border-t border-gray-900" id="altitud">
+        <div className="container mx-auto px-6 max-w-5xl text-center">
+          <span className="text-orange-500 text-xs font-black uppercase tracking-widest block mb-3">
+            {isSpanish ? 'ALTITUD INTELIGENTE' : 'SMART ALTITUDE'}
+          </span>
+          <T.H2 className="text-4xl lg:text-5xl font-extrabold text-white tracking-tight mb-6 max-w-3xl mx-auto leading-tight">
+            {isSpanish ? 'Donde el aire pesa diferente' : 'Where the air feels different'}
+          </T.H2>
+          <T.P className="text-lg text-gray-400 max-w-3xl mx-auto mb-12 leading-relaxed">
+            {isSpanish 
+              ? 'Entrenar en Quito no es lo mismo que en la costa. El oxígeno, tu ritmo cardíaco y tu recuperación cambian con la altura. Fitnflai detecta tu ciudad automáticamente y ajusta las semanas de tu plan y tus zonas cardíacas. Ninguna app importada hace esto.' 
+              : 'Training in Quito is not the same as training on the coast. Oxygen levels, heart rate, and recovery change with elevation. Fitnflai automatically detects your altitude and adjusts both your weekly plan and heart rate zones. No generic imported app does this.'}
+          </T.P>
+
+          {/* Altitude Pills */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 justify-center">
+            {[
+              { alt: '3.640m', cityEs: 'La Paz', cityEn: 'La Paz' },
+              { alt: '2.850m', cityEs: 'Quito', cityEn: 'Quito' },
+              { alt: '2.640m', cityEs: 'Bogotá', cityEn: 'Bogotá' },
+              { alt: '2.240m', cityEs: 'CDMX', cityEn: 'Mexico City' },
+              { alt: '1.500m', cityEs: 'Medellín', cityEn: 'Medellín' },
+              { alt: '~0m', cityEs: 'Guayaquil', cityEn: 'Guayaquil' }
+            ].map((pill, idx) => (
+              <div 
+                key={idx}
+                className="bg-gradient-to-b from-[#141416]/80 to-orange-950/15 border border-orange-500/10 rounded-2xl p-5 hover:border-orange-500/30 transition-all duration-300 hover:scale-[1.03] shadow-lg hover:shadow-orange-950/10"
+              >
+                <span className="text-lg sm:text-xl font-extrabold text-orange-500 block mb-1 font-mono">
+                  {pill.alt}
+                </span>
+                <span className="text-gray-400 text-sm font-bold block uppercase tracking-wider">
+                  {isSpanish ? pill.cityEs : pill.cityEn}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Modo Vida Real Section */}
+      <section className="py-24 bg-gray-950/70 text-white relative z-10 border-t border-gray-900" id="vida-real">
+        <div className="container mx-auto px-6 max-w-5xl flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-16">
+          
+          {/* Left Side: Mock Phone Card */}
+          <div className="w-full lg:w-1/2 flex justify-center order-2 lg:order-1">
+            <div className="w-full max-w-[380px] bg-gradient-to-br from-[#141416]/80 to-indigo-950/20 border border-indigo-500/10 rounded-3xl p-8 flex flex-col text-left shadow-2xl relative overflow-hidden hover:border-indigo-500/30 transition-all duration-300 hover:shadow-indigo-950/10">
+              <span className="text-xs font-black text-orange-500 tracking-widest mb-1.5 block uppercase">
+                {isSpanish ? 'HOY' : 'TODAY'}
+              </span>
+              <h4 className="text-white font-extrabold text-lg mb-6 leading-tight">
+                {isSpanish ? 'Tengo 20 min y estoy cansado' : 'I have 20 min and I am tired'}
+              </h4>
+              <div className="bg-gradient-to-r from-black/50 to-emerald-950/15 border border-emerald-500/20 rounded-2xl p-5 shadow-inner">
+                <span className="text-xs font-black text-emerald-400 tracking-widest block mb-2 uppercase">
+                  ✓ {isSpanish ? 'PLAN AJUSTADO' : 'PLAN ADJUSTED'}
+                </span>
+                <h5 className="text-white font-extrabold text-base mb-2 leading-tight">
+                  {isSpanish ? 'Movilidad + core • 20 min' : 'Mobility + core • 20 min'}
+                </h5>
+                <p className="text-gray-400 text-sm leading-relaxed font-medium">
+                  {isSpanish 
+                    ? 'Hoy tu cuerpo necesita esto, no alta intensidad. Mañana retomamos fuerza. Sin sobreexigirte, sin culpa.' 
+                    : 'Today your body needs this, not high intensity. Tomorrow we regain strength. No overexertion, no guilt.'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Side: Content */}
+          <div className="w-full lg:w-1/2 text-left order-1 lg:order-2">
+            <span className="text-orange-500 text-xs font-black uppercase tracking-widest block mb-3">
+              {isSpanish ? 'MODO VIDA REAL' : 'REAL LIFE MODE'}
+            </span>
+            <T.H2 className="text-4xl font-extrabold text-white tracking-tight mb-6 leading-tight">
+              {isSpanish 
+                ? 'Tu plan se adapta a tu día — no al revés' 
+                : 'Your plan adapts to your day — not the other way around'}
+            </T.H2>
+            <T.P className="text-gray-300 text-base leading-relaxed mb-8">
+              {isSpanish 
+                ? 'Trabajo, familia, cansancio, mala noche de sueño. Tu plan debería saber todo eso. El Modo Vida Real reajusta cada sesión según tu tiempo, tu energía, tu sueño y tu estrés. Es lo que hace que el plan se sientan tuyo.' 
+                : 'Work, family, fatigue, poor sleep. Your plan should know all of that. Real Life Mode readjusts each session based on your time, energy, sleep, and stress. That\'s what makes the plan truly yours.'}
+            </T.P>
+
+            {/* Bullet Points List */}
+            <ul className="space-y-4">
+              {[
+                {
+                  es: 'Menos tiempo hoy → sesión más corta y efectiva',
+                  en: 'Less time today → shorter, highly effective session'
+                },
+                {
+                  es: 'Dormiste mal → menor carga automáticamente (con <6h el riesgo de lesión sube 70%)',
+                  en: 'Poor sleep → automatic load reduction (with <6h of sleep, injury risk spikes 70%)'
+                },
+                {
+                  es: 'Faltaste unos días → protocolo de retorno seguro, sin empezar de cero',
+                  en: 'Missed a few days → safe return protocol, no starting over from scratch'
+                }
+              ].map((bullet, idx) => (
+                <li key={idx} className="flex items-start gap-3">
+                  <span className="text-emerald-400 font-extrabold text-base flex-shrink-0 mt-0.5">✓</span>
+                  <p className="text-sm text-gray-300 leading-relaxed">
+                    {isSpanish ? bullet.es : bullet.en}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+        </div>
+      </section>
+
+      {/* El Semáforo de Seguridad Section */}
+      <section className="py-24 bg-gray-950/70 text-white relative z-10 border-t border-gray-900" id="semaforo">
+        <div className="container mx-auto px-6 max-w-5xl text-center">
+          <span className="text-orange-500 text-xs font-black uppercase tracking-widest block mb-3">
+            {isSpanish ? 'TU SALUD PRIMERO' : 'YOUR HEALTH FIRST'}
+          </span>
+          <T.H2 className="text-4xl lg:text-5xl font-extrabold text-white tracking-tight mb-6 max-w-3xl mx-auto leading-tight">
+            {isSpanish ? 'El semáforo de seguridad' : 'The safety traffic light'}
+          </T.H2>
+          <T.P className="text-lg text-gray-400 max-w-3xl mx-auto mb-16 leading-relaxed">
+            {isSpanish 
+              ? 'Tu salud es más importante que tu objetivo. Fitnflai monitorea señales en tiempo real y te indica siempre si estás en zona segura — y frena el plan si hace falta.' 
+              : 'Your health is more important than your goal. Fitnflai monitors real-time biological signals and tells you if you are in the safe zone — pausing or dialing down the plan if necessary.'}
+          </T.P>
+
+          {/* Traffic Light Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 justify-center">
+            {[
+              {
+                colorDot: 'bg-[#10b981]',
+                bgGradient: 'bg-gradient-to-br from-[#141416]/80 to-emerald-950/20 border-emerald-500/10 hover:border-emerald-500/30 hover:shadow-emerald-950/10',
+                titleEs: 'Verde',
+                titleEn: 'Green',
+                descEs: 'Estás respondiendo bien. El plan puede progresar — nunca más del 10% por semana.',
+                descEn: 'You are responding well. The plan can progress — never more than 10% per week.'
+              },
+              {
+                colorDot: 'bg-[#f59e0b]',
+                bgGradient: 'bg-gradient-to-br from-[#141416]/80 to-amber-950/20 border-amber-500/10 hover:border-amber-500/30 hover:shadow-amber-950/10',
+                titleEs: 'Amarillo',
+                titleEn: 'Yellow',
+                descEs: 'Dolor muscular, sueño bajo o 3 días duros seguidos: el plan baja la carga automáticamente.',
+                descEn: 'Muscle soreness, poor sleep, or 3 consecutive hard days: the plan automatically reduces the load.'
+              },
+              {
+                colorDot: 'bg-[#ef4444]',
+                bgGradient: 'bg-gradient-to-br from-[#141416]/80 to-red-950/20 border-red-500/10 hover:border-red-500/30 hover:shadow-red-950/10',
+                titleEs: 'Rojo',
+                titleEn: 'Red',
+                descEs: 'Dolor articular o señales de alarma: se pausa la sesión y se protege tu cuerpo.',
+                descEn: 'Joint pain or alarm signals: the session is paused to protect your body.'
+              }
+            ].map((card, idx) => (
+              <div 
+                key={idx}
+                className={`${card.bgGradient} border rounded-2xl p-6 text-left transition-all duration-300 hover:scale-[1.03] shadow-lg`}
+              >
+                <h3 className="text-white font-extrabold text-base mb-3 flex items-center gap-2 uppercase tracking-wide">
+                  <span className={`w-2.5 h-2.5 rounded-full ${card.colorDot} shadow-sm`}></span>
+                  <span>{isSpanish ? card.titleEs : card.titleEn}</span>
+                </h3>
+                <p className="text-gray-300 text-sm leading-relaxed">
+                  {isSpanish ? card.descEs : card.descEn}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Adaptación por Ciclo Menstrual Section */}
+      <section className="py-24 bg-gray-950/70 text-white relative z-10 border-t border-gray-900" id="ciclo">
+        <div className="container mx-auto px-6 max-w-5xl flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-16">
+          
+          {/* Left Side: Content */}
+          <div className="w-full lg:w-1/2 text-left">
+            <span className="text-orange-500 text-xs font-black uppercase tracking-widest block mb-3">
+              {isSpanish ? 'ADAPTACIÓN POR CICLO MENSTRUAL' : 'MENSTRUAL CYCLE ADAPTATION'}
+            </span>
+            <T.H2 className="text-4xl font-extrabold text-white tracking-tight mb-6 leading-tight">
+              {isSpanish 
+                ? 'Tu plan sabe en qué fase estás' 
+                : 'Your plan knows your active phase'}
+            </T.H2>
+            <T.P className="text-gray-300 text-base leading-relaxed mb-8">
+              {isSpanish 
+                ? 'Tu energía cambia con tu ciclo, y tu plan debería saberlo. Desde el plan Essential, Fitnflai adapta la carga a tu fase hormonal — priorizando movilidad y trabajo ligero cuando tu cuerpo lo necesita. Un diferenciador que las apps genéricas ignoran por completo.' 
+                : 'Your energy levels change with your cycle, and your training plan should know it. Starting with our Essential plan, Fitnflai adapts your training load to your hormonal phase — prioritizing mobility and lighter workouts when your body needs them. A differentiator that generic apps completely ignore.'}
+            </T.P>
+          </div>
+
+          {/* Right Side: Mock Card */}
+          <div className="w-full lg:w-1/2 flex justify-center">
+            <div className="w-full max-w-[380px] bg-gradient-to-br from-[#141416]/80 to-pink-950/20 border border-pink-500/10 rounded-3xl p-8 flex flex-col text-left shadow-2xl relative overflow-hidden hover:border-pink-500/30 transition-all duration-300 hover:shadow-pink-950/10">
+              <span className="text-xs font-black text-orange-500 tracking-widest mb-1.5 block uppercase">
+                {isSpanish ? 'FASE LÚTEA' : 'LUTEAR PHASE'}
+              </span>
+              <h4 className="text-white font-extrabold text-lg mb-3 leading-tight">
+                {isSpanish ? 'Hoy priorizamos movilidad' : 'Today we prioritize mobility'}
+              </h4>
+              <p className="text-gray-400 text-sm leading-relaxed font-medium">
+                {isSpanish 
+                  ? 'Tu ciclo indica fase lútea. La energía suele bajar. Hoy trabajo ligero y movilidad — escucha a tu cuerpo. Retomamos intensidad cuando toque.' 
+                  : 'Your cycle indicates lutear phase. Energy levels are usually lower. Lighter work and mobility today — listen to your body. We will dial back up when the time is right.'}
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* Cada Ejercicio Explicado Section */}
+      <section className="py-24 bg-gray-950/70 text-white relative z-10 border-t border-gray-900" id="ejercicio-explicado">
+        <div className="container mx-auto px-6 max-w-5xl flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-16">
+          
+          {/* Left Side: Mock Exercise Card */}
+          <div className="w-full lg:w-1/2 flex justify-center order-2 lg:order-1">
+            <div className="w-full max-w-[380px] bg-gradient-to-br from-[#141416]/80 to-orange-950/15 border border-orange-500/10 rounded-3xl p-8 flex flex-col text-left shadow-2xl relative overflow-hidden hover:border-orange-500/30 transition-all duration-300 hover:shadow-orange-950/10">
+              <h4 className="text-white font-black text-2xl mb-6 leading-tight">
+                {isSpanish ? 'Puente de glúteo' : 'Glute bridge'}
+              </h4>
+              
+              <div className="mb-4">
+                <span className="text-xs font-black tracking-widest text-orange-500 block mb-1 uppercase">
+                  {isSpanish ? 'QUÉ TRABAJA' : 'WHAT IT WORKS'}
+                </span>
+                <p className="text-gray-300 text-sm leading-relaxed font-medium">
+                  {isSpanish 
+                    ? 'Glúteo y core, zona que tu evaluación mostró débil.' 
+                    : 'Glutes and core, an area your evaluation flagged as weak.'}
+                </p>
+              </div>
+
+              <div className="mb-4">
+                <span className="text-xs font-black tracking-widest text-orange-500 block mb-1 uppercase">
+                  {isSpanish ? 'POR QUÉ TE LO MANDAMOS' : 'WHY WE PRESCRIBED IT'}
+                </span>
+                <p className="text-gray-300 text-sm leading-relaxed font-medium">
+                  {isSpanish 
+                    ? 'Está conectada con la molestia que sientes al correr.' 
+                    : 'It is connected to the discomfort you experience when running.'}
+                </p>
+              </div>
+
+              <div>
+                <span className="text-xs font-black tracking-widest text-orange-500 block mb-1 uppercase">
+                  {isSpanish ? 'CÓMO HACERLO' : 'HOW TO DO IT'}
+                </span>
+                <p className="text-gray-300 text-sm leading-relaxed font-medium">
+                  {isSpanish 
+                    ? 'Espalda recta, sube controlado. Si sientes dolor, para.' 
+                    : 'Straight back, raise under control. If you feel pain, stop.'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Side: Content */}
+          <div className="w-full lg:w-1/2 text-left order-1 lg:order-2">
+            <span className="text-orange-500 text-xs font-black uppercase tracking-widest block mb-3">
+              {isSpanish ? 'CADA EJERCICIO, EXPLICADO' : 'EVERY EXERCISE EXPLAINED'}
+            </span>
+            <T.H2 className="text-4xl font-extrabold text-white tracking-tight mb-6 leading-tight">
+              {isSpanish ? 'Si no lo entiendes, no te sirve' : "If you don't understand it, it's useless"}
+            </T.H2>
+            <T.P className="text-gray-300 text-base leading-relaxed mb-8">
+              {isSpanish 
+                ? 'Nuestra promesa: si un ejercicio no se puede explicar, no debería mandarse. Cada movimiento viene con qué trabaja, por qué te lo mandamos y cómo hacerlo — en lenguaje que cualquiera entiende, sin importar tu nivel. Y si mostramos un indicador, también te decimos qué significa y qué hacer.' 
+                : 'Our promise: if an exercise cannot be explained, it shouldn\'t be prescribed. Every single movement details what it works on, why we prescribed it, and how to perform it — in language anyone can understand, regardless of experience. And if we show any metric, we tell you exactly what it means and how to act on it.'}
+            </T.P>
+
+            {/* Orange blockquote quote at bottom */}
+            <p className="text-lg lg:text-xl font-serif italic text-orange-500 font-extrabold leading-relaxed">
+              {isSpanish ? '"Por fin entiendo lo que hago y por qué lo hago."' : '"Finally I understand what I am doing and why I am doing it."'}
+            </p>
+          </div>
+
+        </div>
+      </section>
+
       {/* Interactive Calculator Section */}
       <TrainingCalculator onPortalEntry={handlePortalEntry} />
 
@@ -853,7 +1570,7 @@ export function LandingPage() {
               {(() => {
                 const currentProfile = athleticNutritionProfiles[activeProfileIndex];
                 return (
-                  <div className="space-y-6 text-left h-full flex flex-col justify-between">
+                  <div className="space-y-6 text-left h-full flex flex-col justify-center">
                     <div>
                       {/* Title & Image */}
                       <div className="flex items-center gap-4 mb-6">
@@ -915,25 +1632,7 @@ export function LandingPage() {
                       </div>
                     </div>
 
-                    {/* Fueling Strategy Grid */}
-                    <div className="grid grid-cols-1 gap-4 pt-4 border-t border-orange-500/30">
-                      <div className="bg-orange-900/30 rounded-xl p-4">
-                        <span className="text-[10px] uppercase font-black tracking-wider text-orange-300 block mb-1">
-                          {isSpanish ? 'Pre-Entrenamiento' : 'Pre-Workout'}
-                        </span>
-                        <p className="text-sm text-white leading-relaxed font-medium">
-                          {isSpanish ? currentProfile.preWorkoutRecommendation.es : currentProfile.preWorkoutRecommendation.en}
-                        </p>
-                      </div>
-                      <div className="bg-orange-900/30 rounded-xl p-4">
-                        <span className="text-[10px] uppercase font-black tracking-wider text-orange-300 block mb-1">
-                          {isSpanish ? 'Post-Entrenamiento' : 'Post-Workout'}
-                        </span>
-                        <p className="text-sm text-white leading-relaxed font-medium">
-                          {isSpanish ? currentProfile.postWorkoutRecommendation.es : currentProfile.postWorkoutRecommendation.en}
-                        </p>
-                      </div>
-                    </div>
+
                   </div>
                 );
               })()}
@@ -944,7 +1643,7 @@ export function LandingPage() {
               {(() => {
                 const currentProfile = athleticNutritionProfiles[activeProfileIndex];
                 return (
-                  <div className="flex flex-col justify-between h-full space-y-6">
+                  <div className="flex flex-col justify-center h-full space-y-6">
                     {/* Testimonial Quote */}
                     <div className="text-center flex-grow flex items-center justify-center">
                       <T.H3 className="text-2xl md:text-3xl font-serif italic text-white leading-relaxed">
@@ -1005,118 +1704,6 @@ export function LandingPage() {
               })()}
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Why Fitnflai Section (Image 1 High-Fidelity Watches & Dark Background) */}
-      <section className="py-24 bg-gray-950/70 text-white overflow-hidden border-t border-gray-900 relative z-10" id="funciones">
-        <div className="container mx-auto px-6 max-w-5xl flex flex-col md:flex-row items-center justify-between gap-12">
-          
-          {/* Left Side: Dynamic Image with Rounded Corners (no border, no container frame) */}
-          <div className="w-full md:w-1/2 flex items-center justify-center min-h-[420px] md:min-h-[500px] pr-0 md:pr-12">
-            <div className="w-[340px] h-[520px] md:w-[440px] md:h-[640px] flex items-center justify-center transform hover:scale-[1.02] transition-all duration-300 select-none">
-              <img 
-                src={
-                  activeWhy === 1 ? '/images/why_plans.png' :
-                  activeWhy === 2 ? '/images/why_sync.png' :
-                  activeWhy === 3 ? '/images/why_support.png' :
-                  '/images/why_strength.png'
-                } 
-                alt="Why Fitnflai Feature" 
-                className="max-w-full max-h-full object-contain transition-opacity duration-300 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
-                key={activeWhy}
-              />
-            </div>
-          </div>
-
-          {/* Right Side: Numbered List */}
-          <div className="w-full md:w-1/2 text-left">
-            <T.H2 className="text-4xl font-extrabold mb-8 text-white tracking-tight leading-tight">
-              {isSpanish ? '¿Por qué Fitnflai?' : 'Why Fitnflai?'}
-            </T.H2>
-            <ul className="space-y-6">
-              {/* Item 1 */}
-              <li 
-                onClick={() => setActiveWhy(1)}
-                className={`flex items-start gap-4 cursor-pointer transition-all duration-300 p-3 rounded-2xl ${activeWhy === 1 ? 'bg-orange-500/5 border border-orange-500/10 shadow-[0_4px_20px_rgba(232,98,42,0.05)]' : 'hover:bg-gray-900/20 border border-transparent'}`}
-              >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-1 transition-all duration-300 ${activeWhy === 1 ? 'bg-orange-500 border border-orange-500 text-white shadow-md shadow-orange-500/20' : 'border border-gray-700 text-gray-400'}`}>
-                  1
-                </div>
-                <div>
-                  <T.H3 className={`font-bold text-sm mb-1 transition-colors duration-300 ${activeWhy === 1 ? 'text-orange-500' : 'text-white'}`}>
-                    {isSpanish ? 'Planes de carrera personalizados sólo para ti' : 'Personalized training plans tailored just for you'}
-                  </T.H3>
-                  <T.P className="text-gray-400 text-xs leading-relaxed mt-1">
-                    {isSpanish 
-                      ? 'Nuestros planes de entrenamiento, los mejor valorados, están personalizados especialmente para ti con sesiones variadas y emocionantes creadas por el motor de Fitnflai.' 
-                      : 'Our highly-rated training plans are customized specifically for you with exciting, varied sessions created by the Fitnflai engine.'}
-                  </T.P>
-                </div>
-              </li>
-
-              {/* Item 2 */}
-              <li 
-                onClick={() => setActiveWhy(2)}
-                className={`flex items-start gap-4 cursor-pointer transition-all duration-300 p-3 rounded-2xl ${activeWhy === 2 ? 'bg-orange-500/5 border border-orange-500/10 shadow-[0_4px_20px_rgba(232,98,42,0.05)]' : 'hover:bg-gray-900/20 border border-transparent'}`}
-              >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-1 transition-all duration-300 ${activeWhy === 2 ? 'bg-orange-500 border border-orange-500 text-white shadow-md shadow-orange-500/20' : 'border border-gray-700 text-gray-400'}`}>
-                  2
-                </div>
-                <div>
-                  <T.H3 className={`font-bold text-sm mb-1 transition-colors duration-300 ${activeWhy === 2 ? 'text-orange-500' : 'text-white'}`}>
-                    {isSpanish ? 'Sincroniza con tus dispositivos favoritos' : 'Sync with your favorite devices'}
-                  </T.H3>
-                  <T.P className="text-gray-400 text-xs leading-relaxed mt-1">
-                    {isSpanish 
-                      ? 'Sigue todos tus entrenamientos en tiempo real en tus dispositivos mientras corres, pedaleas o nadas. Hasta te ayudaremos a establecer el ritmo adecuado.' 
-                      : 'Track all your workouts in real time on your devices as you run, cycle, or swim. We\'ll even help you set the correct target pace.'}
-                  </T.P>
-                </div>
-              </li>
-
-              {/* Item 3 */}
-              <li 
-                onClick={() => setActiveWhy(3)}
-                className={`flex items-start gap-4 cursor-pointer transition-all duration-300 p-3 rounded-2xl ${activeWhy === 3 ? 'bg-orange-500/5 border border-orange-500/10 shadow-[0_4px_20px_rgba(232,98,42,0.05)]' : 'hover:bg-gray-900/20 border border-transparent'}`}
-              >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-1 transition-all duration-300 ${activeWhy === 3 ? 'bg-orange-500 border border-orange-500 text-white shadow-md shadow-orange-500/20' : 'border border-gray-700 text-gray-400'}`}>
-                  3
-                </div>
-                <div>
-                  <T.H3 className={`font-bold text-sm mb-1 transition-colors duration-300 ${activeWhy === 3 ? 'text-orange-500' : 'text-white'}`}>
-                    {isSpanish ? 'Asistencia integral' : 'Holistic support'}
-                  </T.H3>
-                  <T.P className="text-gray-400 text-xs leading-relaxed mt-1">
-                    {isSpanish 
-                      ? 'Obtén asistencia integral para convertirte en un mejor atleta, tanto si necesitas consejos sobre tu técnica de carrera, consejos de nutrición o ejercicios específicos para la rodilla de corredor.' 
-                      : 'Get holistic support to become a better athlete, whether you need running form tips, nutrition guidance, or specific exercises for runner\'s knee injuries.'}
-                  </T.P>
-                </div>
-              </li>
-
-              {/* Item 4 */}
-              <li 
-                onClick={() => setActiveWhy(4)}
-                className={`flex items-start gap-4 cursor-pointer transition-all duration-300 p-3 rounded-2xl ${activeWhy === 4 ? 'bg-orange-500/5 border border-orange-500/10 shadow-[0_4px_20px_rgba(232,98,42,0.05)]' : 'hover:bg-gray-900/20 border border-transparent'}`}
-              >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-1 transition-all duration-300 ${activeWhy === 4 ? 'bg-orange-500 border border-orange-500 text-white shadow-md shadow-orange-500/20' : 'border border-gray-700 text-gray-400'}`}>
-                  4
-                </div>
-                <div>
-                  <T.H3 className={`font-bold text-sm mb-1 transition-colors duration-300 ${activeWhy === 4 ? 'text-orange-500' : 'text-white'}`}>
-                    {isSpanish ? 'Entrenamiento de fuerza y movilidad para atletas' : 'Strength & mobility training for athletes'}
-                  </T.H3>
-                  <T.P className="text-gray-400 text-xs leading-relaxed mt-1">
-                    {isSpanish 
-                      ? 'Complementa tu entrenamiento de resistencia con un programa personalizado de fuerza, acondicionamiento y movilidad que se adapte a tu plan de entrenamiento.' 
-                      : 'Complement your endurance training with a personalized strength, conditioning, and mobility program tailored to your active training calendar.'}
-                  </T.P>
-                </div>
-              </li>
-            </ul>
-          </div>
-
         </div>
       </section>
 
@@ -1470,182 +2057,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Team of Coaches Section (Image 9 High-Fidelity Design) */}
-      <section className="py-24 bg-gray-950/70 text-white relative z-10" id="coaches">
-        <div className="container mx-auto px-6 max-w-6xl">
-          {/* Centered Heading */}
-          <T.H2 className="text-4xl lg:text-5xl font-black text-center mb-16 leading-tight max-w-2xl mx-auto">
-            {isSpanish ? 'Te presentamos a tu equipo de coaches de primer nivel' : 'Meet your world-class coaching team'}
-          </T.H2>
 
-          {/* Carousel Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-            
-            {/* Coach 1: Adrian D'Costa (Highlighted/Active Card in Deep Slate Blue) */}
-            <div className="bg-[#141416] rounded-3xl p-8 shadow-xl flex flex-col justify-between border border-gray-800 transition-transform duration-300 hover:scale-[1.02]">
-              <div>
-                {/* Header Row */}
-                <div className="flex items-center gap-4 mb-6">
-                  {/* Photo Avatar */}
-                  <img
-                    src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&h=150&q=80"
-                    alt="Adrian D'Costa"
-                    className="w-20 h-20 rounded-full object-cover border-2 border-orange-500 shadow-md shrink-0"
-                  />
-                  <div>
-                    <span className="inline-block px-2.5 py-0.5 bg-orange-500/10 text-orange-400 rounded-full text-[9px] font-black uppercase tracking-wider mb-1">
-                      {isSpanish ? 'Kinesiólogo' : 'Physical Therapist'}
-                    </span>
-                    <T.H3 className="text-xl font-extrabold text-white leading-tight">Adrian D'Costa</T.H3>
-                    <T.P className="text-gray-400 text-xs mt-0.5">{isSpanish ? 'Fisioterapeuta Deportivo' : 'Sports Physiotherapist'}</T.P>
-                    
-                    {/* Social Link */}
-                    <div className="mt-1.5 flex items-center">
-                      <a href="#" className="text-gray-500 hover:text-orange-400 transition-colors">
-                        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2">
-                          <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-                          <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-                          <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
-                        </svg>
-                      </a>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Paragraph Intro */}
-                <T.P className="text-xs text-gray-300 leading-relaxed mb-6 font-medium">
-                  {isSpanish 
-                    ? 'Adrian es un fisioterapeuta experimentado y fundador de The Running Room, una clínica con sede en Londres dedicada a ayudar a los atletas a recuperarse, mantenerse fuertes y rendir al máximo.'
-                    : 'Adrian is an experienced sports therapist and founder of The Running Room, a clinic dedicated to helping athletes recover, stay strong and perform at their personal best.'}
-                </T.P>
-
-                {/* Numbered List */}
-                <ol className="space-y-3 text-xs text-gray-300 text-left border-t border-gray-800 pt-6">
-                  <li><span className="font-extrabold text-orange-400 mr-1.5">1.</span> {isSpanish ? 'Fundador de The Running Room, clínica enfocada en el rendimiento' : 'Founder of The Running Room clinic'}</li>
-                  <li><span className="font-extrabold text-orange-400 mr-1.5">2.</span> {isSpanish ? 'Especializado en dolor de cadera/ingle y lesiones de rodilla' : 'Specialized in hip and sports knee injuries'}</li>
-                  <li><span className="font-extrabold text-orange-400 mr-1.5">3.</span> {isSpanish ? 'Ha tratado a miles de corredores y atletas de múltiples deportes' : 'Treated thousands of runners and multi-sport athletes'}</li>
-                  <li><span className="font-extrabold text-orange-400 mr-1.5">4.</span> {isSpanish ? 'Apasionado del trail running y la salud de la comunidad' : 'Passionate about running and community health'}</li>
-                </ol>
-              </div>
-            </div>
-
-            {/* Coach 2: Fraser Briggs (Secondary Card) */}
-            <div className="bg-[#141416] rounded-3xl p-8 shadow-xl flex flex-col justify-between border border-gray-900 transition-transform duration-300 hover:scale-[1.02]">
-              <div>
-                {/* Header Row */}
-                <div className="flex items-center gap-4 mb-6">
-                  <img
-                    src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=150&h=150&q=80"
-                    alt="Fraser Briggs"
-                    className="w-20 h-20 rounded-full object-cover border-2 border-gray-800 shadow-md shrink-0"
-                  />
-                  <div>
-                    <span className="inline-block px-2.5 py-0.5 bg-gray-800 text-gray-300 rounded-full text-[9px] font-black uppercase tracking-wider mb-1">
-                      {isSpanish ? 'Estiramientos' : 'Stretch & Mobility'}
-                    </span>
-                    <T.H3 className="text-xl font-extrabold text-white leading-tight">Fraser Briggs</T.H3>
-                    <T.P className="text-gray-400 text-xs mt-0.5">{isSpanish ? 'Instructor de Movimiento' : 'Movement Instructor'}</T.P>
-                    
-                    <div className="mt-1.5 flex items-center">
-                      <a href="#" className="text-gray-500 hover:text-orange-400 transition-colors">
-                        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2">
-                          <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-                          <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-                          <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
-                        </svg>
-                      </a>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Paragraph Intro */}
-                <T.P className="text-xs text-gray-300 leading-relaxed mb-6 font-medium">
-                  {isSpanish
-                    ? 'Fraser es Entrenador de Movimiento con 6 años de experiencia ayudando a los atletas a moverse mejor, sentirse más fuertes y mantenerse sin lesiones. Su estilo combina movilidad y fuerza.'
-                    : 'Fraser is a Movement Coach with 6 years of experience helping athletes move better, feel stronger and stay injury free. His calm style blends strength and mobility.'}
-                </T.P>
-
-                {/* Numbered List */}
-                <ol className="space-y-3 text-xs text-gray-300 text-left border-t border-gray-850 pt-6">
-                  <li><span className="font-extrabold text-gray-500 mr-1.5">1.</span> {isSpanish ? 'Dirige sesiones de Estiramiento & Estabilidad postural' : 'Leads stretching & stability sessions'}</li>
-                  <li><span className="font-extrabold text-gray-500 mr-1.5">2.</span> {isSpanish ? 'Especializado en salud articular y prevención de lesiones' : 'Specialized in joint health and active prevention'}</li>
-                  <li><span className="font-extrabold text-gray-500 mr-1.5">3.</span> {isSpanish ? 'Experto en calistenia, peso corporal y yoga funcional' : 'Expert in calisthenics and functional flow'}</li>
-                  <li><span className="font-extrabold text-gray-500 mr-1.5">4.</span> {isSpanish ? 'Ex DJ trotamundos convertido en guía de respiración' : 'World-traveler DJ turned mobility guide'}</li>
-                </ol>
-              </div>
-            </div>
-
-            {/* Coach 3: Christie (Translucent Secondary Card) */}
-            <div className="bg-[#141416] rounded-3xl p-8 shadow-xl flex flex-col justify-between border border-gray-900 transition-all duration-300 opacity-60 hover:opacity-100 hover:scale-[1.02] hidden lg:flex">
-              <div>
-                {/* Header Row */}
-                <div className="flex items-center gap-4 mb-6">
-                  <img
-                    src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&h=150&q=80"
-                    alt="Christie"
-                    className="w-20 h-20 rounded-full object-cover border-2 border-gray-800 shadow-md shrink-0"
-                  />
-                  <div>
-                    <span className="inline-block px-2.5 py-0.5 bg-gray-800 text-gray-300 rounded-full text-[9px] font-black uppercase tracking-wider mb-1">
-                      {isSpanish ? 'Pilates' : 'Pilates Coach'}
-                    </span>
-                    <T.H3 className="text-xl font-extrabold text-white leading-tight">Christie</T.H3>
-                    <T.P className="text-gray-400 text-xs mt-0.5">{isSpanish ? 'Instructora de Postura' : 'Core & Posture Instructor'}</T.P>
-                    
-                    <div className="mt-1.5 flex items-center">
-                      <a href="#" className="text-gray-500 hover:text-orange-400 transition-colors">
-                        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2">
-                          <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-                          <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-                          <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
-                        </svg>
-                      </a>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Paragraph Intro */}
-                <T.P className="text-xs text-gray-300 leading-relaxed mb-6 font-medium">
-                  {isSpanish
-                    ? 'Christie es instructora de Pilates clásico con 8 años de experiencia. Trabaja con atletas de fondo para optimizar la estabilidad de la postura y la eficiencia respiratoria.'
-                    : 'Christie is a classical Pilates instructor with 8 years of experience. She works with endurance athletes to optimize core stability and breathing efficiency.'}
-                </T.P>
-
-                {/* Numbered List */}
-                <ol className="space-y-3 text-xs text-gray-300 text-left border-t border-gray-850 pt-6">
-                  <li><span className="font-extrabold text-gray-500 mr-1.5">1.</span> {isSpanish ? 'Certificada en Pilates y reeducación corporal' : 'Certified in Pilates and posture alignment'}</li>
-                  <li><span className="font-extrabold text-gray-500 mr-1.5">2.</span> {isSpanish ? 'Ha entrenado a atletas olímpicos y fondistas de élite' : 'Trained Olympic and elite endurance athletes'}</li>
-                  <li><span className="font-extrabold text-gray-500 mr-1.5">3.</span> {isSpanish ? 'Especialista en movilidad lumbar y pélvica' : 'Endurance posture and pelvis specialist'}</li>
-                  <li><span className="font-extrabold text-gray-500 mr-1.5">4.</span> {isSpanish ? 'Apasionada del ciclismo, el senderismo y el Pilates' : 'Loves cycling, trail hiking, and active stretching'}</li>
-                </ol>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Carousel Controls Bottom (Image 2 style) */}
-          <div className="flex flex-row justify-between items-center max-w-6xl mx-auto px-4 mt-8">
-            {/* Dots Indicator (Left-aligned under Coach 1) */}
-            <div className="flex items-center space-x-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-md"></span>
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((dot) => (
-                <span key={dot} className="w-1.5 h-1.5 rounded-full bg-gray-700"></span>
-              ))}
-            </div>
-
-            {/* Carousel Arrows (Right-aligned under Coach 2) */}
-            <div className="flex items-center space-x-3">
-              <button className="w-10 h-10 rounded-full border border-gray-800 bg-gray-900/60 hover:bg-gray-800 text-gray-400 hover:text-white flex items-center justify-center transition-all">
-                <IconChevronLeft size={20} />
-              </button>
-              <button className="w-10 h-10 rounded-full border border-gray-800 bg-gray-900/60 hover:bg-gray-800 text-gray-400 hover:text-white flex items-center justify-center transition-all">
-                <IconChevronRight size={20} />
-              </button>
-            </div>
-          </div>
-
-        </div>
-      </section>
 
       {/* FAQs Section (Image 2 Minimalist Accordion Layout & Dark Background) */}
       <section className="py-24 bg-gray-950/70 text-white relative z-10" id="soporte">

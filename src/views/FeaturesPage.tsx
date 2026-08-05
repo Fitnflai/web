@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/store/useAppStore'
 import { useTranslation } from '@/i18n/useTranslation'
@@ -75,6 +75,15 @@ export function FeaturesPage() {
 
   // Active story slide in carousel (Image 1 / Image 2)
   const [activeStory, setActiveStory] = useState<number>(0)
+  const [activeWhy, setActiveWhy] = useState<1 | 2 | 3 | 4>(1)
+
+  // Autoplay "¿Por qué Fitnflai?" carousel (5 seconds interval, restarts on activeWhy change)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveWhy((prev) => (prev === 4 ? 1 : (prev + 1) as 1 | 2 | 3 | 4))
+    }, 5000)
+    return () => clearInterval(timer)
+  }, [activeWhy])
 
   const successStories = [
     {
@@ -476,6 +485,118 @@ export function FeaturesPage() {
           </section>
 
         </div>
+
+        {/* Why Fitnflai Section (Image 1 High-Fidelity Watches & Dark Background) */}
+        <section className="py-24 bg-gray-950/70 text-white overflow-hidden border-t border-gray-900 relative z-10 max-w-5xl mx-auto rounded-3xl mb-16" id="por-que-fitnflai">
+          <div className="container mx-auto px-6 max-w-5xl flex flex-col md:flex-row items-center justify-between gap-12">
+            
+            {/* Left Side: Dynamic Image with Rounded Corners (no border, no container frame) */}
+            <div className="w-full md:w-1/2 flex items-center justify-center min-h-[420px] md:min-h-[500px] pr-0 md:pr-12">
+              <div className="w-[340px] h-[520px] md:w-[440px] md:h-[640px] flex items-center justify-center transform hover:scale-[1.02] transition-all duration-300 select-none">
+                <img 
+                  src={
+                    activeWhy === 1 ? '/images/why_plans.png' :
+                    activeWhy === 2 ? '/images/why_sync.png' :
+                    activeWhy === 3 ? '/images/why_support.png' :
+                    '/images/why_strength.png'
+                  } 
+                  alt="Why Fitnflai Feature" 
+                  className="max-w-full max-h-full object-contain transition-opacity duration-300 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
+                  key={activeWhy}
+                />
+              </div>
+            </div>
+
+            {/* Right Side: Numbered List */}
+            <div className="w-full md:w-1/2 text-left">
+              <T.H2 className="text-4xl font-extrabold mb-8 text-white tracking-tight leading-tight">
+                {isSpanish ? '¿Por qué Fitnflai?' : 'Why Fitnflai?'}
+              </T.H2>
+              <ul className="space-y-6">
+                {/* Item 1 */}
+                <li 
+                  onClick={() => setActiveWhy(1)}
+                  className={`flex items-start gap-4 cursor-pointer transition-all duration-300 p-3 rounded-2xl ${activeWhy === 1 ? 'bg-orange-500/5 border border-orange-500/10 shadow-[0_4px_20px_rgba(232,98,42,0.05)]' : 'hover:bg-gray-900/20 border border-transparent'}`}
+                >
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-1 transition-all duration-300 ${activeWhy === 1 ? 'bg-orange-500 border border-orange-500 text-white shadow-md shadow-orange-500/20' : 'border border-gray-700 text-gray-400'}`}>
+                    1
+                  </div>
+                  <div>
+                    <T.H3 className={`font-bold text-sm mb-1 transition-colors duration-300 ${activeWhy === 1 ? 'text-orange-500' : 'text-white'}`}>
+                      {isSpanish ? 'Planes de carrera personalizados sólo para ti' : 'Personalized training plans tailored just for you'}
+                    </T.H3>
+                    <T.P className="text-gray-400 text-sm leading-relaxed mt-1">
+                      {isSpanish 
+                        ? 'Nuestros planes de entrenamiento, los mejor valorados, están personalizados especialmente para ti con sesiones variadas y emocionantes creadas por el motor de Fitnflai.' 
+                        : 'Our highly-rated training plans are customized specifically for you with exciting, varied sessions created by the Fitnflai engine.'}
+                    </T.P>
+                  </div>
+                </li>
+
+                {/* Item 2 */}
+                <li 
+                  onClick={() => setActiveWhy(2)}
+                  className={`flex items-start gap-4 cursor-pointer transition-all duration-300 p-3 rounded-2xl ${activeWhy === 2 ? 'bg-orange-500/5 border border-orange-500/10 shadow-[0_4px_20px_rgba(232,98,42,0.05)]' : 'hover:bg-gray-900/20 border border-transparent'}`}
+                >
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-1 transition-all duration-300 ${activeWhy === 2 ? 'bg-orange-500 border border-orange-500 text-white shadow-md shadow-orange-500/20' : 'border border-gray-700 text-gray-400'}`}>
+                    2
+                  </div>
+                  <div>
+                    <T.H3 className={`font-bold text-sm mb-1 transition-colors duration-300 ${activeWhy === 2 ? 'text-orange-500' : 'text-white'}`}>
+                      {isSpanish ? 'Sincroniza con tus dispositivos favoritos' : 'Sync with your favorite devices'}
+                    </T.H3>
+                    <T.P className="text-gray-400 text-sm leading-relaxed mt-1">
+                      {isSpanish 
+                        ? 'Sigue todos tus entrenamientos en tiempo real en tus dispositivos mientras corres, pedaleas o nadas. Hasta te ayudaremos a establecer el ritmo adecuado.' 
+                        : 'Track all your workouts in real time on your devices as you run, cycle, or swim. We\'ll even help you set the correct target pace.'}
+                    </T.P>
+                  </div>
+                </li>
+
+                {/* Item 3 */}
+                <li 
+                  onClick={() => setActiveWhy(3)}
+                  className={`flex items-start gap-4 cursor-pointer transition-all duration-300 p-3 rounded-2xl ${activeWhy === 3 ? 'bg-orange-500/5 border border-orange-500/10 shadow-[0_4px_20px_rgba(232,98,42,0.05)]' : 'hover:bg-gray-900/20 border border-transparent'}`}
+                >
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-1 transition-all duration-300 ${activeWhy === 3 ? 'bg-orange-500 border border-orange-500 text-white shadow-md shadow-orange-500/20' : 'border border-gray-700 text-gray-400'}`}>
+                    3
+                  </div>
+                  <div>
+                    <T.H3 className={`font-bold text-sm mb-1 transition-colors duration-300 ${activeWhy === 3 ? 'text-orange-500' : 'text-white'}`}>
+                      {isSpanish ? 'Asistencia integral' : 'Holistic support'}
+                    </T.H3>
+                    <T.P className="text-gray-400 text-sm leading-relaxed mt-1">
+                      {isSpanish 
+                        ? 'Obtén asistencia integral para convertirte en un mejor atleta, tanto si necesitas consejos sobre tu técnica de carrera, consejos de nutrición o ejercicios específicos para la rodilla de corredor.' 
+                        : 'Get holistic support to become a better athlete, whether you need running form tips, nutrition guidance, or specific exercises for runner\'s knee injuries.'}
+                    </T.P>
+                  </div>
+                </li>
+
+                {/* Item 4 */}
+                <li 
+                  onClick={() => setActiveWhy(4)}
+                  className={`flex items-start gap-4 cursor-pointer transition-all duration-300 p-3 rounded-2xl ${activeWhy === 4 ? 'bg-orange-500/5 border border-orange-500/10 shadow-[0_4px_20px_rgba(232,98,42,0.05)]' : 'hover:bg-gray-900/20 border border-transparent'}`}
+                >
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-1 transition-all duration-300 ${activeWhy === 4 ? 'bg-orange-500 border border-orange-500 text-white shadow-md shadow-orange-500/20' : 'border border-gray-700 text-gray-400'}`}>
+                    4
+                  </div>
+                  <div>
+                    <T.H3 className={`font-bold text-sm mb-1 transition-colors duration-300 ${activeWhy === 4 ? 'text-orange-500' : 'text-white'}`}>
+                      {isSpanish ? 'Entrenamiento de fuerza y movilidad para atletas' : 'Strength & mobility training for athletes'}
+                    </T.H3>
+                    <T.P className="text-gray-400 text-sm leading-relaxed mt-1">
+                      {isSpanish 
+                        ? 'Complementa tu entrenamiento de resistencia con un programa personalizado de fuerza, acondicionamiento y movilidad que se adapte a tu plan de entrenamiento.' 
+                        : 'Complement your endurance training with a personalized strength, conditioning, and mobility program tailored to your active training calendar.'}
+                    </T.P>
+                  </div>
+                </li>
+              </ul>
+            </div>
+
+          </div>
+        </section>
 
 
         {/* "Cómo funciona" (How it works) Steps Section (Image 2 style) */}
