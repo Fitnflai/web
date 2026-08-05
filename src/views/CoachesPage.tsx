@@ -65,6 +65,7 @@ export function CoachesPage() {
   const [isPlanesDropdownOpen, setIsPlanesDropdownOpen] = useState(false)
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false)
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const isSpanish = language === 'ES'
 
@@ -219,7 +220,7 @@ export function CoachesPage() {
             <button onClick={() => navigate('/#soporte')} className="text-gray-300 hover:text-orange-400 transition duration-300 font-semibold">{t('landing.header.support')}</button>
           </div>
 
-          {/* Language Selector Dropdown */}
+          {/* Language Selector Dropdown & Mobile Toggle */}
           <div className="flex items-center space-x-4">
             <div className="relative">
               <button
@@ -253,8 +254,95 @@ export function CoachesPage() {
                 </div>
               )}
             </div>
+
+            {/* Mobile Menu Toggle Button */}
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden text-gray-300 hover:text-orange-400 focus:outline-none p-1 cursor-pointer transition-colors"
+              aria-label="Toggle Menu"
+            >
+              {isMobileMenuOpen ? (
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16m-7 6h7" />
+                </svg>
+              )}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Navigation Menu Dropdown */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden bg-gray-900 border-t border-gray-800 px-6 py-4 space-y-4 shadow-2xl transition-all duration-300">
+            {/* Planes Sub-Menu */}
+            <div className="space-y-2">
+              <div className="font-extrabold text-xs uppercase tracking-wider text-orange-500 mb-1">
+                {t('landing.header.plans')}
+              </div>
+              <div className="grid grid-cols-2 gap-2 pl-2">
+                {[
+                  { id: 'trail-running', label: isSpanish ? 'Trail running' : 'Trail Running' },
+                  { id: 'ciclismo-de-ruta', label: isSpanish ? 'Ciclismo de ruta' : 'Road Cycling' },
+                  { id: 'mtb', label: isSpanish ? 'MTB (Ciclismo de montaña)' : 'MTB (Mountain Cycling)' },
+                  { id: 'triatlon', label: isSpanish ? 'Triatlón' : 'Triathlon' },
+                  { id: 'senderismo', label: isSpanish ? 'Senderismo' : 'Hiking & Trekking' },
+                  { id: 'entrenamiento-funcional', label: isSpanish ? 'Entrenamiento funcional' : 'Functional Training' },
+                ].map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      setIsMobileMenuOpen(false)
+                      navigate(`/planes/${p.id}`)
+                    }}
+                    className="text-left text-xs font-semibold text-gray-300 hover:text-orange-400 py-1 transition cursor-pointer"
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <hr className="border-gray-800" />
+            <button 
+              onClick={() => {
+                setIsMobileMenuOpen(false)
+                navigate('/precios')
+              }}
+              className="block w-full text-left font-semibold text-sm text-gray-300 hover:text-orange-400 py-2 transition cursor-pointer"
+            >
+              {t('landing.header.pricing')}
+            </button>
+            <button 
+              onClick={() => {
+                setIsMobileMenuOpen(false)
+                navigate('/caracteristicas')
+              }}
+              className="block w-full text-left font-semibold text-sm text-gray-300 hover:text-orange-400 py-2 transition cursor-pointer"
+            >
+              {t('landing.header.features')}
+            </button>
+            <button 
+              onClick={() => {
+                setIsMobileMenuOpen(false)
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}
+              className="block w-full text-left font-semibold text-sm text-orange-400 py-2 transition cursor-pointer"
+            >
+              {t('landing.header.coaches')}
+            </button>
+            <button 
+              onClick={() => {
+                setIsMobileMenuOpen(false)
+                navigate('/#soporte')
+              }}
+              className="block w-full text-left font-semibold text-sm text-gray-300 hover:text-orange-400 py-2 transition cursor-pointer"
+            >
+              {t('landing.header.support')}
+            </button>
+          </div>
+        )}
       </nav>
 
       {/* Main Container */}
@@ -277,7 +365,7 @@ export function CoachesPage() {
             {isSpanish ? 'Comenzar prueba gratuita' : 'Start free trial'}
           </button>
           <T.P className="text-xs text-gray-500 font-bold uppercase">
-            {isSpanish ? 'Primera semana gratis. Cancela cuando quieras.' : 'First week free. Cancel anytime.'}
+            {isSpanish ? 'Prueba gratuita de 21 días. Cancela cuando quieras.' : '21-day free trial. Cancel anytime.'}
           </T.P>
         </section>
 

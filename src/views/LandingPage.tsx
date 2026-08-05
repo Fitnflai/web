@@ -43,55 +43,131 @@ function TrainingCalculator({ onPortalEntry }: { onPortalEntry: (role: 'admin' |
   const { language } = useAppStore()
   const isSpanish = language === 'ES'
 
-  const [level, setLevel] = useState<'beginner' | 'intermediate' | 'advanced' | 'elite'>('intermediate')
-  const [distance, setDistance] = useState<'5k' | '10k' | 'half' | 'marathon'>('half')
-  const [weeks, setWeeks] = useState<8 | 10 | 12>(10)
+  const [activeDiscipline, setActiveDiscipline] = useState<'running' | 'cycling' | 'triathlon' | 'hiking' | 'functional'>('running')
 
-  // Dynamic predicted times based on selections (resembling image times)
-  const predictTime = () => {
-    if (distance === '5k') {
-      if (level === 'beginner') return '26:45 - 28:15'
-      if (level === 'intermediate') return '22:30 - 23:45'
-      if (level === 'advanced') return '18:15 - 19:30'
-      return '15:45 - 16:30'
+  const disciplinesContent = {
+    running: {
+      title: isSpanish ? 'Genera tu plan de entrenamiento de Running' : 'Generate your Running training plan',
+      desc: isSpanish 
+        ? '¿Quieres saber qué logros puedes alcanzar con un plan de Fitnflai? Genera tu plan de entrenamiento dinámico y descúbrelo.' 
+        : 'Want to know what milestones you can achieve with a Fitnflai plan? Generate your dynamic training plan and find out.',
+      step1: isSpanish 
+        ? 'Cuéntanos un poco sobre ti, como tu nivel actual de running y la distancia para la que te estás preparando' 
+        : 'Tell us a bit about yourself, like your current training level and your target distance',
+      step2: isSpanish 
+        ? 'Dinos cuánto estás dispuesto a entrenar, desde la duración del plan hasta los días de entrenamiento a la semana' 
+        : 'Tell us how much you are willing to train, from plan duration to weekly training schedule',
+      step3: isSpanish 
+        ? 'Te daremos tu plan con los ritmos y entrenamientos ideales para tu carrera. Empecemos...' 
+        : 'We will give you your plan with the ideal paces and workouts for your race. Let\'s begin...',
+      btn: isSpanish ? 'Generar mi Plan' : 'Generate my Plan'
+    },
+    cycling: {
+      title: isSpanish ? 'Genera tus entrenamientos de Ciclismo' : 'Generate your Cycling workouts',
+      desc: isSpanish 
+        ? '¿Quieres optimizar tu potencia o terminar tu primer gran fondo en bicicleta? Obtén tu plan de entrenamiento adaptativo de ciclismo.' 
+        : 'Want to optimize your power output or finish your first cycling gran fondo? Get your custom adaptive cycling training plan.',
+      step1: isSpanish 
+        ? 'Cuéntanos sobre tu nivel, potencia estimada (FTP) y los recorridos de ruta o montaña que quieres conquistar' 
+        : 'Tell us about your level, estimated power output (FTP), and the road or mountain routes you want to dominate',
+      step2: isSpanish 
+        ? 'Elige tus días disponibles de pedaleo a la semana y los entrenamientos cruzados de fuerza en el gimnasio' 
+        : 'Choose your available weekly riding days and cross-training strength sessions in the gym',
+      step3: isSpanish 
+        ? 'Te daremos tu rutina con vatios objetivo (W/Kg) y entrenamientos recomendados de rodaje. Empecemos...' 
+        : 'We will give you your routine with target power (W/Kg) and recommended training rides. Let\'s begin...',
+      btn: isSpanish ? 'Generar mis Entrenamientos' : 'Generate my Workouts'
+    },
+    triathlon: {
+      title: isSpanish ? 'Genera tu planificación de Triatlón' : 'Generate your Triathlon planning',
+      desc: isSpanish 
+        ? 'Combina natación, ciclismo y carrera a pie en una sola rutina inteligente que se ajusta a tu fatiga diaria.' 
+        : 'Combine swimming, cycling, and running into a single smart routine that automatically adjusts to your daily fatigue.',
+      step1: isSpanish 
+        ? 'Cuéntanos tus ritmos en el agua, potencia en bici y tiempos de carrera junto con tu distancia objetivo' 
+        : 'Tell us your swim paces, cycling power, and run times along with your target triathlon distance',
+      step2: isSpanish 
+        ? 'Ajusta tus sesiones de natación en piscina, rodajes en ruta y entrenamientos en transición (ladrillos)' 
+        : 'Fine-tune your pool swims, road rides, and weekly transitional brick training workouts',
+      step3: isSpanish 
+        ? 'Te daremos tu planificación con las horas semanales y ritmos óptimos de carrera. Empecemos...' 
+        : 'We will give you your plan with weekly hours distribution and optimal race-day pacing. Let\'s begin...',
+      btn: isSpanish ? 'Generar mi Plan de Triatlón' : 'Generate my Triathlon Plan'
+    },
+    hiking: {
+      title: isSpanish ? 'Genera tu entrenamiento de Senderismo' : 'Generate your Hiking training',
+      desc: isSpanish 
+        ? 'Acondiciona tu cuerpo para largas caminatas de montaña, desnivel acumulado y aclimatación de altitud.' 
+        : 'Bulletproof your body for long mountain hikes, elevation gain, and smart altitude acclimation.',
+      step1: isSpanish 
+        ? 'Cuéntanos el desnivel positivo de tu expedición y las horas estimadas de marcha continua en altura' 
+        : 'Tell us your expedition\'s vertical gain and estimated continuous hiking hours at high altitude',
+      step2: isSpanish 
+        ? 'Define tus sesiones de subida de escalones, caminatas con mochila cargada y fortalecimiento articular' 
+        : 'Define your step-up sessions, loaded backpack hikes, and joints-strengthening routines',
+      step3: isSpanish 
+        ? 'Te daremos tus entrenamientos con el ritmo de marcha recomendado (km/h) y el equipamiento ideal. Empecemos...' 
+        : 'We will give you your workouts with recommended hiking pace (km/h) and ideal equipment. Let\'s begin...',
+      btn: isSpanish ? 'Generar mi Ruta' : 'Generate my Route'
+    },
+    functional: {
+      title: isSpanish ? 'Genera tu rutina de Funcional y Fuerza' : 'Generate your Functional & Strength routine',
+      desc: isSpanish 
+        ? 'Aumenta tu fuerza máxima, estabilidad del CORE y rango de movimiento para prevenir lesiones en el deporte.' 
+        : 'Increase your peak strength, core stability, and range of motion to prevent injuries in sports.',
+      step1: isSpanish 
+        ? 'Elige tu objetivo principal: ganar fuerza máxima, hipertrofia muscular, resistencia metabólica o movilidad' 
+        : 'Choose your main goal: peak strength, muscle hypertrophy, metabolic endurance, or active mobility',
+      step2: isSpanish 
+        ? 'Configura tus días disponibles, elementos de entrenamiento y tus puntos de dolor para evitar lesiones' 
+        : 'Configure your available days, training equipment, and any joint pain areas to prevent injuries',
+      step3: isSpanish 
+        ? 'Te daremos tu volumen semanal de series recomendadas y el rango de intensidad óptimo. Empecemos...' 
+        : 'We will give you your recommended weekly set volume and optimal intensity ranges. Let\'s begin...',
+      btn: isSpanish ? 'Generar mi Rutina' : 'Design my Workout'
     }
-    if (distance === '10k') {
-      if (level === 'beginner') return '56:00 - 59:30'
-      if (level === 'intermediate') return '46:40 - 49:15'
-      if (level === 'advanced') return '38:15 - 40:00'
-      return '32:30 - 34:15'
-    }
-    if (distance === 'half') {
-      if (level === 'beginner') return '2:05:00 - 2:12:00'
-      if (level === 'intermediate') return '1:42:00 - 1:47:00'
-      if (level === 'advanced') return '1:24:00 - 1:28:00'
-      return '1:11:00 - 1:15:00'
-    }
-    // marathon
-    if (level === 'beginner') return '4:15:00 - 4:28:00'
-    if (level === 'intermediate') return '3:40:00 - 3:45:00' // matches screenshot!
-    if (level === 'advanced') return '2:58:00 - 3:05:00'
-    return '2:32:00 - 2:38:00'
   }
 
-  const distanceLabel = () => {
-    if (distance === '5k') return '5K'
-    if (distance === '10k') return '10K'
-    if (distance === 'half') return isSpanish ? 'Media Maratón' : 'Half Marathon'
-    return isSpanish ? 'Maratón' : 'Marathon'
-  }
+  const currentData = disciplinesContent[activeDiscipline]
 
   return (
     <section className="py-24 bg-gray-950/70 text-white relative z-10" id="calculadora">
       <div className="container mx-auto px-6 text-center">
+
+        {/* Discipline Selector Tabs */}
+        <div className="flex flex-wrap justify-center items-center gap-3 mb-12 max-w-4xl mx-auto px-4 select-none">
+          {[
+            { id: 'running', name: isSpanish ? 'Running / Trail' : 'Running & Trail', icon: IconRun, color: 'text-orange-500' },
+            { id: 'cycling', name: isSpanish ? 'Ciclismo (Ruta / MTB)' : 'Cycling (Road / MTB)', icon: IconBike, color: 'text-emerald-500' },
+            { id: 'triathlon', name: isSpanish ? 'Triatlón' : 'Triathlon', icon: IconSwimming, color: 'text-blue-500' },
+            { id: 'hiking', name: isSpanish ? 'Senderismo / Montaña' : 'Hiking & Mountain', icon: IconMountain, color: 'text-yellow-500' },
+            { id: 'functional', name: isSpanish ? 'Funcional / Fuerza' : 'Functional & Strength', icon: IconDeviceWatch, color: 'text-purple-500' },
+          ].map((tab) => {
+            const Icon = tab.icon
+            const isActive = activeDiscipline === tab.id
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveDiscipline(tab.id as any)}
+                className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-xs md:text-sm font-bold tracking-wide border cursor-pointer transition-all duration-300 ${
+                  isActive 
+                    ? 'bg-orange-500/10 border-orange-500 text-orange-500 shadow-[0_0_20px_rgba(234,88,12,0.15)] scale-105' 
+                    : 'bg-[#141416]/50 border-gray-800/80 text-gray-400 hover:border-gray-700 hover:text-white'
+                }`}
+              >
+                <Icon size={18} className={tab.color} />
+                <span>{tab.name}</span>
+              </button>
+            )
+          })}
+        </div>
+
         {/* Title & Subtitle */}
-        <T.H2 className="text-4xl lg:text-5xl font-extrabold text-white tracking-tight mb-4 max-w-2xl mx-auto leading-tight">
-          {isSpanish ? 'Supera tu mejor marca personal' : 'Beat your personal best'}
+        <T.H2 className="text-4xl lg:text-5xl font-extrabold text-white tracking-tight mb-4 max-w-3xl mx-auto leading-tight min-h-[96px] flex items-center justify-center">
+          {currentData.title}
         </T.H2>
-        <T.P className="text-lg text-gray-400 max-w-2xl mx-auto mb-16 leading-relaxed">
-          {isSpanish 
-            ? '¿Quieres saber de qué logros puedes alcanzar con un plan de Fitnflai? Usa nuestra calculadora de tiempo estimado de carrera y descúbrelo.' 
-            : 'Want to know what milestones you can achieve with a Fitnflai plan? Use our estimated race time calculator and discover it.'}
+        <T.P className="text-lg text-gray-400 max-w-3xl mx-auto mb-16 leading-relaxed min-h-[56px]">
+          {currentData.desc}
         </T.P>
 
         {/* 3 Phone Mockups Row */}
@@ -102,10 +178,8 @@ function TrainingCalculator({ onPortalEntry }: { onPortalEntry: (role: 'admin' |
             <div className="w-64 h-[440px] mb-6 flex items-center justify-center transform hover:scale-105 transition-transform duration-300 select-none">
               <img src="/images/mockup_01.png" alt="Unlock Your Potential" className="max-w-full max-h-full object-contain filter drop-shadow-[0_20px_40px_rgba(0,0,0,0.4)]" />
             </div>
-            <p className="text-sm font-semibold text-gray-400 mt-4 max-w-[240px] leading-relaxed">
-              {isSpanish 
-                ? 'Cuéntanos un poco sobre ti, como tu nivel actual de running y la distancia para la que te estás preparando' 
-                : 'Tell us a bit about yourself, like your current training level and your target distance'}
+            <p className="text-sm font-semibold text-gray-400 mt-4 max-w-[240px] leading-relaxed min-h-[48px]">
+              {currentData.step1}
             </p>
           </div>
 
@@ -114,10 +188,8 @@ function TrainingCalculator({ onPortalEntry }: { onPortalEntry: (role: 'admin' |
             <div className="w-64 h-[440px] mb-6 flex items-center justify-center transform hover:scale-105 transition-transform duration-300 select-none">
               <img src="/images/mockup_02.png" alt="Configura tu Disponibilidad" className="max-w-full max-h-full object-contain filter drop-shadow-[0_20px_40px_rgba(0,0,0,0.4)]" />
             </div>
-            <p className="text-sm font-semibold text-gray-400 mt-4 max-w-[240px] leading-relaxed">
-              {isSpanish 
-                ? 'Dinos cuánto estás dispuesto a trabajar, desde la duración del plan hasta los días de entrenamiento a la semana' 
-                : 'Tell us how much you are willing to work, from plan duration to weekly training schedule'}
+            <p className="text-sm font-semibold text-gray-400 mt-4 max-w-[240px] leading-relaxed min-h-[48px]">
+              {currentData.step2}
             </p>
           </div>
 
@@ -126,10 +198,8 @@ function TrainingCalculator({ onPortalEntry }: { onPortalEntry: (role: 'admin' |
             <div className="w-64 h-[440px] mb-6 flex items-center justify-center transform hover:scale-105 transition-transform duration-300 select-none">
               <img src="/images/mockup_03.png" alt="Dynamic Result" className="max-w-full max-h-full object-contain filter drop-shadow-[0_25px_40px_rgba(232,98,42,0.15)]" />
             </div>
-            <p className="text-sm font-semibold text-gray-400 mt-4 max-w-[240px] leading-relaxed">
-              {isSpanish 
-                ? 'Te daremos tu tiempo estimado para la carrera. Empecemos...' 
-                : 'We will give you your estimated race time. Let\'s begin...'}
+            <p className="text-sm font-semibold text-gray-400 mt-4 max-w-[240px] leading-relaxed min-h-[48px]">
+              {currentData.step3}
             </p>
           </div>
 
@@ -139,9 +209,9 @@ function TrainingCalculator({ onPortalEntry }: { onPortalEntry: (role: 'admin' |
         <div className="flex justify-center mt-6">
           <button
             onClick={() => onPortalEntry('admin')}
-            className="px-10 py-4 bg-[#ea580c] hover:bg-orange-600 text-white font-black text-xl rounded-xl transition duration-300 shadow-xl"
+            className="px-10 py-4 bg-[#ea580c] hover:bg-orange-600 text-white font-black text-xl rounded-xl transition duration-300 shadow-xl cursor-pointer"
           >
-            {isSpanish ? 'Batir tu RP' : 'Beat your PR'}
+            {currentData.btn}
           </button>
         </div>
 
@@ -285,6 +355,7 @@ export function LandingPage() {
   const [billingCycle, setBillingCycle] = useState<'annual' | 'monthly'>('annual')
   const [isPlanesDropdownOpen, setIsPlanesDropdownOpen] = useState(false)
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [activeBenefit, setActiveBenefit] = useState<1 | 2 | 3 | 4>(1)
   const [activeWhy, setActiveWhy] = useState<1 | 2 | 3 | 4>(1)
 
@@ -387,8 +458,8 @@ export function LandingPage() {
     {
       q: isSpanish ? '¿Cuánto cuesta Fitnflai?' : 'How much does Fitnflai cost?',
       a: isSpanish 
-        ? 'Ofrecemos tres planes flexibles adaptados a tus objetivos: Essential por $9.99/mes, Pro por $19.99/mes (nuestro plan más popular con nutrición) y Elite por $29.99/mes (con soporte clínico prioritario). ¡Tu primera semana es completamente gratis!'
-        : 'We offer three flexible plans: Essential for $9.99/mo, Pro for $19.99/mo (our most popular plan with nutrition coaching), and Elite for $29.99/mo (includes medical supervision). Your first week is completely free!'
+        ? 'Ofrecemos tres planes flexibles adaptados a tus objetivos: Essential por $9.99/mes, Pro por $19.99/mes (nuestro plan más popular con nutrición) y Elite por $29.99/mes (con soporte clínico prioritario). ¡Tu prueba de 21 días es completamente gratis!'
+        : 'We offer three flexible plans: Essential for $9.99/mo, Pro for $19.99/mo (our most popular plan with nutrition coaching), and Elite for $29.99/mo (includes medical supervision). Your 21-day trial is completely free!'
     },
     {
       q: isSpanish ? '¿Puedo regalar una suscripción de Fitnflai?' : 'Can I gift a Fitnflai membership?',
@@ -411,7 +482,7 @@ export function LandingPage() {
     {
       q: isSpanish ? '¿Puedo hablar con coaches reales o profesionales de salud?' : 'Can I speak with real coaches or health professionals?',
       a: isSpanish
-        ? '¡Exacto! A diferencia de otras apps básicas, en nuestros planes Pro y Elite contás con un canal de chat directo con deportólogos, fisioterapeutas y nutricionistas calificados para que tu progreso esté médicamente respaldado.'
+        ? '¡Exacto! A diferencia de otras apps básicas, en nuestros planes Pro y Elite cuentas con un canal de chat directo con deportólogos, fisioterapeutas y nutricionistas calificados para que tu progreso esté médicamente respaldado.'
         : 'Exactly! Unlike other basic apps, with our Pro and Elite plans, you have a direct chat channel with sports doctors, physiotherapists, and nutritionists.'
     }
   ];
@@ -509,7 +580,7 @@ export function LandingPage() {
             <button onClick={() => handleNavClick('soporte')} className="text-gray-300 hover:text-orange-400 transition duration-300 font-semibold">{t('landing.header.support')}</button>
           </div>
 
-          {/* Language Selector Dropdown */}
+          {/* Language Selector Dropdown & Mobile Toggle */}
           <div className="flex items-center space-x-4">
             <div className="relative">
               <button
@@ -543,8 +614,95 @@ export function LandingPage() {
                 </div>
               )}
             </div>
+
+            {/* Mobile Menu Toggle Button */}
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden text-gray-300 hover:text-orange-400 focus:outline-none p-1 cursor-pointer transition-colors"
+              aria-label="Toggle Menu"
+            >
+              {isMobileMenuOpen ? (
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16m-7 6h7" />
+                </svg>
+              )}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Navigation Menu Dropdown */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden bg-gray-900 border-t border-gray-800 px-6 py-4 space-y-4 shadow-2xl transition-all duration-300">
+            {/* Planes Sub-Menu */}
+            <div className="space-y-2">
+              <div className="font-extrabold text-xs uppercase tracking-wider text-orange-500 mb-1">
+                {t('landing.header.plans')}
+              </div>
+              <div className="grid grid-cols-2 gap-2 pl-2">
+                {[
+                  { id: 'trail-running', label: isSpanish ? 'Trail running' : 'Trail Running' },
+                  { id: 'ciclismo-de-ruta', label: isSpanish ? 'Ciclismo de ruta' : 'Road Cycling' },
+                  { id: 'mtb', label: isSpanish ? 'MTB (Ciclismo de montaña)' : 'MTB (Mountain Cycling)' },
+                  { id: 'triatlon', label: isSpanish ? 'Triatlón' : 'Triathlon' },
+                  { id: 'senderismo', label: isSpanish ? 'Senderismo' : 'Hiking & Trekking' },
+                  { id: 'entrenamiento-funcional', label: isSpanish ? 'Entrenamiento funcional' : 'Functional Training' },
+                ].map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      setIsMobileMenuOpen(false)
+                      navigate(`/planes/${p.id}`)
+                    }}
+                    className="text-left text-xs font-semibold text-gray-300 hover:text-orange-400 py-1 transition cursor-pointer"
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <hr className="border-gray-800" />
+            <button 
+              onClick={() => {
+                setIsMobileMenuOpen(false)
+                handlePricingClick()
+              }}
+              className="block w-full text-left font-semibold text-sm text-gray-300 hover:text-orange-400 py-2 transition cursor-pointer"
+            >
+              {t('landing.header.pricing')}
+            </button>
+            <button 
+              onClick={() => {
+                setIsMobileMenuOpen(false)
+                navigate('/caracteristicas')
+              }}
+              className="block w-full text-left font-semibold text-sm text-gray-300 hover:text-orange-400 py-2 transition cursor-pointer"
+            >
+              {t('landing.header.features')}
+            </button>
+            <button 
+              onClick={() => {
+                setIsMobileMenuOpen(false)
+                navigate('/coaches')
+              }}
+              className="block w-full text-left font-semibold text-sm text-gray-300 hover:text-orange-400 py-2 transition cursor-pointer"
+            >
+              {t('landing.header.coaches')}
+            </button>
+            <button 
+              onClick={() => {
+                setIsMobileMenuOpen(false)
+                handleNavClick('soporte')
+              }}
+              className="block w-full text-left font-semibold text-sm text-gray-300 hover:text-orange-400 py-2 transition cursor-pointer"
+            >
+              {t('landing.header.support')}
+            </button>
+          </div>
+        )}
       </nav>
 
       {/* Hero Section (Image 2 Centered Design) */}
@@ -575,7 +733,7 @@ export function LandingPage() {
               {isSpanish ? 'Comenzar prueba gratuita' : 'Start Free Trial'}
             </button>
             <T.P className="text-sm text-gray-400 font-medium">
-              {isSpanish ? 'Primera semana gratis. Cancela cuando quieras.' : 'First week free. Cancel anytime.'}
+              {isSpanish ? 'Prueba gratuita de 21 días. Cancela cuando quieras.' : '21-day free trial. Cancel anytime.'}
             </T.P>
           </div>
 
@@ -970,7 +1128,7 @@ export function LandingPage() {
             {isSpanish ? 'Encuentra un plan de entrenamiento que se adapte a ti.' : 'Find a training plan that adapts to you.'}
           </T.H2>
           <T.P className="text-2xl text-orange-500 font-extrabold mb-12">
-            {isSpanish ? 'Tu primera semana es gratis.' : 'Your first week is free.'}
+            {isSpanish ? 'Tu prueba de 21 días es gratis.' : 'Your 21-day trial is free.'}
           </T.P>
 
           {/* Relative wrapper for 3D Coverflow Carousel and Navigation Buttons */}
@@ -1175,8 +1333,8 @@ export function LandingPage() {
             </T.P>
             <T.P className="text-3xl font-extrabold text-white mb-8">
               {isSpanish 
-                ? 'Inicia tu plan hoy mismo por solo $9.99 por mes / $99.99 por año.' 
-                : 'Start your plan today for only $9.99 per month / $99.99 per year.'}
+                ? 'Inicia tu plan hoy mismo por solo $9.99 por mes / $101.90 por año.' 
+                : 'Start your plan today for only $9.99 per month / $101.90 per year.'}
             </T.P>
             <button
               onClick={() => navigate('/descargar')}
@@ -1185,7 +1343,7 @@ export function LandingPage() {
               {isSpanish ? 'Comenzar prueba gratuita' : 'Start Free Trial'}
             </button>
             <T.P className="text-sm text-gray-500 mt-4">
-              {isSpanish ? 'Primera semana gratis. Cancela cuando quieras.' : 'First week free. Cancel anytime.'}
+              {isSpanish ? 'Prueba gratuita de 21 días. Cancela cuando quieras.' : '21-day free trial. Cancel anytime.'}
             </T.P>
           </div>
         </div>

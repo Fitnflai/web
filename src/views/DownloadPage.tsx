@@ -123,14 +123,14 @@ export function DownloadPage() {
 
           {/* Title */}
           <T.H1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-none mb-6 max-w-3xl mx-auto">
-            {isSpanish ? 'Superá tus límites con la App' : 'Beat your limits with our App'}
+            {isSpanish ? 'Supera tus límites con la App' : 'Beat your limits with our App'}
           </T.H1>
 
           {/* Subtitle */}
           <div className="max-w-xl mx-auto mb-12">
             <T.P className="text-base sm:text-lg text-gray-400 leading-relaxed">
               {isSpanish 
-                ? 'Descargá la app de Fitnflai en tu teléfono celular para arrancar con tus planes de entrenamiento y nutrición personalizados.' 
+                ? 'Descarga la app de Fitnflai en tu teléfono celular para arrancar con tus planes de entrenamiento y nutrición personalizados.' 
                 : 'Download the Fitnflai app on your mobile phone to kickstart your personalized training and nutrition plans.'}
             </T.P>
             <T.P className="text-lg sm:text-xl text-white font-black mt-5 block uppercase tracking-wide">

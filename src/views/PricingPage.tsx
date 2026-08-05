@@ -64,6 +64,7 @@ export function PricingPage() {
   const [billingCycle, setBillingCycle] = useState<'annual' | 'monthly'>('annual')
   const [isPlanesDropdownOpen, setIsPlanesDropdownOpen] = useState(false)
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const isSpanish = language === 'ES'
 
@@ -165,7 +166,7 @@ export function PricingPage() {
             <button onClick={() => navigate('/#soporte')} className="text-gray-300 hover:text-orange-400 transition duration-300 font-semibold">{t('landing.header.support')}</button>
           </div>
 
-          {/* Language Selector Dropdown */}
+          {/* Language Selector Dropdown & Mobile Toggle */}
           <div className="flex items-center space-x-4">
             <div className="relative">
               <button
@@ -199,8 +200,95 @@ export function PricingPage() {
                 </div>
               )}
             </div>
+
+            {/* Mobile Menu Toggle Button */}
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden text-gray-300 hover:text-orange-400 focus:outline-none p-1 cursor-pointer transition-colors"
+              aria-label="Toggle Menu"
+            >
+              {isMobileMenuOpen ? (
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16m-7 6h7" />
+                </svg>
+              )}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Navigation Menu Dropdown */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden bg-gray-900 border-t border-gray-800 px-6 py-4 space-y-4 shadow-2xl transition-all duration-300">
+            {/* Planes Sub-Menu */}
+            <div className="space-y-2">
+              <div className="font-extrabold text-xs uppercase tracking-wider text-orange-500 mb-1">
+                {t('landing.header.plans')}
+              </div>
+              <div className="grid grid-cols-2 gap-2 pl-2">
+                {[
+                  { id: 'trail-running', label: isSpanish ? 'Trail running' : 'Trail Running' },
+                  { id: 'ciclismo-de-ruta', label: isSpanish ? 'Ciclismo de ruta' : 'Road Cycling' },
+                  { id: 'mtb', label: isSpanish ? 'MTB (Ciclismo de montaña)' : 'MTB (Mountain Cycling)' },
+                  { id: 'triatlon', label: isSpanish ? 'Triatlón' : 'Triathlon' },
+                  { id: 'senderismo', label: isSpanish ? 'Senderismo' : 'Hiking & Trekking' },
+                  { id: 'entrenamiento-funcional', label: isSpanish ? 'Entrenamiento funcional' : 'Functional Training' },
+                ].map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      setIsMobileMenuOpen(false)
+                      navigate(`/planes/${p.id}`)
+                    }}
+                    className="text-left text-xs font-semibold text-gray-300 hover:text-orange-400 py-1 transition cursor-pointer"
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <hr className="border-gray-800" />
+            <button 
+              onClick={() => {
+                setIsMobileMenuOpen(false)
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}
+              className="block w-full text-left font-semibold text-sm text-orange-400 py-2 transition cursor-pointer"
+            >
+              {t('landing.header.pricing')}
+            </button>
+            <button 
+              onClick={() => {
+                setIsMobileMenuOpen(false)
+                navigate('/caracteristicas')
+              }}
+              className="block w-full text-left font-semibold text-sm text-gray-300 hover:text-orange-400 py-2 transition cursor-pointer"
+            >
+              {t('landing.header.features')}
+            </button>
+            <button 
+              onClick={() => {
+                setIsMobileMenuOpen(false)
+                navigate('/coaches')
+              }}
+              className="block w-full text-left font-semibold text-sm text-gray-300 hover:text-orange-400 py-2 transition cursor-pointer"
+            >
+              {t('landing.header.coaches')}
+            </button>
+            <button 
+              onClick={() => {
+                setIsMobileMenuOpen(false)
+                navigate('/#soporte')
+              }}
+              className="block w-full text-left font-semibold text-sm text-gray-300 hover:text-orange-400 py-2 transition cursor-pointer"
+            >
+              {t('landing.header.support')}
+            </button>
+          </div>
+        )}
       </nav>
 
       {/* Main Container */}
@@ -220,7 +308,7 @@ export function PricingPage() {
             onClick={() => handlePortalEntry('admin')}
             className="px-8 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-black rounded-full transition duration-300 text-lg shadow-lg hover:scale-105"
           >
-            {isSpanish ? 'Join Now' : 'Join Now'}
+            {isSpanish ? 'Únete ahora' : 'Join Now'}
           </button>
         </section>
 
@@ -360,21 +448,20 @@ export function PricingPage() {
                 </span>
 
                 <ul className="space-y-3 text-xs text-gray-300 border-t border-gray-850 pt-6 mb-8">
-                  <li className="flex items-center">
-                    <IconCheck className="text-emerald-400 mr-2 flex-shrink-0" size={16} />
-                    <span>{isSpanish ? 'Plan personalizado por IA' : 'AI-personalized training plan'}</span>
+                  <li className="font-extrabold text-purple-400 uppercase tracking-wider text-[10px] mb-2">
+                    {isSpanish ? 'Todo lo de Essential, más:' : 'Everything in Essential, plus:'}
                   </li>
                   <li className="flex items-center">
                     <IconCheck className="text-emerald-400 mr-2 flex-shrink-0" size={16} />
-                    <span>{isSpanish ? 'Seguimiento de progreso' : 'Progress tracking metrics'}</span>
+                    <span>{isSpanish ? 'Planificación nutricional semanal' : 'Weekly personalized sport nutrition'}</span>
                   </li>
                   <li className="flex items-center">
                     <IconCheck className="text-emerald-400 mr-2 flex-shrink-0" size={16} />
-                    <span>{isSpanish ? 'Adaptación por altitud' : 'Smart altitude adaptation'}</span>
+                    <span>{isSpanish ? 'Seguimiento nutricional' : 'Personalized nutrition tracking'}</span>
                   </li>
                   <li className="flex items-center">
                     <IconCheck className="text-emerald-400 mr-2 flex-shrink-0" size={16} />
-                    <span>{isSpanish ? 'Registro de lesiones' : 'Injury logging and baseline'}</span>
+                    <span>{isSpanish ? 'Acceso anticipado a nuevas funciones' : 'Early access to new app features'}</span>
                   </li>
                 </ul>
               </div>
@@ -429,21 +516,20 @@ export function PricingPage() {
                 </span>
 
                 <ul className="space-y-3 text-xs text-gray-300 border-t border-gray-850 pt-6 mb-4">
-                  <li className="flex items-center">
-                    <IconCheck className="text-emerald-400 mr-2 flex-shrink-0" size={16} />
-                    <span>{isSpanish ? 'Plan personalizado por IA' : 'AI-personalized training plan'}</span>
+                  <li className="font-extrabold text-yellow-400 uppercase tracking-wider text-[10px] mb-2">
+                    {isSpanish ? 'Todo lo de Pro, más:' : 'Everything in Pro, plus:'}
                   </li>
                   <li className="flex items-center">
                     <IconCheck className="text-emerald-400 mr-2 flex-shrink-0" size={16} />
-                    <span>{isSpanish ? 'Seguimiento de progreso' : 'Progress tracking metrics'}</span>
+                    <span>{isSpanish ? 'Agenda citas con tu deportólogo' : 'Book appointments with your sports doctor'}</span>
                   </li>
                   <li className="flex items-center">
                     <IconCheck className="text-emerald-400 mr-2 flex-shrink-0" size={16} />
-                    <span>{isSpanish ? 'Adaptación por altitud' : 'Smart altitude adaptation'}</span>
+                    <span>{isSpanish ? 'Prioridad en análisis clínico y biométrico' : 'Priority clinical & biometric analysis'}</span>
                   </li>
                   <li className="flex items-center">
                     <IconCheck className="text-emerald-400 mr-2 flex-shrink-0" size={16} />
-                    <span>{isSpanish ? 'Registro de lesiones' : 'Injury logging and baseline'}</span>
+                    <span>{isSpanish ? 'Soporte VIP prioritario (< 2 horas)' : 'Priority VIP support (< 2 hours)'}</span>
                   </li>
                 </ul>
 
@@ -586,7 +672,7 @@ export function PricingPage() {
             onClick={() => handlePortalEntry('admin')}
             className="px-8 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-black rounded-full transition duration-300 text-lg shadow-lg hover:scale-105 mb-16"
           >
-            {isSpanish ? 'Join Now' : 'Join Now'}
+            {isSpanish ? 'Únete ahora' : 'Join Now'}
           </button>
 
           {/* 4 Steps Grid with Orange Icons */}
@@ -670,7 +756,7 @@ export function PricingPage() {
                 </button>
               </div>
               <T.P className="text-xs text-gray-500 font-bold uppercase mt-4">
-                {isSpanish ? 'Primera semana gratis. Cancela cuando quieras.' : 'First week free. Cancel anytime.'}
+                {isSpanish ? 'Prueba gratuita de 21 días. Cancela cuando quieras.' : '21-day free trial. Cancel anytime.'}
               </T.P>
             </div>
           </div>

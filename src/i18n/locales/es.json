@@ -15,7 +15,7 @@
   },
   "dashboard": {
     "welcome": "¡Hola, {name}!",
-    "subtitle": "Aquí tenés un resumen del rendimiento y control de hoy.",
+    "subtitle": "Aquí tienes un resumen del rendimiento y control de hoy.",
     "metrics": {
       "totalUsers": "Usuarios Totales",
       "activeToday": "Activos Hoy",
@@ -26,7 +26,7 @@
     },
     "todo": {
       "title": "Lista de Pendientes",
-      "noTasks": "¡Buen trabajo! No tenés acciones inmediatas prioritarias.",
+      "noTasks": "¡Buen trabajo! No tienes acciones inmediatas prioritarias.",
       "urgent": "Acción Urgente",
       "completed": "Completada"
     },
@@ -247,7 +247,7 @@
     }
   },
   "registerCoach": {
-    "title": "¿Sos un profesional de la salud o del deporte?",
+    "title": "¿Eres un profesional de la salud o del deporte?",
     "subtitle": "Únete a nuestro equipo de especialistas. Ofrece tus servicios personalizados a una comunidad de atletas motivados.",
     "ctaButton": "Únete como Especialista",
     "alreadyRegistered": "¿Ya eres un especialista?",
