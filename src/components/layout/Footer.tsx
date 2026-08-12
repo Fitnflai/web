@@ -7,16 +7,11 @@ import { IconBrandFacebook, IconBrandX, IconBrandInstagram, IconBrandTiktok, Ico
 export function Footer() {
   const navigate = useNavigate()
   const { language } = useAppStore()
-  const { t } = useTranslation()
   const isSpanish = language === 'ES'
-
-  const handlePortalEntry = (role: 'admin' | 'specialist') => {
-    navigate('/login')
-  }
 
   return (
     <footer className="bg-gray-950/70 text-gray-500 py-16 border-t border-gray-900 relative z-10">
-      <div className="container mx-auto px-6 grid grid-cols-1 lg:grid-cols-3 items-center lg:items-end gap-12 lg:gap-0">
+      <div className="container mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 items-center lg:items-end gap-12 lg:gap-0">
         {/* Left Column (Logo & Socials) */}
         <div className="flex flex-col items-center lg:items-start text-center lg:text-left gap-6">
           {/* Logo */}
@@ -48,12 +43,12 @@ export function Footer() {
           </div>
         </div>
 
-        {/* Middle Column (Copyright & Legal links centered) */}
-        <div className="flex flex-col items-center text-center gap-2">
+        {/* Right Column (Copyright & Legal links aligned right on desktop) */}
+        <div className="flex flex-col items-center lg:items-end text-center lg:text-right gap-2">
           <T.P className="text-sm text-gray-500">
             {isSpanish ? '© 2026 Fitnflai. Todos los derechos reservados.' : '© 2026 Fitnflai. All rights reserved.'}
           </T.P>
-          <div className="flex flex-wrap justify-center gap-4 lg:gap-6 text-sm">
+          <div className="flex flex-wrap justify-center lg:justify-end gap-4 lg:gap-6 text-sm">
             <button
               onClick={() => navigate('/terminos-condiciones')}
               className="text-gray-400 hover:text-orange-400 transition cursor-pointer font-semibold"
@@ -67,16 +62,6 @@ export function Footer() {
               {isSpanish ? 'Política de Privacidad' : 'Privacy Policy'}
             </button>
           </div>
-        </div>
-
-        {/* Right Column (Specialist Access - Aligned Bottom-Right on Desktop) */}
-        <div className="flex flex-col items-center lg:items-end justify-end">
-          <button
-            onClick={() => handlePortalEntry('specialist')}
-            className="px-5 py-2.5 rounded-xl border border-gray-800 bg-gray-900/40 hover:bg-gray-800/60 text-gray-300 hover:text-orange-400 transition-all duration-300 cursor-pointer font-semibold text-sm shadow-md"
-          >
-            {isSpanish ? 'Acceso Especialistas' : 'Specialist Portal'}
-          </button>
         </div>
       </div>
     </footer>

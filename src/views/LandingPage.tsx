@@ -328,8 +328,12 @@ function TrainingCalculator({ onPortalEntry }: { onPortalEntry: (role: 'admin' |
           
           {/* Phone 1: Unlock Your Potential */}
           <div className="flex flex-col items-center">
-            <div className="w-64 h-[440px] mb-6 flex items-center justify-center transform hover:scale-105 transition-transform duration-300 select-none">
-              <img src="/images/mockup_01.png" alt="Unlock Your Potential" className="max-w-full max-h-full object-contain filter drop-shadow-[0_20px_40px_rgba(0,0,0,0.4)]" />
+            <div className="w-64 h-[550px] mb-6 relative bg-gray-950 rounded-[2.2rem] border-[8px] border-neutral-800 shadow-2xl overflow-hidden flex items-center justify-center select-none transform hover:scale-105 transition-transform duration-300">
+              {/* Notch */}
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 w-16 h-3.5 bg-black rounded-full z-40 flex items-center justify-center">
+                <div className="w-1.5 h-1.5 bg-neutral-900 rounded-full"></div>
+              </div>
+              <img src="/images/mockup_01.jpeg" alt="Unlock Your Potential" className="w-full h-full object-cover rounded-[1.6rem]" />
             </div>
             <p className="text-sm font-semibold text-gray-400 mt-4 max-w-[240px] leading-relaxed min-h-[48px]">
               {currentData.step1}
@@ -338,8 +342,12 @@ function TrainingCalculator({ onPortalEntry }: { onPortalEntry: (role: 'admin' |
 
           {/* Phone 2: Details & Schedule */}
           <div className="flex flex-col items-center">
-            <div className="w-64 h-[440px] mb-6 flex items-center justify-center transform hover:scale-105 transition-transform duration-300 select-none">
-              <img src="/images/mockup_02.png" alt="Configura tu Disponibilidad" className="max-w-full max-h-full object-contain filter drop-shadow-[0_20px_40px_rgba(0,0,0,0.4)]" />
+            <div className="w-64 h-[550px] mb-6 relative bg-gray-950 rounded-[2.2rem] border-[8px] border-neutral-800 shadow-2xl overflow-hidden flex items-center justify-center select-none transform hover:scale-105 transition-transform duration-300">
+              {/* Notch */}
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 w-16 h-3.5 bg-black rounded-full z-40 flex items-center justify-center">
+                <div className="w-1.5 h-1.5 bg-neutral-900 rounded-full"></div>
+              </div>
+              <img src="/images/mockup_02.jpeg" alt="Configura tu Disponibilidad" className="w-full h-full object-cover rounded-[1.6rem]" />
             </div>
             <p className="text-sm font-semibold text-gray-400 mt-4 max-w-[240px] leading-relaxed min-h-[48px]">
               {currentData.step2}
@@ -348,8 +356,12 @@ function TrainingCalculator({ onPortalEntry }: { onPortalEntry: (role: 'admin' |
 
           {/* Phone 3: Dynamic Result */}
           <div className="flex flex-col items-center">
-            <div className="w-64 h-[440px] mb-6 flex items-center justify-center transform hover:scale-105 transition-transform duration-300 select-none">
-              <img src="/images/mockup_03.png" alt="Dynamic Result" className="max-w-full max-h-full object-contain filter drop-shadow-[0_25px_40px_rgba(232,98,42,0.15)]" />
+            <div className="w-64 h-[550px] mb-6 relative bg-gray-950 rounded-[2.2rem] border-[8px] border-neutral-800 shadow-2xl overflow-hidden flex items-center justify-center select-none transform hover:scale-105 transition-transform duration-300 ring-4 ring-orange-500/10">
+              {/* Notch */}
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 w-16 h-3.5 bg-black rounded-full z-40 flex items-center justify-center">
+                <div className="w-1.5 h-1.5 bg-neutral-900 rounded-full"></div>
+              </div>
+              <img src="/images/mockup_03.jpeg" alt="Dynamic Result" className="w-full h-full object-cover rounded-[1.6rem]" />
             </div>
             <p className="text-sm font-semibold text-gray-400 mt-4 max-w-[240px] leading-relaxed min-h-[48px]">
               {currentData.step3}
@@ -717,6 +729,14 @@ export function LandingPage() {
 
           {/* Language Selector Dropdown & Mobile Toggle */}
           <div className="flex items-center space-x-4">
+            {/* Specialist Access Button (Desktop) */}
+            <button
+              onClick={() => navigate('/login')}
+              className="hidden md:inline-flex px-4 py-1.5 rounded-lg border border-gray-800 bg-gray-900/40 hover:bg-gray-800/60 text-gray-300 hover:text-orange-400 transition-all duration-300 cursor-pointer font-semibold text-xs shadow-sm"
+            >
+              {isSpanish ? 'Acceso Especialistas' : 'Specialist Portal'}
+            </button>
+
             <div className="relative">
               <button
                 onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
@@ -836,6 +856,16 @@ export function LandingPage() {
             >
               {t('landing.header.support')}
             </button>
+            <hr className="border-gray-800" />
+            <button 
+              onClick={() => {
+                setIsMobileMenuOpen(false)
+                navigate('/login')
+              }}
+              className="block w-full text-center font-bold text-xs text-white bg-orange-600 hover:bg-orange-700 py-2.5 rounded-xl transition cursor-pointer"
+            >
+              {isSpanish ? 'Acceso Especialistas' : 'Specialist Portal'}
+            </button>
           </div>
         )}
       </nav>
@@ -898,28 +928,52 @@ export function LandingPage() {
               </div>
             </div>
 
-            {/* Phone 1 (Far Left): Categorías */}
-            <div className="absolute left-[2%] lg:left-[8%] w-40 md:w-56 h-[260px] md:h-[395px] transform -rotate-12 z-10 flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity duration-300">
-              <img src="/images/mockup_09.png" alt="Mockup 9" className="max-w-full max-h-full object-contain filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.3)]" />
+             {/* Phone 1 (Far Left): Categorías */}
+            <div className="absolute left-[2%] lg:left-[8%] w-40 md:w-56 h-[330px] md:h-[450px] transform -rotate-12 z-10 flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity duration-300">
+              <div className="relative w-full h-full bg-gray-950 rounded-[1.8rem] md:rounded-[2.4rem] border-[5px] md:border-[8px] border-neutral-800 shadow-2xl overflow-hidden">
+                {/* Notch */}
+                <div className="absolute top-1 md:top-2 left-1/2 -translate-x-1/2 w-12 md:w-16 h-2 md:h-3.5 bg-black rounded-full z-40 flex items-center justify-center">
+                  <div className="w-1 h-1 bg-neutral-900 rounded-full"></div>
+                </div>
+                <img src="/images/mockup_09.jpeg" alt="Mockup 9" className="w-full h-full object-cover rounded-[1.2rem] md:rounded-[1.8rem]" />
+              </div>
             </div>
 
             {/* Phone 2 (Mid Left): Progreso / Plan */}
-            <div className="absolute left-[15%] lg:left-[21%] w-40 md:w-56 h-[285px] md:h-[420px] transform -rotate-6 z-20 flex items-center justify-center opacity-90 hover:opacity-100 transition-opacity duration-300">
-              <img src="/images/mockup_10.png" alt="Mockup 10" className="max-w-full max-h-full object-contain filter drop-shadow-[0_15px_25px_rgba(0,0,0,0.4)]" />
+            <div className="absolute left-[15%] lg:left-[21%] w-40 md:w-56 h-[345px] md:h-[480px] transform -rotate-6 z-20 flex items-center justify-center opacity-90 hover:opacity-100 transition-opacity duration-300">
+              <div className="relative w-full h-full bg-gray-950 rounded-[1.8rem] md:rounded-[2.4rem] border-[5px] md:border-[8px] border-neutral-800 shadow-2xl overflow-hidden">
+                {/* Notch */}
+                <div className="absolute top-1 md:top-2 left-1/2 -translate-x-1/2 w-12 md:w-16 h-2 md:h-3.5 bg-black rounded-full z-40 flex items-center justify-center">
+                  <div className="w-1 h-1 bg-neutral-900 rounded-full"></div>
+                </div>
+                <img src="/images/mockup_10.jpeg" alt="Mockup 10" className="w-full h-full object-cover rounded-[1.2rem] md:rounded-[1.8rem]" />
+              </div>
             </div>
 
             {/* Phone 3 (Center): Calendario de Hoy - HIGHLIGHTED */}
-            <div className="absolute left-1/2 -translate-x-1/2 w-44 md:w-60 h-[300px] md:h-[460px] z-30 flex items-center justify-center scale-105">
-              <img src="/images/mockup_11.png" alt="Mockup 11" className="max-w-full max-h-full object-contain filter drop-shadow-[0_25px_40px_rgba(232,98,42,0.25)]" />
+            <div className="absolute left-1/2 -translate-x-1/2 w-44 md:w-60 h-[360px] md:h-[510px] z-30 flex items-center justify-center scale-105">
+              <div className="relative w-full h-full bg-gray-950 rounded-[1.8rem] md:rounded-[2.4rem] border-[5px] md:border-[8px] border-neutral-800 shadow-2xl overflow-hidden ring-4 ring-orange-500/20">
+                {/* Notch */}
+                <div className="absolute top-1 md:top-2 left-1/2 -translate-x-1/2 w-12 md:w-16 h-2 md:h-3.5 bg-black rounded-full z-40 flex items-center justify-center">
+                  <div className="w-1 h-1 bg-neutral-900 rounded-full"></div>
+                </div>
+                <img src="/images/mockup_11.jpeg" alt="Mockup 11" className="w-full h-full object-cover rounded-[1.2rem] md:rounded-[1.8rem]" />
+              </div>
             </div>
 
             {/* Phone 4 (Mid Right): GPS Map */}
-            <div className="absolute right-[15%] lg:right-[21%] w-40 md:w-56 h-[285px] md:h-[420px] transform rotate-6 z-20 flex items-center justify-center opacity-90 hover:opacity-100 transition-opacity duration-300">
-              <img src="/images/mockup_12.png" alt="Mockup 12" className="max-w-full max-h-full object-contain filter drop-shadow-[0_15px_25px_rgba(0,0,0,0.4)]" />
+            <div className="absolute right-[15%] lg:right-[21%] w-40 md:w-56 h-[345px] md:h-[480px] transform rotate-6 z-20 flex items-center justify-center opacity-90 hover:opacity-100 transition-opacity duration-300">
+              <div className="relative w-full h-full bg-gray-950 rounded-[1.8rem] md:rounded-[2.4rem] border-[5px] md:border-[8px] border-neutral-800 shadow-2xl overflow-hidden">
+                {/* Notch */}
+                <div className="absolute top-1 md:top-2 left-1/2 -translate-x-1/2 w-12 md:w-16 h-2 md:h-3.5 bg-black rounded-full z-40 flex items-center justify-center">
+                  <div className="w-1 h-1 bg-neutral-900 rounded-full"></div>
+                </div>
+                <img src="/images/mockup_12.jpeg" alt="Mockup 12" className="w-full h-full object-cover rounded-[1.2rem] md:rounded-[1.8rem]" />
+              </div>
             </div>
 
             {/* Phone 5 (Far Right): Comunidad & Soporte */}
-            <div className="absolute right-[2%] lg:right-[8%] w-40 md:w-56 h-[260px] md:h-[395px] transform rotate-12 z-10 flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity duration-300">
+            <div className="absolute right-[2%] lg:right-[8%] w-40 md:w-56 h-[330px] md:h-[450px] transform rotate-12 z-10 flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity duration-300">
               <img src="/images/mockup_13.png" alt="Mockup 13" className="max-w-full max-h-full object-contain filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.3)]" />
             </div>
 

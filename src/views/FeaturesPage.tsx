@@ -351,12 +351,26 @@ export function FeaturesPage() {
           {/* Row 1: Tu plan. Tu progreso. */}
           <section className="flex flex-col md:flex-row items-center gap-12 scroll-mt-24" id="plan">
             {/* Left Side: Phone Mockups overlay */}
-            <div className="w-full md:w-1/2 relative flex justify-center items-center h-[400px] select-none">
-              <div className="absolute w-48 h-[340px] transform -rotate-12 z-10 flex items-center justify-center">
-                <img src="/images/mockup_01.png" alt="Mockup 1" className="max-w-full max-h-full object-contain filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.3)]" />
+            <div className="w-full md:w-1/2 relative flex justify-center items-center h-[480px] select-none">
+              {/* Back Phone */}
+              <div className="absolute w-48 h-[415px] transform -rotate-12 z-10 flex items-center justify-center">
+                <div className="relative w-full h-full bg-gray-950 rounded-[1.8rem] border-[5px] md:border-[7px] border-neutral-800 shadow-2xl overflow-hidden">
+                  {/* Notch */}
+                  <div className="absolute top-1 md:top-2 left-1/2 -translate-x-1/2 w-12 md:w-14 h-2 md:h-3 bg-black rounded-full z-40 flex items-center justify-center">
+                    <div className="w-1 h-1 bg-neutral-900 rounded-full"></div>
+                  </div>
+                  <img src="/images/mockup_01.jpeg" alt="Mockup 1" className="w-full h-full object-cover rounded-[1.2rem]" />
+                </div>
               </div>
-              <div className="absolute w-52 h-[380px] transform rotate-6 z-20 flex items-center justify-center">
-                <img src="/images/mockup_02.png" alt="Mockup 2" className="max-w-full max-h-full object-contain filter drop-shadow-[0_15px_25px_rgba(0,0,0,0.4)]" />
+              {/* Front Phone */}
+              <div className="absolute w-52 h-[450px] transform rotate-6 z-20 flex items-center justify-center">
+                <div className="relative w-full h-full bg-gray-950 rounded-[2rem] border-[6px] md:border-[8px] border-neutral-800 shadow-2xl overflow-hidden">
+                  {/* Notch */}
+                  <div className="absolute top-1 md:top-2 left-1/2 -translate-x-1/2 w-12 md:w-16 h-2 md:h-3.5 bg-black rounded-full z-40 flex items-center justify-center">
+                    <div className="w-1 h-1 bg-neutral-900 rounded-full"></div>
+                  </div>
+                  <img src="/images/mockup_02.jpeg" alt="Mockup 2" className="w-full h-full object-cover rounded-[1.4rem]" />
+                </div>
               </div>
             </div>
             {/* Right Side: Copy */}
@@ -380,9 +394,15 @@ export function FeaturesPage() {
           {/* Row 2: Entrenadores de élite. */}
           <section className="flex flex-col md:flex-row-reverse items-center gap-12 scroll-mt-24" id="expert">
             {/* Right Side Mockup */}
-            <div className="w-full md:w-1/2 relative flex justify-center items-center h-[400px] select-none">
-              <div className="absolute w-56 h-[380px] flex items-center justify-center transform hover:scale-105 transition-transform duration-300">
-                <img src="/images/mockup_12.png" alt="Mockup 12" className="max-w-full max-h-full object-contain filter drop-shadow-[0_15px_25px_rgba(0,0,0,0.4)]" />
+            <div className="w-full md:w-1/2 relative flex justify-center items-center h-[520px] select-none">
+              <div className="absolute w-56 h-[490px] flex items-center justify-center transform hover:scale-105 transition-transform duration-300">
+                <div className="relative w-full h-full bg-gray-950 rounded-[2.2rem] border-[6px] md:border-[8px] border-neutral-800 shadow-2xl overflow-hidden">
+                  {/* Notch */}
+                  <div className="absolute top-1 md:top-2 left-1/2 -translate-x-1/2 w-12 md:w-16 h-2 md:h-3.5 bg-black rounded-full z-40 flex items-center justify-center">
+                    <div className="w-1 h-1 bg-neutral-900 rounded-full"></div>
+                  </div>
+                  <img src="/images/mockup_12.jpeg" alt="Mockup 12" className="w-full h-full object-cover rounded-[1.6rem]" />
+                </div>
               </div>
             </div>
             {/* Left Side: Copy */}
@@ -406,12 +426,20 @@ export function FeaturesPage() {
           {/* Row 3: Simplicidad al alcance de la mano. */}
           <section className="flex flex-col md:flex-row items-center gap-12 scroll-mt-24" id="simplicity">
             {/* Left Side: Mockups */}
-            <div className="w-full md:w-1/2 relative flex justify-center items-center h-[400px] select-none">
-              <div className="absolute w-48 h-[340px] transform -rotate-12 overflow-hidden flex items-center justify-center">
+            <div className="w-full md:w-1/2 relative flex justify-center items-center h-[480px] select-none">
+              {/* Back Phone */}
+              <div className="absolute w-48 h-[415px] transform -rotate-12 z-10 flex items-center justify-center">
                 <img src="/images/mockup_13.png" alt="Mockup 13" className="max-w-full max-h-full object-contain filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.3)]" />
               </div>
-              <div className="absolute w-52 h-[380px] transform rotate-6 overflow-hidden flex items-center justify-center">
-                <img src="/images/mockup_14.png" alt="Mockup 14" className="max-w-full max-h-full object-contain filter drop-shadow-[0_15px_25px_rgba(0,0,0,0.4)]" />
+              {/* Front Phone */}
+              <div className="absolute w-52 h-[450px] transform rotate-6 z-20 flex items-center justify-center">
+                <div className="relative w-full h-full bg-gray-950 rounded-[2rem] border-[6px] md:border-[8px] border-neutral-800 shadow-2xl overflow-hidden">
+                  {/* Notch */}
+                  <div className="absolute top-1 md:top-2 left-1/2 -translate-x-1/2 w-12 md:w-16 h-2 md:h-3.5 bg-black rounded-full z-40 flex items-center justify-center">
+                    <div className="w-1.5 h-1.5 bg-neutral-900 rounded-full"></div>
+                  </div>
+                  <img src="/images/mockup_14.jpeg" alt="Mockup 14" className="w-full h-full object-cover rounded-[1.4rem]" />
+                </div>
               </div>
             </div>
             {/* Right Side: Copy */}
@@ -435,9 +463,15 @@ export function FeaturesPage() {
           {/* Row 4: Esto es un movimiento. */}
           <section className="flex flex-col md:flex-row-reverse items-center gap-12 scroll-mt-24" id="movement">
             {/* Right Side Mockup */}
-            <div className="w-full md:w-1/2 relative flex justify-center items-center h-[400px] select-none">
-              <div className="absolute w-56 h-[380px] flex items-center justify-center transform hover:scale-105 transition-transform duration-300">
-                <img src="/images/mockup_01.png" alt="Mockup 1" className="max-w-full max-h-full object-contain filter drop-shadow-[0_15px_25px_rgba(0,0,0,0.4)]" />
+            <div className="w-full md:w-1/2 relative flex justify-center items-center h-[520px] select-none">
+              <div className="absolute w-56 h-[490px] flex items-center justify-center transform hover:scale-105 transition-transform duration-300">
+                <div className="relative w-full h-full bg-gray-950 rounded-[2.2rem] border-[6px] md:border-[8px] border-neutral-800 shadow-2xl overflow-hidden">
+                  {/* Notch */}
+                  <div className="absolute top-1 md:top-2 left-1/2 -translate-x-1/2 w-12 md:w-16 h-2 md:h-3.5 bg-black rounded-full z-40 flex items-center justify-center">
+                    <div className="w-1 h-1 bg-neutral-900 rounded-full"></div>
+                  </div>
+                  <img src="/images/mockup_01.jpeg" alt="Mockup 1" className="w-full h-full object-cover rounded-[1.6rem]" />
+                </div>
               </div>
             </div>
             {/* Left Side: Copy */}
@@ -461,9 +495,15 @@ export function FeaturesPage() {
           {/* Row 5: Con apoyo en cada paso. */}
           <section className="flex flex-col md:flex-row items-center gap-12 scroll-mt-24" id="support">
             {/* Left Side: Chat support mockup */}
-            <div className="w-full md:w-1/2 relative flex justify-center items-center h-[400px] select-none">
-              <div className="absolute w-56 h-[380px] flex items-center justify-center transform hover:scale-105 transition-transform duration-300">
-                <img src="/images/mockup_02.png" alt="Mockup 2" className="max-w-full max-h-full object-contain filter drop-shadow-[0_15px_25px_rgba(0,0,0,0.4)]" />
+            <div className="w-full md:w-1/2 relative flex justify-center items-center h-[520px] select-none">
+              <div className="absolute w-56 h-[490px] flex items-center justify-center transform hover:scale-105 transition-transform duration-300">
+                <div className="relative w-full h-full bg-gray-950 rounded-[2.2rem] border-[6px] md:border-[8px] border-neutral-800 shadow-2xl overflow-hidden">
+                  {/* Notch */}
+                  <div className="absolute top-1 md:top-2 left-1/2 -translate-x-1/2 w-12 md:w-16 h-2 md:h-3.5 bg-black rounded-full z-40 flex items-center justify-center">
+                    <div className="w-1 h-1 bg-neutral-900 rounded-full"></div>
+                  </div>
+                  <img src="/images/mockup_02.jpeg" alt="Mockup 2" className="w-full h-full object-cover rounded-[1.6rem]" />
+                </div>
               </div>
             </div>
             {/* Right Side: Copy */}
