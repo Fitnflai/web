@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { usersService } from '@/services/endpoints/users'
 import { Download, Plus, ChevronLeft, Search, Trash2, Upload } from 'lucide-react'
 import { AgendaPage } from '@/views/shared/AgendaPage'
 import { Avatar } from '@/components/ui/Avatar'
@@ -807,39 +809,37 @@ function ProfDetail({ onUpdate }: { onUpdate: () => void }) {
 
 // ─── List ──────────────────────────────────────────────────────────
 export function ProfesionalesPage() {
-  const { setPage, setSelectedProfessional, selectedProfessional, currentPage } = useAppStore()
-  
-  // Local state to track updates and force renders
-  const [updateTick, setUpdateTick] = useState(0)
-  const triggerUpdate = () => setUpdateTick(t => t + 1)
+      const { setPage, setSelectedProfessional, selectedProfessional, currentPage } = useAppStore()
+      
+      // Local state to track updates and force renders
+      const [updateTick, setUpdateTick] = useState(0)
+      const triggerUpdate = () => setUpdateTick(t => t + 1)
 
-  // Filtering and search state
-  const [filter, setFilter] = useState<'Todos' | 'Activos' | 'Pendientes'>('Todos')
-  const [search, setSearch] = useState('')
+      // Filtering and search state
+      const [filter, setFilter] = useState<'Todos' | 'Activos' | 'Pendientes'>('Todos')
+      const [search, setSearch] = useState('')
+      const [page, setPageNum] = useState(1)
+      const pageSize = 10
 
-  // Approval review modal state
-  const [isReviewOpen, setIsReviewOpen] = useState(false)
-  const [reviewProfessional, setReviewProfessional] = useState<Professional | null>(null)
+      const { data: professionalsData, isLoading } = useQuery({
+        queryKey: ['adminProfessionals', filter, search, page],
+        queryFn: () => usersService.getAdminProfessionals(page, pageSize, filter, search),
+      })
 
-  const filteredProfessionals = useMemo(() => {
-    return MOCK_PROFESSIONALS.filter(p => {
-      // 1. Filter by status tag
-      if (filter === 'Activos' && p.accesoNivel === 'Sin acceso') return false
-      if (filter === 'Pendientes' && p.accesoNivel !== 'Sin acceso') return false
+      const { data: statsData } = useQuery({
+        queryKey: ['adminProfessionalStats'],
+        queryFn: () => usersService.getProfessionalStats(),
+      })
 
-      // 2. Filter by search query
-      if (search.trim() !== '') {
-        const query = search.toLowerCase()
-        const matchesNombre = p.nombre?.toLowerCase().includes(query)
-        const matchesEmail = p.email?.toLowerCase().includes(query)
-        const matchesEspecialidad = p.especialidad?.toLowerCase().includes(query)
-        const matchesRol = p.rol?.toLowerCase().includes(query)
-        return matchesNombre || matchesEmail || matchesEspecialidad || matchesRol
-      }
+      const filteredProfessionals = useMemo(() => {
+        return professionalsData?.data || []
+      }, [professionalsData])
 
-      return true
-    })
-  }, [filter, search, updateTick])
+      const totalProfessionals = professionalsData?.total || 0
+
+      // Approval review modal state
+      const [isReviewOpen, setIsReviewOpen] = useState(false)
+      const [reviewProfessional, setReviewProfessional] = useState<Professional | null>(null)
 
   const handleRowClick = (p: Professional) => {
     if (p.accesoNivel === 'Sin acceso' && !p.estado?.includes('Suspendido')) {
@@ -889,7 +889,7 @@ export function ProfesionalesPage() {
           <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{background:'rgba(155,89,182,.15)'}}>
             <span style={{color:'#9B59B6',fontSize:15}}>🪪</span>
           </div>
-          <div><h2 className="text-lg font-bold">Profesionales</h2><p className="text-[12px] text-surface-muted mt-0.5">{filteredProfessionals.length} deportólogos y entrenadores</p></div>
+          <div><h2 className="text-lg font-bold">Profesionales</h2><p className="text-[12px] text-surface-muted mt-0.5">{totalProfessionals} deportólogos y entrenadores</p></div>
         </div>
         <div className="flex gap-2">
           <Button variant="ghost" className="gap-1.5"><Download size={13}/> Exportar</Button>
@@ -898,10 +898,28 @@ export function ProfesionalesPage() {
       </div>
 
       <div className="grid grid-cols-4 gap-3 mb-5">
-        <StatCard label="Total" value={MOCK_PROFESSIONALS.length.toString()} valueColor="#9B59B6" delta="↑ +2 este mes" deltaUp />
-        <StatCard label="Deportólogos" value={MOCK_PROFESSIONALS.filter(p=>p.rol.includes('Deport')).length.toString()} valueColor="#4A7CC7" />
-        <StatCard label="Entrenadores" value={MOCK_PROFESSIONALS.filter(p=>p.rol.includes('Entrena')).length.toString()} valueColor="#4CAF82" />
-        <StatCard label="Pacientes asignados" value={MOCK_PROFESSIONALS.reduce((sum, p) => sum + p.pacientes, 0).toString()} valueColor="#E8622A" />
+        <StatCard 
+          label="Total" 
+          value={(statsData?.total ?? 0).toString()} 
+          valueColor="#9B59B6" 
+          delta={statsData?.crecimiento_mes ?? ''} 
+          deltaUp 
+        />
+        <StatCard 
+          label="Deportólogos" 
+          value={(statsData?.deportologos ?? 0).toString()} 
+          valueColor="#4A7CC7" 
+        />
+        <StatCard 
+          label="Entrenadores" 
+          value={(statsData?.entrenadores ?? 0).toString()} 
+          valueColor="#4CAF82" 
+        />
+        <StatCard 
+          label="Pacientes asignados" 
+          value={(statsData?.pacientes_assigned ?? 0).toString()} 
+          valueColor="#E8622A" 
+        />
       </div>
 
       {/* Filter Tabs and Search */}
@@ -974,7 +992,7 @@ export function ProfesionalesPage() {
           </table>
         </div>
         <div className="p-2.5 flex items-center justify-between border-t border-surface-border">
-          <span className="text-[11px] text-surface-muted">{filteredProfessionals.length} de {MOCK_PROFESSIONALS.length} profesionales</span>
+          <span className="text-[11px] text-surface-muted">{filteredProfessionals.length} de {totalProfessionals} profesionales</span>
           <div className="flex gap-1.5">
             <Button variant="ghost" size="sm">← Anterior</Button>
             <Button variant="ghost" size="sm">Siguiente →</Button>

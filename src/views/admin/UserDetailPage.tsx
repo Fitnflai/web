@@ -983,7 +983,7 @@ export function UserDetailPage() {
 
       {tab === 'plan' && <AdminPlanTab key={u.id_usuario} userId={u.id_usuario} />}
 
-      {tab === 'nutricion' && <SpecialistNutritionTab userId={u.id_usuario} readOnly={true} />}
+      {tab === 'nutricion' && <SpecialistNutritionTab key={u.id_usuario} userId={u.id_usuario} readOnly={true} />}
 
       {tab === 'progreso' && <ProgressTab patientId={u.id_usuario} readOnly={true} />}
 
@@ -1052,97 +1052,80 @@ const getWeekDates = (offsetWeeks: number): Date[] => {
 export function AdminPlanTab({ userId }: { userId: string }) {
   const [weekOffset, setWeekOffset] = useState(0)
   const [planItems, setPlanItems] = useState<PlanItem[]>([])
-  const [selectedDateStr, setSelectedDateStr] = useState(formatDateISO(new Date()))
   const [selectedExercise, setSelectedExercise] = useState<WorkoutExercise | null>(null)
 
-  const { data: planData, isLoading: isPlanLoading, error } = useQuery({
-    queryKey: ['adminUserPlan', userId],
-    queryFn: () => usersService.getUserTabDetalle(userId, 'plan'),
+  // Calculate start and end dates based on weekOffset
+  const weekDates = useMemo(() => getWeekDates(weekOffset), [weekOffset])
+  const startDate = useMemo(() => formatDateISO(weekDates[0]), [weekDates])
+  const endDate = useMemo(() => formatDateISO(weekDates[6]), [weekDates])
+
+  const todayStr = useMemo(() => formatDateISO(new Date()), [])
+  const [selectedDateStr, setSelectedDateStr] = useState(() => {
+    const initialWeekDates = getWeekDates(0)
+    const initialStart = formatDateISO(initialWeekDates[0])
+    const initialEnd = formatDateISO(initialWeekDates[6])
+    const currentToday = formatDateISO(new Date())
+    if (currentToday >= initialStart && currentToday <= initialEnd) {
+      return currentToday
+    }
+    return initialStart
+  })
+
+  const { data: fetchedPlanData, isLoading: isPlanLoading, error } = useQuery({
+    queryKey: ['adminUserPlan', userId, startDate, endDate],
+    queryFn: () => usersService.getUserTabDetalle(userId, 'plan', startDate, endDate),
     enabled: !!userId,
   })
 
-  useEffect(() => {
-    console.log('AdminPlanTab query result:', { planData, isPlanLoading, error })
-  }, [planData, isPlanLoading, error])
-
-  // Set weekDates dynamically based on semana_rango if available
-  const weekDates = useMemo(() => {
-    if (planData?.semana_rango?.inicio) {
-      const parts = planData.semana_rango.inicio.split('-')
-      const baseDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
-      baseDate.setDate(baseDate.getDate() + weekOffset * 7)
-      const dates: Date[] = []
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(baseDate)
-        d.setDate(baseDate.getDate() + i)
-        dates.push(d)
+  const planData = useMemo(() => {
+    if (fetchedPlanData) {
+      if (Array.isArray(fetchedPlanData)) {
+        const matchingWeek = fetchedPlanData.find(week => {
+          const inicio = week?.semana_rango?.inicio
+          const fin = week?.semana_rango?.fin
+          return inicio && fin && selectedDateStr >= inicio && selectedDateStr <= fin
+        })
+        return matchingWeek || fetchedPlanData[0]
       }
-      return dates
+      return fetchedPlanData
     }
-    return getWeekDates(weekOffset)
-  }, [planData, weekOffset])
+    return undefined;
+  }, [fetchedPlanData, selectedDateStr])
+
+  useEffect(() => {
+    console.log('AdminPlanTab query result:', { fetchedPlanData, isPlanLoading, error })
+  }, [fetchedPlanData, isPlanLoading, error])
+
+  // Sync selectedDateStr to today (if in range) or startDate (if not) when week changes
+  useEffect(() => {
+    if (todayStr >= startDate && todayStr <= endDate) {
+      setSelectedDateStr(todayStr)
+    } else {
+      setSelectedDateStr(startDate)
+    }
+  }, [startDate, endDate, todayStr])
 
   // Map workouts/plan items when planData loads
   useEffect(() => {
-    try {
-      console.log('Mapping planData:', planData)
-      if (planData && planData.entrenamientos) {
-        const mapped: PlanItem[] = planData.entrenamientos.map((item: any) => ({
-          ...item,
-          titulo_entrenamiento: item.titulo_entrenamiento || item.tipo || 'Entrenamiento',
-          ejercicios_asociados: (item.ejercicios_asociados || []).map((we: any) => ({
-            ...we,
-            ejercicio: {
-              ...we.ejercicio,
-              instrucciones: we.ejercicio?.instrucciones || {
-                posicion_inicial: '',
-                ejecucion: '',
-                consejos_tecnicos: [],
-                errores_comunes: ''
-              }
-            }
-          }))
-        }))
-        console.log('Mapped plan items successfully:', mapped)
-        setPlanItems(mapped)
-      } else {
-        console.log('No entrenamientos to map. Setting empty.')
-        setPlanItems([])
-      }
-    } catch (err) {
-      console.error('Error during mapping planData:', err)
+    if (planData?.entrenamientos) {
+      const baseWorkouts = planData.entrenamientos || []
+      const mapped = baseWorkouts.map((item: any) => {
+        if ('id_entrenamiento' in item) {
+          const workout = item as Workout
+          return {
+            ...workout,
+            ejercicios_asociados: workout.ejercicios_asociados || []
+          }
+        }
+        return item
+      })
+      setPlanItems(mapped)
+    } else {
+      setPlanItems([])
     }
   }, [planData])
 
-  // Select initial date (prioritizes day with scheduled workouts)
-  useEffect(() => {
-    if (planData?.semana_rango?.inicio) {
-      const start = planData.semana_rango.inicio
-      const end = planData.semana_rango.fin
-      const todayStr = formatDateISO(new Date())
-      
-      if (todayStr >= start && todayStr <= end) {
-        const hasSomethingToday = planItems.some(item => item.fecha_programada === todayStr)
-        if (hasSomethingToday) {
-          setSelectedDateStr(todayStr)
-        } else {
-          const firstWithSomething = planItems.find(item => item.fecha_programada >= start && item.fecha_programada <= end)
-          if (firstWithSomething) {
-            setSelectedDateStr(firstWithSomething.fecha_programada)
-          } else {
-            setSelectedDateStr(todayStr)
-          }
-        }
-      } else {
-        const firstWithSomething = planItems.find(item => item.fecha_programada >= start && item.fecha_programada <= end)
-        if (firstWithSomething) {
-          setSelectedDateStr(firstWithSomething.fecha_programada)
-        } else {
-          setSelectedDateStr(start)
-        }
-      }
-    }
-  }, [planData, planItems])
+  // Synchronized initial date logic
 
   const activeWorkout = useMemo(() => {
     return planItems.find(item => 'id_entrenamiento' in item && item.fecha_programada === selectedDateStr) as Workout | undefined

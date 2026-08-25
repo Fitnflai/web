@@ -1587,7 +1587,17 @@ function MealDetailModal({ isOpen, onClose, meal, onSave, readOnly = false }: Me
 export function SpecialistNutritionTab({ userId, readOnly = false }: { userId: string; readOnly?: boolean }) {
   const repos = useRepositories()
   const [weekOffset, setWeekOffset] = useState(0)
-  const [selectedDateStr, setSelectedDateStr] = useState(formatDateISO(new Date()))
+  const todayStr = useMemo(() => formatDateISO(new Date()), [])
+  const [selectedDateStr, setSelectedDateStr] = useState(() => {
+    const initialWeekDates = getWeekDates(0)
+    const initialStart = formatDateISO(initialWeekDates[0])
+    const initialEnd = formatDateISO(initialWeekDates[6])
+    const currentToday = formatDateISO(new Date())
+    if (currentToday >= initialStart && currentToday <= initialEnd) {
+      return currentToday
+    }
+    return initialStart
+  })
   
   const [log, setLog] = useState<DailyNutritionHydrationLog | null>(null)
   const [updateTick, setUpdateTick] = useState(0)
@@ -1606,11 +1616,117 @@ export function SpecialistNutritionTab({ userId, readOnly = false }: { userId: s
   const [newDietCommentText, setNewDietCommentText] = useState('')
 
   const weekDates = useMemo(() => getWeekDates(weekOffset), [weekOffset])
+  const startDate = useMemo(() => formatDateISO(weekDates[0]), [weekDates])
+  const endDate = useMemo(() => formatDateISO(weekDates[6]), [weekDates])
 
-  // Dynamic log fetching based on selected calendar date
+  const { data: rawNutritionData, error: nutritionError } = useQuery({
+    queryKey: ['userNutritionTab', userId, startDate, endDate],
+    queryFn: () => usersService.getUserTabDetalle(userId, 'nutricion', startDate, endDate),
+    enabled: !!userId && !!startDate && !!endDate,
+  })
+
   useEffect(() => {
-    repos.nutrition.getLog(userId, selectedDateStr).then(setLog)
-  }, [userId, selectedDateStr, updateTick])
+    if (nutritionError) {
+      console.error('Error en la llamada de API de Nutrición:', nutritionError);
+    }
+  }, [nutritionError])
+
+  const nutritionData = useMemo(() => {
+    if (rawNutritionData) {
+      if (Array.isArray(rawNutritionData)) {
+        const matchingWeek = rawNutritionData.find(week => {
+          const inicio = (week?.semana_rango?.inicio || week?.semana_rango?.fecha_inicio || week?.fecha_inicio || week?.fecha_inicio_plan)?.substring(0, 10)
+          const fin = (week?.semana_rango?.fin || week?.semana_rango?.fecha_fin || week?.fecha_fin || week?.fecha_fin_plan)?.substring(0, 10)
+          return inicio && fin && selectedDateStr >= inicio && selectedDateStr <= fin
+        })
+        return matchingWeek || rawNutritionData[0]
+      }
+      return rawNutritionData
+    }
+    return undefined;
+  }, [rawNutritionData, selectedDateStr])
+
+
+  // Sync selectedDateStr to today (if in range) or startDate (if not) when week changes
+  useEffect(() => {
+    if (todayStr >= startDate && todayStr <= endDate) {
+      setSelectedDateStr(todayStr)
+    } else {
+      setSelectedDateStr(startDate)
+    }
+  }, [startDate, endDate, todayStr])
+
+  // Auto-select first day with meals if the current selection is empty
+  useEffect(() => {
+    if (nutritionData?.detalle_diario) {
+      const selectedHasData = nutritionData.detalle_diario[selectedDateStr]?.pauta_alimentacion?.comidas?.length > 0
+      if (!selectedHasData) {
+        const weekDatesStr = weekDates.map(d => formatDateISO(d))
+        const firstWithData = weekDatesStr.find(dateStr => {
+          const dayData = nutritionData.detalle_diario[dateStr]
+          return dayData?.pauta_alimentacion?.comidas?.length > 0 || (dayData?.pauta_alimentacion?.real?.hidratacion_ml || 0) > 0 || (dayData?.analitica_hidratacion?.volumen_consumido_ml || 0) > 0
+        })
+        if (firstWithData) {
+          setSelectedDateStr(firstWithData)
+        }
+      }
+    }
+  }, [nutritionData, weekDates, selectedDateStr])
+
+  // Dynamic log fetching based on selected calendar date and API response
+  useEffect(() => {
+    const dailyKeys = nutritionData?.detalle_diario ? Object.keys(nutritionData.detalle_diario) : []
+    const matchingKey = dailyKeys.find(key => key.startsWith(selectedDateStr))
+    
+    if (matchingKey && nutritionData?.detalle_diario?.[matchingKey]) {
+      const dayData = nutritionData.detalle_diario[matchingKey]
+      const pauta = dayData.pauta_alimentacion
+      const analitica = dayData.analitica_hidratacion
+      
+      setLog({
+        id: `nut-${selectedDateStr}`,
+        userId,
+        date: selectedDateStr,
+        targetKcal: pauta?.objetivo?.kcal || 0,
+        actualKcal: pauta?.real?.kcal || 0,
+        targetProteins: pauta?.objetivo?.proteina || 0,
+        actualProteins: pauta?.real?.proteina || 0,
+        targetCarbs: pauta?.objetivo?.ch || 0,
+        actualCarbs: pauta?.real?.ch || 0,
+        targetFats: pauta?.objetivo?.grasas || 0,
+        actualFats: pauta?.real?.grasas || 0,
+        comidas: pauta?.comidas || [],
+        liquidVolumeMl: analitica?.volumen_consumido_ml || pauta?.real?.hidratacion_ml || 0,
+        targetLiquidVolumeMl: analitica?.objetivo_ml || pauta?.objetivo?.hidratacion_ml_objetivo || 3000,
+        calculatedDehydrationLiters: analitica?.deshidratacion_estimada || 0,
+        hydrationJustification: analitica?.justificacion_ajuste || '',
+        intakes: [],
+        foodLog: []
+      })
+    } else {
+      // Set to an empty log structure directly instead of calling the mock repo!
+      setLog({
+        id: `nut-${selectedDateStr}`,
+        userId,
+        date: selectedDateStr,
+        targetKcal: 0,
+        actualKcal: 0,
+        targetProteins: 0,
+        actualProteins: 0,
+        targetCarbs: 0,
+        actualCarbs: 0,
+        targetFats: 0,
+        actualFats: 0,
+        comidas: [],
+        liquidVolumeMl: 0,
+        targetLiquidVolumeMl: 3000,
+        calculatedDehydrationLiters: 0,
+        hydrationJustification: '',
+        intakes: [],
+        foodLog: []
+      })
+    }
+  }, [nutritionData, selectedDateStr, userId, updateTick])
 
   // Fetch diet comments for the selected day
   useEffect(() => {
@@ -2314,7 +2430,7 @@ export function UserDetailPage() {
 
       {tab === 'perfil' && <PerfilTab u={u} />}
       {tab === 'plan' && <SpecialistPlanTab key={u.id_usuario} userId={u.id_usuario} />}
-      {tab === 'nutricion' && <SpecialistNutritionTab userId={u.id_usuario} />}
+      {tab === 'nutricion' && <SpecialistNutritionTab key={u.id_usuario} userId={u.id_usuario} />}
       {tab === 'progreso' && <ProgressTab patientId={u.id_usuario} isSpecialist={true} />}
       {tab === 'reporte-clinico' && <ClinicalReportTab patientId={u.id_usuario} />}
       {tab === 'notificaciones' && <NotificacionesTab userId={u.id_usuario} />}

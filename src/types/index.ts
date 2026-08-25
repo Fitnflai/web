@@ -273,3 +273,11 @@ export interface ProfAvailability {
   semana: string           // "2026-W24"
   slots: AvailabilitySlot[]
 }
+
+export interface AdminProfessionalStats {
+  total: number
+  crecimiento_mes: string
+  deportologos: number
+  entrenadores: number
+  pacientes_assigned: number
+}
