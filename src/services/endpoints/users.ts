@@ -13,6 +13,11 @@ const isMockId = (id: string): boolean => {
   return id.startsWith('uid-') || id.startsWith('pro-') || id.startsWith('esp-') || id.length < 10 || id.startsWith('uid-mock-')
 }
 
+const isMockProfessionalId = (id: string): boolean => {
+  if (!id) return false
+  return id.startsWith('pro-') || id.startsWith('esp-') || id.startsWith('uid-mock-')
+}
+
 // Helper to generate dates for a week based on a start date
 const generateWeekDates = (startDateString: string | undefined) => {
   const referenceDate = startDateString ? parseISO(startDateString) : new Date('2026-06-06');
@@ -285,8 +290,45 @@ export const usersService = {
     }
   },
 
+  getAvailableStudents: async (search?: string): Promise<{ id_usuario: string, nombre_alumno: string }[]> => {
+    if (USE_MOCK) {
+      const filteredUsers = MOCK_USERS.filter(u =>
+        !search || u.nombre.toLowerCase().includes(search.toLowerCase())
+      ).map(u => ({ id_usuario: u.id_usuario, nombre_alumno: u.nombre }));
+      return filteredUsers;
+    }
+    const { data } = await apiClient.get('/admin/obtener-alumnos-disponibles-para-asignar', { params: { search } });
+    return data;
+  },
+
+  linkStudentToSpecialist: async (id_usuario: string, id_especialista: string): Promise<any> => {
+    if (USE_MOCK || isMockProfessionalId(id_especialista)) {
+      const professional = MOCK_PROFESSIONALS.find(p => p.id === id_especialista);
+      const targetUser = MOCK_USERS.find(u => u.id_usuario === id_usuario);
+
+      if (professional && targetUser) {
+        const newPatient: AssignedPatient = {
+          nombre: targetUser.apodo || targetUser.nombre, // Assuming apodo exists, fallback to nombre
+          disc: targetUser.nombre_disciplina || 'General',
+          nivel: targetUser.clasificacion_visible_actual || 'Básico',
+          adh: '85%',
+          ultimo: 'Hoy',
+          est: 'En seguimiento',
+          ini: targetUser.initials || (targetUser.nombre ? targetUser.nombre.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'US'),
+          color: targetUser.color || '#9B59B6',
+        };
+        professional.pacAsi = [...(professional.pacAsi || []), newPatient];
+        professional.pacientes = professional.pacAsi.length; // Update patient count
+        return { success: true, message: "Alumno asignado con éxito" };
+      }
+      return Promise.reject(new Error('Professional or User not found for linking'));
+    }
+    const { data } = await apiClient.post('/admin/vincular-alumno-a-especialista', { id_usuario, id_especialista });
+    return data;
+  },
+
   getProfessionalHeaderDetalle: async (id: string): Promise<any> => {
-    if (USE_MOCK || isMockId(id)) {
+    if (USE_MOCK || isMockProfessionalId(id)) {
       return MOCK_PROFESSIONALS.find(p => p.id === id);
     }
     const { data } = await apiClient.get(`/admin/${id}/detalle-especialista-cabecera`);
@@ -294,7 +336,7 @@ export const usersService = {
   },
 
   getProfessionalTabDetalle: async (id: string, tab: string): Promise<any> => {
-    if (USE_MOCK || isMockId(id)) {
+    if (USE_MOCK || isMockProfessionalId(id)) {
       const professional = MOCK_PROFESSIONALS.find(p => p.id === id);
       if (!professional) return undefined;
 
@@ -314,7 +356,7 @@ export const usersService = {
   },
 
   updateProfessional: async (id: string, payload: Partial<Professional>): Promise<Professional> => {
-    if (USE_MOCK || isMockId(id)) {
+    if (USE_MOCK || isMockProfessionalId(id)) {
       const index = MOCK_PROFESSIONALS.findIndex(p => p.id === id);
       if (index > -1) {
         MOCK_PROFESSIONALS[index] = { ...MOCK_PROFESSIONALS[index], ...payload };
@@ -327,7 +369,7 @@ export const usersService = {
   },
 
   assignPatientToProfessional: async (specialistId: string, id_usuario: string): Promise<any> => {
-    if (USE_MOCK || isMockId(specialistId)) {
+    if (USE_MOCK || isMockProfessionalId(specialistId)) {
       const professional = MOCK_PROFESSIONALS.find(p => p.id === specialistId);
       if (professional) {
         // This is a simplified mock. In a real scenario, you'd fetch patient details.
@@ -351,7 +393,7 @@ export const usersService = {
   },
 
   reassignPatientBetweenProfessionals: async (fromSpecialistId: string, toSpecialistId: string, patientName: string): Promise<any> => {
-    if (USE_MOCK || isMockId(fromSpecialistId) || isMockId(toSpecialistId)) {
+    if (USE_MOCK || isMockProfessionalId(fromSpecialistId) || isMockProfessionalId(toSpecialistId)) {
       const fromProfessional = MOCK_PROFESSIONALS.find(p => p.id === fromSpecialistId);
       const toProfessional = MOCK_PROFESSIONALS.find(p => p.id === toSpecialistId);
 

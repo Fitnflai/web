@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { usersService } from '@/services/endpoints/users'
 import { Download, Plus, ChevronLeft, Search, Trash2, Upload } from 'lucide-react'
 import { AgendaPage } from '@/views/shared/AgendaPage'
@@ -22,12 +22,28 @@ type ProfTab = 'perfil' | 'pacientes' | 'agenda'
 // ─── Detail ───────────────────────────────────────────────────────
 function ProfDetail({ onUpdate }: { onUpdate: () => void }) {
   const { selectedProfessional: p, setPage } = useAppStore()
+  const queryClient = useQueryClient()
+  const isMockProfessional = !p?.id || p.id.startsWith('pro-') || p.id.startsWith('esp-') || p.id.startsWith('uid-mock-')
   const [tab, setTab] = useState<ProfTab>('perfil')
   const [isEditing, setIsEditing] = useState(false)
   
   // Local state for pupil assignments modal
   const [isAssignOpen, setIsAssignOpen] = useState(false)
   const [selectedUserVal, setSelectedUserVal] = useState('')
+
+  // Fetch assigned patients
+  const { data: apiPatients, isLoading: isPatientsLoading } = useQuery({
+    queryKey: ['professionalPatients', p?.id],
+    queryFn: () => usersService.getProfessionalTabDetalle(p!.id, 'pacientes'),
+    enabled: !isMockProfessional && tab === 'pacientes' && !!p?.id,
+  })
+
+  // Fetch available students for assignment
+  const { data: availableStudents } = useQuery({
+    queryKey: ['availableStudents'],
+    queryFn: () => usersService.getAvailableStudents(),
+    enabled: !isMockProfessional && isAssignOpen,
+  })
 
   // Local state for patient reassignment
   const [isReassignOpen, setIsReassignOpen] = useState(false)
@@ -71,40 +87,84 @@ function ProfDetail({ onUpdate }: { onUpdate: () => void }) {
     }
   }
 
+  const adaptApiPatient = (apiPat: any) => {
+    const nombre = apiPat.nombre_paciente || apiPat.nombre || 'Usuario';
+    const firstChar = nombre.substring(0, 1).toUpperCase();
+    const secondChar = nombre.split(/[ _]/).slice(1).map((s: string) => s[0]).join('').substring(0, 1).toUpperCase() || nombre.substring(1, 2).toUpperCase() || 'U';
+    return {
+      ini: firstChar + secondChar,
+      nombre: nombre,
+      disc: apiPat.disciplina || apiPat.nombre_disciplina || 'Trailrunning',
+      nivel: apiPat.nivel || apiPat.clasificacion_visible_actual || 'Avanzado',
+      adh: apiPat.adherencia || apiPat.adh || '85%',
+      ultimo: apiPat.ultimo_acceso || apiPat.ultimo || 'Hoy',
+      est: apiPat.estado === 'Activo' ? 'En seguimiento' : (apiPat.estado || 'En seguimiento'),
+      color: apiPat.color || '#9B59B6',
+    };
+  };
+
   // Options list of available pupils (excluding those already assigned)
+  const currentPatients = useMemo(() => {
+    if (isMockProfessional) {
+      return p.pacAsi || [];
+    }
+    return (apiPatients || []).map(adaptApiPatient);
+  }, [isMockProfessional, p.pacAsi, apiPatients]);
+
   const pupilOptions: SelectOption[] = useMemo(() => {
-    const assignedNames = p.pacAsi.map(pa => pa.nombre.toLowerCase())
-    return MOCK_USERS
-      .filter(u => !assignedNames.includes(u.apodo.toLowerCase()))
-      .map(u => ({
-        value: u.id_usuario,
-        label: `${u.nombre} (${u.nombre_disciplina})`
-      }))
-  }, [p.pacAsi, isAssignOpen])
+    if (isMockProfessional) {
+      const assignedNames = (p.pacAsi || []).map(pa => pa.nombre.toLowerCase())
+      return MOCK_USERS
+        .filter(u => !assignedNames.includes(u.apodo.toLowerCase()))
+        .map(u => ({
+          value: u.id_usuario,
+          label: `${u.nombre} (${u.nombre_disciplina || 'Running'})`
+        }))
+    }
+    return (availableStudents || []).map((u: any) => ({
+      value: u.id_usuario,
+      label: u.nombre_alumno || u.nombre || 'Alumno'
+    }));
+  }, [isMockProfessional, p.pacAsi, availableStudents, isAssignOpen])
 
   // Process pupil assignment
-  const handleAssignPupil = () => {
+  const handleAssignPupil = async () => {
     if (!selectedUserVal) {
       toast.show('Por favor selecciona un alumno', 'error')
       return
     }
-    const targetUser = MOCK_USERS.find(u => u.id_usuario === selectedUserVal)
-    if (targetUser) {
-      p.pacAsi.push({
-        ini: targetUser.initials || 'US',
-        nombre: targetUser.apodo,
-        disc: targetUser.nombre_disciplina,
-        nivel: targetUser.clasificacion_visible_actual,
-        adh: '85%', // Default mock starting value
-        ultimo: 'Hoy',
-        est: 'En seguimiento',
-        color: targetUser.color || '#9B59B6'
-      })
-      p.pacientes = p.pacAsi.length
-      toast.show(`Alumno ${targetUser.nombre} asignado con éxito`, 'success')
-      setIsAssignOpen(false)
-      setSelectedUserVal('')
-      onUpdate()
+
+    if (isMockProfessional) {
+      const targetUser = MOCK_USERS.find(u => u.id_usuario === selectedUserVal)
+      if (targetUser) {
+        p.pacAsi.push({
+          ini: targetUser.initials || 'US',
+          nombre: targetUser.apodo || targetUser.nombre,
+          disc: targetUser.nombre_disciplina,
+          nivel: targetUser.clasificacion_visible_actual,
+          adh: '85%',
+          ultimo: 'Hoy',
+          est: 'En seguimiento',
+          color: targetUser.color || '#9B59B6'
+        })
+        p.pacientes = p.pacAsi.length
+        toast.show(`Alumno ${targetUser.nombre} asignado con éxito`, 'success')
+        setIsAssignOpen(false)
+        setSelectedUserVal('')
+        onUpdate()
+      }
+    } else {
+      try {
+        await usersService.linkStudentToSpecialist(selectedUserVal, p.id);
+        toast.show('Alumno asignado con éxito', 'success')
+        queryClient.invalidateQueries({ queryKey: ['professionalPatients', p.id] });
+        setIsAssignOpen(false)
+        setSelectedUserVal('')
+        onUpdate()
+      } catch (err) {
+        console.error('Failed to link student:', err);
+        toast.show('Error al asignar el alumno al especialista', 'error')
+      }
     }
   }
 
@@ -681,10 +741,12 @@ function ProfDetail({ onUpdate }: { onUpdate: () => void }) {
       {tab === 'pacientes' && (
         <div>
           <div className="flex items-center justify-between mb-4">
-            <div className="text-[13px] text-surface-muted">{p.pacAsi.length} paciente{p.pacAsi.length !== 1 ? 's' : ''} asignado{p.pacAsi.length !== 1 ? 's' : ''}</div>
+            <div className="text-[13px] text-surface-muted">{currentPatients.length} paciente{currentPatients.length !== 1 ? 's' : ''} asignado{currentPatients.length !== 1 ? 's' : ''}</div>
             <Button variant="primary" size="sm" onClick={() => setIsAssignOpen(true)}>+ Asignar Alumno</Button>
           </div>
-          {p.pacAsi.length === 0 ? (
+          {isPatientsLoading ? (
+            <div className="text-center py-10 text-surface-muted">Cargando pacientes...</div>
+          ) : currentPatients.length === 0 ? (
             <div className="text-center py-10 text-surface-muted"><div className="text-3xl mb-3">👥</div><div>Sin pacientes asignados</div></div>
           ) : (
             <div className="card-base p-0 overflow-hidden">
@@ -692,7 +754,7 @@ function ProfDetail({ onUpdate }: { onUpdate: () => void }) {
                 <table className="w-full border-collapse text-[12px]">
                   <thead><tr>{['Paciente','Disciplina','Nivel','Adherencia','Último acceso','Estado',''].map(h=><th key={h} className="text-left p-2.5 text-[10px] text-surface-muted uppercase tracking-[0.7px] border-b border-surface-border font-medium">{h}</th>)}</tr></thead>
                   <tbody>
-                    {p.pacAsi.map((pa) => (
+                    {currentPatients.map((pa: any) => (
                       <tr key={pa.nombre} className="hover:bg-white/[0.015]">
                         <td className="p-2.5 border-b border-surface-border"><div className="flex items-center gap-2"><Avatar initials={pa.ini} color={pa.color} size="sm" /><span className="font-medium">{pa.nombre}</span></div></td>
                         <td className="p-2.5 border-b border-surface-border text-[11px]">{pa.disc}</td>
