@@ -1,5 +1,5 @@
 import { apiClient } from '@/services/api/client'
-import type { User, Professional, AdminProfessionalStats } from '@/types'
+import type { User, Professional, AdminProfessionalStats, AssignedPatient } from '@/types'
 import { MOCK_USERS } from '@/services/mocks/users.mock'
 import { MOCK_PLAN } from '@/services/mocks/plan.mock'
 import { MOCK_PROFESSIONALS } from '@/services/mocks/professionals.mock'
@@ -30,7 +30,7 @@ const shiftPlanDates = (basePlan: any[], startDateString: string | undefined) =>
   const baseStartDate = parseISO('2026-06-01'); // MOCK_PLAN's original start date
   const targetStartDate = parseISO(weekDates.inicio);
 
-  return basePlan.map(item => {
+  return basePlan.map((item: any) => {
     const originalDate = parseISO(item.fecha_programada || item.fecha_inicio || item.fecha_programada_clase);
     const diffDays = (targetStartDate.getTime() - baseStartDate.getTime()) / (1000 * 60 * 60 * 24);
     const newDate = addDays(originalDate, diffDays);
@@ -207,7 +207,7 @@ export const usersService = {
   },
   getAdminProfessionals: async (page: number, pageSize: number, estado: string, search: string): Promise<{ total: number, data: Professional[] }> => {
     if (USE_MOCK) {
-      const filtered = MOCK_PROFESSIONALS.filter(p => {
+      const filtered = MOCK_PROFESSIONALS.filter((p: Professional) => {
         const matchesEstado = estado === 'Todos' ||
           (estado === 'Activos' && p.accesoNivel !== 'Sin acceso') ||
           (estado === 'Pendientes' && p.accesoNivel === 'Sin acceso');
@@ -263,9 +263,9 @@ export const usersService = {
   getProfessionalStats: async (): Promise<AdminProfessionalStats> => {
     if (USE_MOCK) {
       const total = MOCK_PROFESSIONALS.length
-      const deportologos = MOCK_PROFESSIONALS.filter(p => p.rol.includes('Deport')).length
-      const entrenadores = MOCK_PROFESSIONALS.filter(p => p.rol.includes('Entrena')).length
-      const pacientes_assigned = MOCK_PROFESSIONALS.reduce((sum, p) => sum + (p.pacientes || 0), 0)
+      const deportologos = MOCK_PROFESSIONALS.filter((p: Professional) => p.rol.includes('Deport')).length
+      const entrenadores = MOCK_PROFESSIONALS.filter((p: Professional) => p.rol.includes('Entrena')).length
+      const pacientes_assigned = MOCK_PROFESSIONALS.reduce((sum, p: Professional) => sum + (p.pacientes || 0), 0)
       return {
         total,
         deportologos,
@@ -283,5 +283,96 @@ export const usersService = {
       pacientes_assigned: data.pacientes_assigned || data.pacientes_asignados_activos || 0,
       crecimiento_mes: data.crecimiento_mes || '↑ +0 este mes'
     }
+  },
+
+  getProfessionalHeaderDetalle: async (id: string): Promise<any> => {
+    if (USE_MOCK || isMockId(id)) {
+      return MOCK_PROFESSIONALS.find(p => p.id === id);
+    }
+    const { data } = await apiClient.get(`/admin/${id}/detalle-especialista-cabecera`);
+    return data;
+  },
+
+  getProfessionalTabDetalle: async (id: string, tab: string): Promise<any> => {
+    if (USE_MOCK || isMockId(id)) {
+      const professional = MOCK_PROFESSIONALS.find(p => p.id === id);
+      if (!professional) return undefined;
+
+      switch (tab) {
+        case 'ficha':
+          return professional; // Return the whole professional object for ficha tab
+        case 'pacientes':
+          return professional.pacAsi || []; // Return assigned patients for pacientes tab
+        case 'agenda': // Example of unsupported tab, returns mock
+          return { message: 'Mock data for agenda tab' };
+        default:
+          return undefined;
+      }
+    }
+    const { data } = await apiClient.get(`/admin/${id}/detalle-especialista-contenido?tab=${tab}`);
+    return data;
+  },
+
+  updateProfessional: async (id: string, payload: Partial<Professional>): Promise<Professional> => {
+    if (USE_MOCK || isMockId(id)) {
+      const index = MOCK_PROFESSIONALS.findIndex(p => p.id === id);
+      if (index > -1) {
+        MOCK_PROFESSIONALS[index] = { ...MOCK_PROFESSIONALS[index], ...payload };
+        return MOCK_PROFESSIONALS[index];
+      }
+      return Promise.reject(new Error('Professional not found for update'));
+    }
+    const { data } = await apiClient.patch(`/admin/profesionales/${id}`, payload);
+    return data;
+  },
+
+  assignPatientToProfessional: async (specialistId: string, id_usuario: string): Promise<any> => {
+    if (USE_MOCK || isMockId(specialistId)) {
+      const professional = MOCK_PROFESSIONALS.find(p => p.id === specialistId);
+      if (professional) {
+        // This is a simplified mock. In a real scenario, you'd fetch patient details.
+        const newPatient: AssignedPatient = {
+          nombre: `Mock Patient ${id_usuario}`,
+          disc: 'General',
+          nivel: 'Alto',
+          est: 'En seguimiento',
+          ini: 'MP',
+          color: '#9B59B6',
+          adh: '90%',
+          ultimo: 'Hoy'
+        };
+        professional.pacAsi = [...(professional.pacAsi || []), newPatient];
+        return { success: true, message: `Patient ${id_usuario} assigned to ${specialistId}` };
+      }
+      return Promise.reject(new Error('Professional not found for patient assignment'));
+    }
+    const { data } = await apiClient.post(`/admin/profesionales/${specialistId}/asignar-paciente`, { id_usuario });
+    return data;
+  },
+
+  reassignPatientBetweenProfessionals: async (fromSpecialistId: string, toSpecialistId: string, patientName: string): Promise<any> => {
+    if (USE_MOCK || isMockId(fromSpecialistId) || isMockId(toSpecialistId)) {
+      const fromProfessional = MOCK_PROFESSIONALS.find(p => p.id === fromSpecialistId);
+      const toProfessional = MOCK_PROFESSIONALS.find(p => p.id === toSpecialistId);
+
+      if (fromProfessional && toProfessional) {
+        fromProfessional.pacAsi = (fromProfessional.pacAsi || []).filter(p => p.nombre !== patientName);
+        const reassignedPatient: AssignedPatient = {
+          nombre: patientName,
+          disc: 'General',
+          nivel: 'Alto',
+          est: 'En seguimiento',
+          ini: 'MP',
+          color: '#9B59B6',
+          adh: '90%',
+          ultimo: 'Hoy'
+        };
+        toProfessional.pacAsi = [...(toProfessional.pacAsi || []), reassignedPatient];
+        return { success: true, message: `Patient ${patientName} reassigned from ${fromSpecialistId} to ${toSpecialistId}` };
+      }
+      return Promise.reject(new Error('One or both professionals not found for patient reassignement'));
+    }
+    const { data } = await apiClient.post(`/admin/profesionales/reasignar-paciente`, { fromSpecialistId, toSpecialistId, patientName });
+    return data;
   }
 }

@@ -14,7 +14,7 @@ import { usersService } from '@/services/endpoints/users'
 import { ProgressTab } from '@/components/patient/ProgressTab'
 import { ClinicalReportTab } from '@/components/patient/ClinicalReportTab'
 import { SpecialistNutritionTab } from '../specialist/UserDetailPage'
-import { MOCK_PLAN } from '@/services/mocks/plan.mock'
+
 import { PLAN_NAMES, PLAN_MONTOS, DAYS_ES } from '@/constants'
 import { formatDate, getPlanState, STATE_LABEL, typeColor } from '@/utils'
 import { cn } from '@/utils'
@@ -42,6 +42,22 @@ function ChipList({ items }: { items: string[] }) {
   )
 }
 
+const renderChipItem = (item: any): string => {
+  if (item && typeof item === 'object') {
+    if ('nombre_equipo' in item) return item.nombre_equipo;
+    if ('nombre_lesion' in item) return item.nombre_lesion;
+    if ('detalle' in item) return item.detalle;
+    // Fallback: look for keys containing 'nombre', 'detalle', 'desc', 'label'
+    const keys = Object.keys(item);
+    const nameKey = keys.find(k => k.includes('nombre') || k.includes('detalle') || k.includes('desc') || k.includes('label'));
+    if (nameKey) return item[nameKey];
+    // Secondary fallback: first string value in object
+    const firstStr = Object.values(item).find(v => typeof v === 'string');
+    if (firstStr) return firstStr as string;
+  }
+  return String(item);
+};
+
 function EditableChipList({
   title,
   items,
@@ -51,7 +67,7 @@ function EditableChipList({
   placeholder
 }: {
   title: string
-  items: string[]
+  items: any[]
   isEditing: boolean
   onAdd: (val: string) => void
   onRemove: (idx: number) => void
@@ -71,7 +87,7 @@ function EditableChipList({
               key={idx}
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] bg-surface-card2 border border-surface-border text-white font-medium"
             >
-              {item}
+              {renderChipItem(item)}
               {isEditing && (
                 <button
                   type="button"
@@ -143,7 +159,7 @@ export function UserDetailPage() {
   const { data: tabData, isLoading: isTabLoading } = useQuery({
     queryKey: ['userTabDetalle', u?.id_usuario, tab],
     queryFn: () => usersService.getUserTabDetalle(u!.id_usuario, tab),
-    enabled: !!u?.id_usuario && tab === 'perfil',
+    enabled: !!u?.id_usuario && (tab === 'perfil' || tab === 'dispositivos'),
   })
 
   // Synchronize and adapt real-time profile fields seamlessly into the active user reference
@@ -151,7 +167,9 @@ export function UserDetailPage() {
     if (u && tabData) {
       if (!isEditing) {
         Object.assign(u, tabData)
-        if (tabData.disciplina) u.nombre_disciplina = tabData.disciplina
+        if (tabData.disciplina) {
+          u.nombre_disciplina = typeof tabData.disciplina === 'object' ? tabData.disciplina.disciplina : tabData.disciplina
+        }
         if (tabData.duracion_objetivo) u.duracion_semanas_objetivo = tabData.duracion_objetivo
         if (tabData.proximo_evento?.fecha) u.proxima_competencia = tabData.proximo_evento.fecha
       }
@@ -170,7 +188,9 @@ export function UserDetailPage() {
     if (u && headerData) {
       if (!isEditing) {
         Object.assign(u, headerData)
-        if (headerData.disciplina) u.nombre_disciplina = headerData.disciplina
+        if (headerData.disciplina) {
+          u.nombre_disciplina = typeof headerData.disciplina === 'object' ? headerData.disciplina.disciplina : headerData.disciplina
+        }
         if (headerData.nivel_motor !== undefined) u.nivel_motor_actual = headerData.nivel_motor
         
         // Parse weight "155.00 Lb" -> weight number + unit
@@ -994,14 +1014,15 @@ export function UserDetailPage() {
           <div className="card-base mb-4">
             <div className="text-[13px] font-semibold mb-3">Dispositivos conectados</div>
             {[
-              { name:'Apple Health', connected: u.health_connected, color:'#FF2D55', icon:'❤️' },
-              { name:'Strava', connected: !!u.strava_access_token, color:'#FC4C02', icon:'🚴' },
-              { name:'Garmin', connected: !!u.last_garmin_sync, color:'#007EC5', icon:'⌚' },
+              { name:'Apple Health', connected: u.apple_health?.conectado ?? u.health_connected, detail: u.apple_health?.detalle, color:'#FF2D55', icon:'❤️' },
+              { name:'Strava', connected: u.strava?.conectado ?? !!u.strava_access_token, detail: u.strava?.detalle, color:'#FC4C02', icon:'🚴' },
+              { name:'Garmin', connected: u.garmin?.conectado ?? !!u.last_garmin_sync, detail: u.garmin?.detalle, color:'#007EC5', icon:'⌚' },
+              { name:'Google Fit', connected: u.google_fit?.conectado, detail: u.google_fit?.detalle, color:'#4285F4', icon:'🏃' },
             ].map((d) => (
               <div key={d.name} className="flex items-center justify-between py-2.5 border-b border-surface-border last:border-0">
                 <div className="flex items-center gap-2.5">
                   <div className="w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0" style={{background:`${d.color}22`}}>{d.icon}</div>
-                  <div><div className="text-[12px] font-medium">{d.name}</div><div className="text-[11px] text-surface-muted">{d.connected ? 'Activo' : 'Sin conexión'}</div></div>
+                  <div><div className="text-[12px] font-medium">{d.name}</div><div className="text-[11px] text-surface-muted">{d.detail || (d.connected ? 'Activo' : 'Sin conexión')}</div></div>
                 </div>
                 <Badge variant={d.connected ? 'green' : 'muted'}>{d.connected ? 'Conectado' : 'No conectado'}</Badge>
               </div>
@@ -1020,11 +1041,7 @@ export function UserDetailPage() {
   )
 }
 
-const isUUID = (id: string) => {
-  if (!id) return false
-  if (id.startsWith('uid-') || id.startsWith('pro-') || id.startsWith('esp-') || id.length < 10) return false
-  return true
-}
+
 
 const formatDateISO = (d: Date): string => {
   const year = d.getFullYear()

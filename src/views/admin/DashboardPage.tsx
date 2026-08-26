@@ -370,7 +370,7 @@ export function DashboardPage() {
                             </td>
                             
                             <td className="p-2.5 border-b border-surface-border text-[11px] text-white">
-                              {u.nombre_disciplina || u.disciplina || ''}
+                              {u.nombre_disciplina || (u.disciplina ? (typeof u.disciplina === 'object' ? u.disciplina.disciplina : u.disciplina) : '') || ''}
                             </td>
                             
                             <td className="p-2.5 border-b border-surface-border">

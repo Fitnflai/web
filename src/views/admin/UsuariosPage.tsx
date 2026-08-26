@@ -55,7 +55,7 @@ export function UsersTable({ users, origin, onSelect, isPacientes = false, page,
                     </div>
                   </td>
                   <td className="p-2.5 border-b border-surface-border text-[11px]">
-                    {u.disciplina && u.disciplina !== 'N/A' ? u.disciplina : ''}
+                    {u.disciplina ? (typeof u.disciplina === 'object' ? u.disciplina.disciplina : u.disciplina) : ''}
                   </td>
                   <td className="p-2.5 border-b border-surface-border">
                     {u.nivel && u.nivel !== 'N/A' ? <Badge variant="blue">{u.nivel}</Badge> : ''}

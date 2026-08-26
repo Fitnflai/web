@@ -19,8 +19,24 @@ import type { PredefinedWorkout, Comment, DailyNutritionHydrationLog, Comida, Bi
 import { ProgressTab } from '@/components/patient/ProgressTab';
 import { ClinicalReportTab } from '@/components/patient/ClinicalReportTab';
 
+const renderChipItem = (item: any): string => {
+  if (item && typeof item === 'object') {
+    if ('nombre_equipo' in item) return item.nombre_equipo;
+    if ('nombre_lesion' in item) return item.nombre_lesion;
+    if ('detalle' in item) return item.detalle;
+    // Fallback: look for keys containing 'nombre', 'detalle', 'desc', 'label'
+    const keys = Object.keys(item);
+    const nameKey = keys.find(k => k.includes('nombre') || k.includes('detalle') || k.includes('desc') || k.includes('label'));
+    if (nameKey) return item[nameKey];
+    // Secondary fallback: first string value in object
+    const firstStr = Object.values(item).find(v => typeof v === 'string');
+    if (firstStr) return firstStr as string;
+  }
+  return String(item);
+};
+
 // Helper to render read-only lists of chips
-function ReadOnlyChipList({ title, items }: { title: string; items: string[] }) {
+function ReadOnlyChipList({ title, items }: { title: string; items: any[] }) {
   return (
     <div className="bg-surface-card border border-surface-border rounded-xl p-4">
       <div className="text-[12px] font-semibold text-white mb-2.5">{title}</div>
@@ -33,7 +49,7 @@ function ReadOnlyChipList({ title, items }: { title: string; items: string[] }) 
               key={idx}
               className="inline-flex px-2.5 py-1 rounded-xl text-[11px] bg-surface-card2 border border-surface-border text-white font-medium"
             >
-              {item}
+              {renderChipItem(item)}
             </span>
           ))
         )}

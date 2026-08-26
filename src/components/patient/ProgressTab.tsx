@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { MockBiometricRepository } from '../../core/repositories/mocks/MockBiometricRepository';
 import { WeeklyProgressData } from '../../core/domain/types';
+import { useQuery } from '@tanstack/react-query';
+import { usersService } from '@/services/endpoints/users';
 
 // Import all card components
 import StatusBanner from './cards/StatusBanner';
@@ -26,7 +28,71 @@ const showToast = (message: string) => {
   // In a real app, this would trigger a UI toast notification
 };
 
+
+const adaptApiProgress = (apiData: any, weekIndex: number): WeeklyProgressData => {
+  const currentWeightValue = apiData.historial_peso?.[0]?.peso || 120;
+  const targetWeightValue = currentWeightValue - 5;
+
+  return {
+    weekIndex,
+    label: apiData.semana_info || `Semana ${weekIndex + 1}`,
+    status: apiData.indice_bienestar >= 70 ? 'Excelente Progreso' : 'Progreso Moderado',
+    aiFeedback: apiData.mensaje_ia || 'No hay comentarios de IA disponibles.',
+    painAlerts: apiData.alertas?.activa
+      ? [{ area: 'Rodilla', level: 3, description: apiData.alertas.detalle || 'Alerta de dolor.' }]
+      : [],
+    wellnessIndex: {
+      overallScore: apiData.indice_bienestar ?? 0,
+      history8Weeks: apiData.evolucion_indice_bienestar?.map((item: any) => {
+        const date = item.fecha;
+        const sleep = apiData.metrica_sueno?.find((s: any) => s.semana === date)?.promedio ?? 0;
+        const stress = apiData.metrica_estres?.find((s: any) => s.semana === date)?.promedio ?? 0;
+        const energy = apiData.metrica_energia?.find((s: any) => s.semana === date)?.promedio ?? 0;
+        return {
+          weekLabel: `Sem ${item.semana_actual}`,
+          sleep: Math.round(sleep * 20), // Convert 1-5 to 0-100
+          stress: Math.round(stress * 20), // Convert 1-5 to 0-100
+          nutrition: 65,
+          energy: Math.round(energy * 20), // Convert 1-5 to 0-100
+        };
+      }) || [],
+    },
+    weightTrend: {
+      currentWeight: currentWeightValue,
+      targetWeight: targetWeightValue,
+      musclePct: apiData.historial_peso?.[0]?.musculo || 52,
+      fatPct: apiData.historial_peso?.[0]?.grasa || 48,
+      muscleDelta: apiData.musculos?.actual - apiData.musculos?.anterior || 0,
+      fatDelta: apiData.grasa?.actual - apiData.grasa?.anterior || 0,
+      history7Weeks: apiData.historial_peso?.map((item: any) => ({
+        weekLabel: `Sem ${item.semana}`,
+        weight: item.peso,
+      })).reverse() || [],
+    },
+    secondaryMetrics: {
+      bodyAge: apiData.detalle_factor_edad_corporal?.puntaje || 36,
+      hydrationDeficit: apiData.metricas_secundarias?.actual?.deficit_hidrico || 0,
+      vo2Max: apiData.metricas_secundarias?.actual?.vo2_max || 44.48,
+    },
+    weeklyInsights: [
+      {
+        title: 'Tiempo Activo',
+        value: apiData.tiempo_activo?.total_minutos ? `${apiData.tiempo_activo.total_minutos} min` : '120 min',
+        description: apiData.tiempo_activo?.sesiones_totales ? `Sesiones completadas: ${apiData.tiempo_activo.sesiones_completadas || 0} de ${apiData.tiempo_activo.sesiones_totales}` : 'Has acumulado minutos de actividad física.',
+        type: 'success',
+      },
+      {
+        title: 'Hidratación Total',
+        value: apiData.detalle_factor_hidratacion?.puntaje?.consumo_total_ml ? `${apiData.detalle_factor_hidratacion.puntaje.consumo_total_ml / 1000} L` : '13 L',
+        description: apiData.detalle_factor_hidratacion?.puntaje?.requerimiento_total_ml ? `Meta semanal de ${Math.round(apiData.detalle_factor_hidratacion.puntaje.requerimiento_total_ml / 1000)} L` : 'Ingesta de líquidos de la semana.',
+        type: 'warning',
+      },
+    ],
+  };
+};
+
 const biometricRepository = new MockBiometricRepository();
+
 
 export const ProgressTab: React.FC<ProgressTabProps> = ({ patientId, isSpecialist = false, readOnly = false }) => {
   const [activeWeekIndex, setActiveWeekIndex] = useState<number>(0); // 0 for current week, up to 4 for oldest
@@ -36,24 +102,49 @@ export const ProgressTab: React.FC<ProgressTabProps> = ({ patientId, isSpecialis
   const [error, setError] = useState<string | null>(null);
   const [lastReportSent, setLastReportSent] = useState<Date | null>(null);
 
+  const isMockPatient = !patientId || patientId.startsWith('uid-') || patientId.startsWith('pro-') || patientId.startsWith('esp-') || patientId.length < 10 || patientId.startsWith('uid-mock-');
+
+  const {
+    data: apiProgressData,
+    isLoading: isApiLoading,
+    isError: isApiError,
+    error: apiError,
+  } = useQuery({
+    queryKey: ['patientProgress', patientId, activeWeekIndex],
+    queryFn: () => usersService.getUserTabDetalle(patientId, 'progreso'),
+    enabled: !isMockPatient && !!patientId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
   useEffect(() => {
     const fetchProgress = async () => {
       setLoading(true);
       setError(null);
       setWeeklyProgressData(null); // Clear previous data
-      try {
-        const data = await biometricRepository.getWeeklyProgress(patientId, activeWeekIndex);
-        setWeeklyProgressData(data);
-      } catch (err) {
-        setError('Failed to fetch progress data.');
-        console.error(err);
-      } finally {
-        setLoading(false);
+
+      if (isMockPatient) {
+        try {
+          const data = await biometricRepository.getWeeklyProgress(patientId, activeWeekIndex);
+          setWeeklyProgressData(data);
+        } catch (err) {
+          setError('Failed to fetch progress data.');
+          console.error(err);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        // Handled by React Query, just set local state based on query result
+        setLoading(isApiLoading);
+        if (isApiError) {
+          setError(apiError?.message || 'Failed to fetch progress data from API.');
+        } else if (apiProgressData) {
+          setWeeklyProgressData(adaptApiProgress(apiProgressData, activeWeekIndex));
+        }
       }
     };
 
     fetchProgress();
-  }, [patientId, activeWeekIndex]);
+  }, [patientId, activeWeekIndex, isMockPatient, isApiLoading, isApiError, apiError, apiProgressData]);
 
   const handleGenerateReport = () => {
     showToast('Generando y enviando informe PDF...');
@@ -65,12 +156,15 @@ export const ProgressTab: React.FC<ProgressTabProps> = ({ patientId, isSpecialis
   const isPrevDisabled = activeWeekIndex >= 4; // Assuming 5 weeks total (0-4)
   const isNextDisabled = activeWeekIndex <= 0;
 
-  if (loading) {
+  const displayLoading = isMockPatient ? loading : isApiLoading;
+  const displayError = isMockPatient ? error : (isApiError ? apiError?.message || 'Failed to fetch progress data from API.' : null);
+
+  if (displayLoading) {
     return <div className="p-4 text-center text-surface-muted">Cargando progreso del paciente...</div>;
   }
 
-  if (error) {
-    return <div className="p-4 text-center text-brand-red">Error: {error}</div>;
+  if (displayError) {
+    return <div className="p-4 text-center text-brand-red">Error: {displayError}</div>;
   }
 
   if (!weeklyProgressData) {

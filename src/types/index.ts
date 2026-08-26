@@ -55,6 +55,10 @@ export interface User {
   fecha_fin_suscripcion?: string
   estado_suscripcion?: string
   tiene_plan_activo?: boolean
+  apple_health?: { conectado: boolean; detalle: string }
+  strava?: { conectado: boolean; detalle: string }
+  garmin?: { conectado: boolean; detalle: string }
+  google_fit?: { conectado: boolean; detalle: string }
 }
 
 export type ClinicalStatus = 'En seguimiento' | 'Alta médica' | 'Pendiente revisión'
