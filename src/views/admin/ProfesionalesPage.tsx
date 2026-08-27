@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { usersService } from '@/services/endpoints/users'
 import { Download, Plus, ChevronLeft, Search, Trash2, Upload } from 'lucide-react'
@@ -21,11 +21,13 @@ type ProfTab = 'perfil' | 'pacientes' | 'agenda'
 
 // ─── Detail ───────────────────────────────────────────────────────
 function ProfDetail({ onUpdate }: { onUpdate: () => void }) {
-  const { selectedProfessional: p, setPage } = useAppStore()
+  const { selectedProfessional: p, setPage, setSelectedProfessional } = useAppStore()
   const queryClient = useQueryClient()
   const isMockProfessional = !p?.id || p.id.startsWith('pro-') || p.id.startsWith('esp-') || p.id.startsWith('uid-mock-')
   const [tab, setTab] = useState<ProfTab>('perfil')
   const [isEditing, setIsEditing] = useState(false)
+  const [hasLoadedHeader, setHasLoadedHeader] = useState(false)
+  const [hasLoadedFicha, setHasLoadedFicha] = useState(false)
   
   // Local state for pupil assignments modal
   const [isAssignOpen, setIsAssignOpen] = useState(false)
@@ -38,12 +40,133 @@ function ProfDetail({ onUpdate }: { onUpdate: () => void }) {
     enabled: !isMockProfessional && tab === 'pacientes' && !!p?.id,
   })
 
+  // Fetch header
+  const { data: apiHeader } = useQuery({
+    queryKey: ['professionalHeader', p?.id],
+    queryFn: () => usersService.getProfessionalHeaderDetalle(p!.id),
+    enabled: !isMockProfessional && !!p?.id,
+  })
+
+  // Fetch ficha
+  const { data: apiFicha } = useQuery({
+    queryKey: ['professionalFicha', p?.id],
+    queryFn: () => usersService.getProfessionalTabDetalle(p!.id, 'ficha'),
+    enabled: !isMockProfessional && !!p?.id,
+  })
+
   // Fetch available students for assignment
   const { data: availableStudents } = useQuery({
     queryKey: ['availableStudents'],
     queryFn: () => usersService.getAvailableStudents(),
     enabled: !isMockProfessional && isAssignOpen,
   })
+
+  useEffect(() => {
+    if (!isMockProfessional && apiHeader && p && !hasLoadedHeader) {
+      if (apiHeader.nombre !== undefined) p.nombre = apiHeader.nombre;
+      if (apiHeader.email !== undefined) p.email = apiHeader.email;
+      if (apiHeader.especialidad_principal !== undefined) p.especialidad = apiHeader.especialidad_principal;
+      if (apiHeader.estado !== undefined) p.estado = apiHeader.estado;
+      setHasLoadedHeader(true);
+      setSelectedProfessional({ ...p });
+      onUpdate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiHeader, isMockProfessional, hasLoadedHeader]);
+
+  useEffect(() => {
+    // Add console log at the very start of the hook's execution
+    console.log('Raw apiFicha response:', apiFicha);
+    if (!isMockProfessional && apiFicha && p && !hasLoadedFicha) {
+      let dataObj = apiFicha;
+
+      // 1. If response is a string (Stringified JSON), parse it safely
+      if (typeof apiFicha === 'string') {
+        try {
+          dataObj = JSON.parse(apiFicha);
+        } catch (e) {
+          console.error('Failed to parse apiFicha stringified JSON:', e);
+        }
+      }
+
+      // 2. If it is wrapped in an array, take the first element
+      if (Array.isArray(dataObj)) {
+        dataObj = dataObj[0];
+      }
+
+      // 3. If it has an inner wrapper like .data or .ficha, unpack it
+      if (dataObj && typeof dataObj === 'object') {
+        if (dataObj.data !== undefined) {
+          dataObj = dataObj.data;
+        } else if (dataObj.ficha !== undefined) {
+          dataObj = dataObj.ficha;
+        }
+      }
+
+      if (!dataObj || typeof dataObj !== 'object') return;
+
+      const bioVal = dataObj.biografia !== undefined ? dataObj.biografia : dataObj.bio;
+      const emailVal = dataObj.email;
+      const espVal = dataObj.especialidades !== undefined ? dataObj.especialidades : (dataObj.especialidad !== undefined ? dataObj.especialidad : dataObj.especialidad_principal);
+      const expVal = dataObj.años_experiencia !== undefined ? dataObj.años_experiencia : dataObj.experiencia;
+      const ciudadVal = dataObj.ciudad;
+      const paisVal = dataObj.pais;
+      const telVal = dataObj.telefono_contacto !== undefined ? dataObj.telefono_contacto : dataObj.tel;
+      const docTipoVal = dataObj.tipo_documento !== undefined ? dataObj.tipo_documento : dataObj.docTipo;
+      const docNumeroVal = dataObj.numero_documento !== undefined ? dataObj.numero_documento : dataObj.docNumero;
+
+      if (bioVal !== undefined) p.bio = bioVal;
+      if (emailVal !== undefined) p.email = emailVal;
+      if (espVal !== undefined) p.especialidad = espVal;
+      if (expVal !== undefined) p.experiencia = expVal;
+      
+      // Reconstruct city/country representation cleanly
+      if (ciudadVal !== undefined) {
+        if (paisVal) {
+          p.ciudad = `${ciudadVal}, ${paisVal}`;
+        } else {
+          p.ciudad = ciudadVal;
+        }
+      } else if (paisVal !== undefined) {
+        p.ciudad = paisVal;
+      }
+
+      if (telVal !== undefined) p.tel = telVal;
+      if (docTipoVal !== undefined) p.docTipo = docTipoVal;
+      if (docNumeroVal !== undefined) p.docNumero = docNumeroVal;
+
+      const docDelanteroVal = dataObj.doc_delantero || dataObj.documento_delantero || dataObj.docDelantero || dataObj.url_delantera;
+      const docTraseroVal = dataObj.doc_trasero || dataObj.documento_trasero || dataObj.docTrasero || dataObj.url_trasera;
+      if (docDelanteroVal !== undefined) p.docDelantero = docDelanteroVal;
+      if (docTraseroVal !== undefined) p.docTrasero = docTraseroVal;
+
+      const laborHistory = dataObj.historial_laboral || dataObj.tray || dataObj.historialLaboral;
+      if (laborHistory) {
+        p.tray = laborHistory.map((item: any) => ({
+          titulo: item.puesto || item.titulo || '',
+          org: item.empresa || item.org || '',
+          inicio: item.periodo ? (item.periodo.split('-')[0] || '') : (item.inicio || ''),
+          fin: item.periodo ? (item.periodo.split('-')[1] || '') : (item.fin || ''),
+          desc: item.desc || ''
+        }));
+      }
+
+      const certsList = dataObj.certificados || dataObj.certs;
+      if (certsList) {
+        p.certs = certsList.map((c: any) => ({
+          id: String(c.id_certificado || c.id || ''),
+          nombre: c.nombre_certificado || c.nombre || '',
+          org: c.institucion || c.org || '',
+          año: c.año || '',
+          venc: c.vence || c.venc || ''
+        }));
+      }
+      setHasLoadedFicha(true);
+      setSelectedProfessional({ ...p });
+      onUpdate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiFicha, isMockProfessional, hasLoadedFicha]);
 
   // Local state for patient reassignment
   const [isReassignOpen, setIsReassignOpen] = useState(false)
@@ -214,10 +337,45 @@ function ProfDetail({ onUpdate }: { onUpdate: () => void }) {
                   <Button
                     variant="primary"
                     style={{ background: '#4CAF82', borderColor: '#4CAF82' }}
-                    onClick={() => {
-                      setIsEditing(false)
-                      toast.show('Cambios guardados con éxito', 'success')
-                      onUpdate()
+                    onClick={async () => {
+                      if (!isMockProfessional) {
+                        const cityParts = (p.ciudad || '').split(',');
+                        const ciudad = cityParts[0]?.trim() || '';
+                        const pais = cityParts[1]?.trim() || '';
+                        const payload = {
+                          email: p.email || '',
+                          biografia: p.bio || '',
+                          especialidades: p.especialidad || '',
+                          años_experiencia: Number(p.experiencia || 0),
+                          ciudad: ciudad,
+                          pais: pais,
+                          telefono_contacto: p.tel || '',
+                          tipo_documento: p.docTipo || '',
+                          numero_documento: p.docNumero || '',
+                          historial_laboral: (p.tray || []).map((item: any) => ({
+                            puesto: item.titulo || '',
+                            empresa: item.org || '',
+                            periodo: `${item.inicio || ''}-${item.fin || ''}`
+                          }))
+                        };
+                        try {
+                          await usersService.updateProfessionalFicha(p.id, payload);
+                          queryClient.invalidateQueries({ queryKey: ['professionalFicha', p.id] });
+                          queryClient.invalidateQueries({ queryKey: ['professionalHeader', p.id] });
+                          toast.show('Cambios guardados con éxito', 'success');
+                          setIsEditing(false);
+                          setSelectedProfessional({ ...p });
+                          onUpdate();
+                        } catch (error) {
+                          console.error('Error al guardar ficha profesional:', error);
+                          toast.show('Error al guardar cambios', 'error');
+                        }
+                      } else {
+                        // Existing mock logic
+                        setIsEditing(false)
+                        toast.show('Cambios guardados con éxito', 'success')
+                        onUpdate()
+                      }
                     }}
                   >
                     💾 Guardar Cambios
@@ -239,11 +397,23 @@ function ProfDetail({ onUpdate }: { onUpdate: () => void }) {
                     <Button
                       variant="primary"
                       style={{ background: '#4CAF82', borderColor: '#4CAF82' }}
-                      onClick={() => {
-                        p.estado = 'Activo'
-                        p.accesoNivel = 'Completo' // restore access
-                        onUpdate()
-                        toast.show('Especialista reactivado con éxito', 'success')
+                      onClick={async () => {
+                        if (!isMockProfessional && p?.id) {
+                          try {
+                            await usersService.updateProfessionalStatus(p.id, { estado: 'Activo' });
+                            queryClient.invalidateQueries({ queryKey: ['professionalHeader', p.id] });
+                            toast.show('Especialista reactivado con éxito', 'success');
+                            onUpdate();
+                          } catch (error) {
+                            console.error('Error al reactivar especialista:', error);
+                            toast.show('Error al reactivar especialista', 'error');
+                          }
+                        } else {
+                          p.estado = 'Activo'
+                          p.accesoNivel = 'Completo' // restore access
+                          onUpdate()
+                          toast.show('Especialista reactivado con éxito', 'success')
+                        }
                       }}
                     >
                       🟢 Reactivar Especialista
@@ -253,22 +423,46 @@ function ProfDetail({ onUpdate }: { onUpdate: () => void }) {
                       <Button
                         variant="ghost"
                         className="text-brand-orange hover:bg-brand-orange/10 border border-brand-orange/20"
-                        onClick={() => {
-                          p.estado = 'Suspendido Temporalmente'
-                          p.accesoNivel = 'Sin acceso' // revoke access
-                          onUpdate()
-                          toast.show('Especialista suspendido temporalmente', 'warning')
+                        onClick={async () => {
+                          if (!isMockProfessional && p?.id) {
+                            try {
+                              await usersService.updateProfessionalStatus(p.id, { estado: 'Suspendido_Temporal', motivo_suspencion: 'Suspensión temporal por administrador' });
+                              queryClient.invalidateQueries({ queryKey: ['professionalHeader', p.id] });
+                              toast.show('Especialista suspendido temporalmente', 'warning');
+                              onUpdate();
+                            } catch (error) {
+                              console.error('Error al suspender temporalmente especialista:', error);
+                              toast.show('Error al suspender temporalmente especialista', 'error');
+                            }
+                          } else {
+                            p.estado = 'Suspendido Temporalmente'
+                            p.accesoNivel = 'Sin acceso' // revoke access
+                            onUpdate()
+                            toast.show('Especialista suspendido temporalmente', 'warning')
+                          }
                         }}
                       >
                         🟡 Suspender Temporalmente
                       </Button>
                       <Button
                         variant="danger"
-                        onClick={() => {
-                          p.estado = 'Suspendido Permanentemente'
-                          p.accesoNivel = 'Sin acceso' // revoke access
-                          onUpdate()
-                          toast.show('Especialista suspendido permanentemente', 'error')
+                        onClick={async () => {
+                          if (!isMockProfessional && p?.id) {
+                            try {
+                              await usersService.updateProfessionalStatus(p.id, { estado: 'Suspendido_Permanente', motivo_suspencion: 'Suspensión permanente por administrador' });
+                              queryClient.invalidateQueries({ queryKey: ['professionalHeader', p.id] });
+                              toast.show('Especialista suspendido permanentemente', 'error');
+                              onUpdate();
+                            } catch (error) {
+                              console.error('Error al suspender permanentemente especialista:', error);
+                              toast.show('Error al suspender permanentemente especialista', 'error');
+                            }
+                          } else {
+                            p.estado = 'Suspendido Permanentemente'
+                            p.accesoNivel = 'Sin acceso' // revoke access
+                            onUpdate()
+                            toast.show('Especialista suspendido permanentemente', 'error')
+                          }
                         }}
                       >
                         🔴 Suspender Permanentemente
@@ -481,10 +675,24 @@ function ProfDetail({ onUpdate }: { onUpdate: () => void }) {
                           </Button>
                           {isEditing && (
                             <button
-                              onClick={() => {
-                                p.docDelantero = undefined
-                                onUpdate()
-                                toast.show('Parte delantera removida', 'error')
+                              onClick={async () => {
+                                if (!isMockProfessional && p?.id) {
+                                  try {
+                                    await usersService.deleteProfessionalDocument(p.id, 'frente');
+                                    p.docDelantero = undefined;
+                                    setSelectedProfessional({ ...p });
+                                    queryClient.invalidateQueries({ queryKey: ['professionalFicha', p.id] });
+                                    toast.show('Parte delantera removida', 'success');
+                                    onUpdate();
+                                  } catch (error) {
+                                    console.error('Error al eliminar documento delantero:', error);
+                                    toast.show('Error al eliminar documento delantero', 'error');
+                                  }
+                                } else {
+                                  p.docDelantero = undefined
+                                  onUpdate()
+                                  toast.show('Parte delantera removida', 'error')
+                                }
                               }}
                               className="p-1 text-brand-red hover:bg-brand-red/10 rounded-lg transition-all cursor-pointer bg-transparent border-0"
                               title="Eliminar frente"
@@ -499,12 +707,26 @@ function ProfDetail({ onUpdate }: { onUpdate: () => void }) {
                         <input
                           type="file"
                           className="hidden"
-                          onChange={(e) => {
+                          onChange={async (e) => {
                             const file = e.target.files?.[0]
                             if (file) {
-                              p.docDelantero = file.name
-                              onUpdate()
-                              toast.show(`Frente "${file.name}" cargado con éxito`, 'success')
+                                if (!isMockProfessional && p?.id) {
+                                  try {
+                                    const res = await usersService.uploadProfessionalDocument(p.id, file, 'frente');
+                                    p.docDelantero = res.url || file.name;
+                                    setSelectedProfessional({ ...p });
+                                    queryClient.invalidateQueries({ queryKey: ['professionalFicha', p.id] });
+                                    toast.show(`Frente "${file.name}" cargado con éxito`, 'success');
+                                    onUpdate();
+                                  } catch (error) {
+                                  console.error('Error al subir documento delantero:', error);
+                                  toast.show('Error al subir documento delantero', 'error');
+                                }
+                              } else {
+                                p.docDelantero = file.name
+                                onUpdate()
+                                toast.show(`Frente "${file.name}" cargado con éxito`, 'success')
+                              }
                             }
                           }}
                         />
@@ -539,10 +761,24 @@ function ProfDetail({ onUpdate }: { onUpdate: () => void }) {
                           </Button>
                           {isEditing && (
                             <button
-                              onClick={() => {
-                                p.docTrasero = undefined
-                                onUpdate()
-                                toast.show('Parte trasera removida', 'error')
+                              onClick={async () => {
+                                if (!isMockProfessional && p?.id) {
+                                  try {
+                                    await usersService.deleteProfessionalDocument(p.id, 'dorso');
+                                    p.docTrasero = undefined;
+                                    setSelectedProfessional({ ...p });
+                                    queryClient.invalidateQueries({ queryKey: ['professionalFicha', p.id] });
+                                    toast.show('Parte trasera removida', 'success');
+                                    onUpdate();
+                                  } catch (error) {
+                                    console.error('Error al eliminar documento trasero:', error);
+                                    toast.show('Error al eliminar documento trasero', 'error');
+                                  }
+                                } else {
+                                  p.docTrasero = undefined
+                                  onUpdate()
+                                  toast.show('Parte trasera removida', 'error')
+                                }
                               }}
                               className="p-1 text-brand-red hover:bg-brand-red/10 rounded-lg transition-all cursor-pointer bg-transparent border-0"
                               title="Eliminar dorso"
@@ -557,12 +793,26 @@ function ProfDetail({ onUpdate }: { onUpdate: () => void }) {
                         <input
                           type="file"
                           className="hidden"
-                          onChange={(e) => {
+                          onChange={async (e) => {
                             const file = e.target.files?.[0]
                             if (file) {
-                              p.docTrasero = file.name
-                              onUpdate()
-                              toast.show(`Dorso "${file.name}" cargado con éxito`, 'success')
+                                if (!isMockProfessional && p?.id) {
+                                  try {
+                                    const res = await usersService.uploadProfessionalDocument(p.id, file, 'dorso');
+                                    p.docTrasero = res.url || file.name;
+                                    setSelectedProfessional({ ...p });
+                                    queryClient.invalidateQueries({ queryKey: ['professionalFicha', p.id] });
+                                    toast.show(`Dorso "${file.name}" cargado con éxito`, 'success');
+                                    onUpdate();
+                                  } catch (error) {
+                                  console.error('Error al subir documento trasero:', error);
+                                  toast.show('Error al subir documento trasero', 'error');
+                                }
+                              } else {
+                                p.docTrasero = file.name
+                                onUpdate()
+                                toast.show(`Dorso "${file.name}" cargado con éxito`, 'success')
+                              }
                             }
                           }}
                         />
@@ -683,19 +933,40 @@ function ProfDetail({ onUpdate }: { onUpdate: () => void }) {
               <input
                 type="file"
                 className="hidden"
-                onChange={(e) => {
+                onChange={async (e) => {
                   const file = e.target.files?.[0]
                   if (file) {
-                    if (!p.certs) p.certs = []
-                    p.certs.push({
-                      nombre: file.name.replace(/\.[^/.]+$/, ""), // remove extension
-                      org: 'Subido por el usuario',
-                      año: new Date().getFullYear().toString(),
-                      venc: 'Sin vencimiento',
-                      id: `USR-${Math.floor(1000 + Math.random() * 9000)}`
-                    })
-                    onUpdate()
-                    toast.show(`Certificado "${file.name}" cargado con éxito`, 'success')
+                    if (!isMockProfessional && p?.id) {
+                      try {
+                        const res = await usersService.uploadProfessionalCertificate(p.id, file);
+                        const newCert = {
+                          id: String(res.id_certificado || res.id || `CERT-${Math.floor(1000 + Math.random() * 9000)}`),
+                          nombre: file.name.replace(/\.[^/.]+$/, ""),
+                          org: 'Subido por el usuario',
+                          año: new Date().getFullYear().toString(),
+                          venc: 'Sin vencimiento'
+                        };
+                        p.certs = [...(p.certs || []), newCert];
+                        setSelectedProfessional({ ...p });
+                        queryClient.invalidateQueries({ queryKey: ['professionalFicha', p.id] });
+                        toast.show(`Certificado "${file.name}" cargado con éxito`, 'success');
+                        onUpdate();
+                      } catch (error) {
+                        console.error('Error al subir certificado:', error);
+                        toast.show('Error al subir certificado', 'error');
+                      }
+                    } else {
+                      if (!p.certs) p.certs = []
+                      p.certs.push({
+                        nombre: file.name.replace(/\.[^/.]+$/, ""), // remove extension
+                        org: 'Subido por el usuario',
+                        año: new Date().getFullYear().toString(),
+                        venc: 'Sin vencimiento',
+                        id: `USR-${Math.floor(1000 + Math.random() * 9000)}`
+                      })
+                      onUpdate()
+                      toast.show(`Certificado "${file.name}" cargado con éxito`, 'success')
+                    }
                   }
                 }}
               />
@@ -713,11 +984,25 @@ function ProfDetail({ onUpdate }: { onUpdate: () => void }) {
                     <span className="text-[12px] text-white">{c.nombre}</span>
                     {isEditing && (
                       <button
-                        onClick={() => {
+                      onClick={async () => {
+                        if (!isMockProfessional && p?.id) {
+                          try {
+                            await usersService.deleteProfessionalCertificate(p.id, c.id);
+                            p.certs = p.certs.filter((cert: any) => cert.id !== c.id);
+                            setSelectedProfessional({ ...p });
+                            queryClient.invalidateQueries({ queryKey: ['professionalFicha', p.id] });
+                            toast.show('Certificado eliminado', 'success');
+                            onUpdate();
+                          } catch (error) {
+                            console.error('Error al eliminar certificado:', error);
+                            toast.show('Error al eliminar certificado', 'error');
+                          }
+                        } else {
                           p.certs = p.certs.filter((_, i) => i !== idx)
                           onUpdate()
                           toast.show('Certificado eliminado', 'error')
-                        }}
+                        }
+                      }}
                         className="p-1.5 text-brand-red hover:bg-brand-red/10 rounded-lg transition-all cursor-pointer bg-transparent border-0"
                         title="Eliminar certificado"
                       >

@@ -327,6 +327,121 @@ export const usersService = {
     return data;
   },
 
+  updateProfessionalFicha: async (id: string, payload: any): Promise<any> => {
+    if (USE_MOCK || isMockProfessionalId(id)) {
+      const professional = MOCK_PROFESSIONALS.find(p => p.id === id);
+      if (professional) {
+        professional.bio = payload.biografia;
+        professional.email = payload.email;
+        professional.especialidad = payload.especialidades;
+        professional.experiencia = payload.años_experiencia;
+        professional.ciudad = payload.ciudad; // Assuming payload.ciudad might also contain country info for mock
+        professional.tel = payload.telefono_contacto;
+        professional.docTipo = payload.tipo_documento;
+        professional.docNumero = payload.numero_documento;
+        professional.tray = payload.historial_laboral;
+        return professional;
+      }
+      return Promise.reject(new Error('Professional not found for ficha update'));
+    }
+    const { data } = await apiClient.put(`/admin/especialista/${id}/ficha`, payload);
+    return data;
+  },
+
+  uploadProfessionalDocument: async (id: string, file: File, tipo: 'frente' | 'dorso'): Promise<any> => {
+    if (USE_MOCK || isMockProfessionalId(id)) {
+      const professional = MOCK_PROFESSIONALS.find(p => p.id === id);
+      if (professional) {
+        if (tipo === 'frente') {
+          professional.docDelantero = file.name;
+        } else if (tipo === 'dorso') {
+          professional.docTrasero = file.name;
+        }
+        return { success: true, message: "Documento subido" };
+      }
+      return Promise.reject(new Error('Professional not found for document upload'));
+    }
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('tipo', tipo);
+    const { data } = await apiClient.post(`/admin/especialista/${id}/documento/subir`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return data;
+  },
+
+  deleteProfessionalDocument: async (id: string, tipo: 'frente' | 'dorso'): Promise<any> => {
+    if (USE_MOCK || isMockProfessionalId(id)) {
+      const professional = MOCK_PROFESSIONALS.find(p => p.id === id);
+      if (professional) {
+        if (tipo === 'frente') {
+          professional.docDelantero = undefined;
+        } else if (tipo === 'dorso') {
+          professional.docTrasero = undefined;
+        }
+        return { success: true, message: "Documento eliminado" };
+      }
+      return Promise.reject(new Error('Professional not found for document deletion'));
+    }
+    const { data } = await apiClient.delete(`/admin/especialista/${id}/documento/${tipo}`);
+    return data;
+  },
+
+  uploadProfessionalCertificate: async (id: string, file: File): Promise<any> => {
+    if (USE_MOCK || isMockProfessionalId(id)) {
+      const professional = MOCK_PROFESSIONALS.find(p => p.id === id);
+      if (professional) {
+        const mockCert = {
+          nombre: file.name.replace(/\.[^/.]+$/, ""),
+          org: 'Subido por el usuario',
+          año: new Date().getFullYear().toString(),
+          venc: 'Sin vencimiento',
+          id: `CERT-${Math.floor(1000 + Math.random() * 9000)}`
+        };
+        professional.certs = [...(professional.certs || []), mockCert];
+        return { success: true, message: "Certificado subido" };
+      }
+      return Promise.reject(new Error('Professional not found for certificate upload'));
+    }
+    const formData = new FormData();
+    formData.append('file', file);
+    const { data } = await apiClient.post(`/admin/especialista/${id}/certificados/subir`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return data;
+  },
+
+  deleteProfessionalCertificate: async (id: string, certId: string): Promise<any> => {
+    if (USE_MOCK || isMockProfessionalId(id)) {
+      const professional = MOCK_PROFESSIONALS.find(p => p.id === id);
+      if (professional) {
+        professional.certs = (professional.certs || []).filter(c => c.id !== certId);
+        return { success: true, message: "Certificado eliminado" };
+      }
+      return Promise.reject(new Error('Professional not found for certificate deletion'));
+    }
+    const { data } = await apiClient.delete(`/admin/especialista/${id}/certificado/${certId}`);
+    return data;
+  },
+
+  updateProfessionalStatus: async (id: string, payload: { estado: string, motivo_suspencion?: string }): Promise<any> => {
+    if (USE_MOCK || isMockProfessionalId(id)) {
+      const professional = MOCK_PROFESSIONALS.find(p => p.id === id);
+      if (professional) {
+        professional.estado = payload.estado as any;
+        professional.accesoNivel = payload.estado === 'Activo' ? 'Completo' : 'Sin acceso';
+        return { success: true, message: "Estado actualizado" };
+      }
+      return Promise.reject(new Error('Professional not found for status update'));
+    }
+    const { data } = await apiClient.patch(`/admin/especialista/${id}/modificar-estado`, payload);
+    return data;
+  },
+
   getProfessionalHeaderDetalle: async (id: string): Promise<any> => {
     if (USE_MOCK || isMockProfessionalId(id)) {
       return MOCK_PROFESSIONALS.find(p => p.id === id);
