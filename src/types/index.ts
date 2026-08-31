@@ -290,3 +290,71 @@ export interface AdminProfessionalStats {
   entrenadores: number
   pacientes_assigned: number
 }
+
+// ─── Memberships & Plans (Direct Backend Integration) ───────────────
+export interface PlanPrice {
+  monto: number
+  monto_mensual?: number
+  moneda: string
+}
+
+export interface MembershipBenefit {
+  id_beneficio: string
+  nombre: string
+  descripcion?: string
+}
+
+export interface MembershipPlan {
+  id_plan: string
+  nombre: string
+  descripcion: string
+  activo: boolean
+  dias_prueba: number
+  descuento_anual: number
+  precio: PlanPrice
+  caracteristicas: MembershipBenefit[]
+  usuarios_activos?: number
+}
+
+export interface MembershipStats {
+  ingresos_este_mes: number
+  crecimiento_porcentaje: number
+  essential_activos: number
+  pro_activos: number
+  elite_activos: number
+}
+
+export interface LinkBenefitPayload {
+  id_plan: string
+  id_beneficio?: string
+  nuevo_nombre?: string
+  nueva_descripcion?: string
+}
+
+export interface UpdatePlanPayload {
+  id_plan: string
+  nombre?: string
+  descripcion?: string
+  activo?: boolean
+  dias_prueba?: number
+  descuento_anual?: number
+  monto?: number
+}
+
+// ─── Transactions Backend Integration ────────────────────────────────
+export interface TransactionSummary {
+  ingresos_totales: number
+  membresias: number
+  citas_medicas: number
+  total_transacciones: number
+}
+
+export interface APITransaction {
+  id_transaccion: string
+  fecha: string
+  cliente: string
+  tipo: 'membresia' | 'cita'
+  detalle: string
+  monto: number
+  estado: 'exitosa' | 'pendiente' | 'cancelada'
+}
