@@ -358,3 +358,37 @@ export interface APITransaction {
   monto: number
   estado: 'exitosa' | 'pendiente' | 'cancelada'
 }
+
+// ─── Notifications Backend Integration ────────────────────────────────
+export interface NotificationStats {
+  enviadas_hoy: number
+  apertura_promedio: number
+  total_promedio: number
+  mas_popular: number
+}
+
+export interface RecipientCounts {
+  todos_los_usuarios: number
+  solo_pacientes: number
+  pro_elite: number
+  inactivos_7_dias: number
+  sin_checkin_hoy: number
+  onboarding_incompleto: number
+}
+
+export interface RecentCampaign {
+  id_campana: number
+  titulo: string
+  destinatarios_filtro: string
+  estado: string
+  fecha_programada: string
+  tiempo_transcurrido: string
+  porcentaje_apertura: number
+}
+
+export interface SendNotificationPayload {
+  subject: string
+  message: string
+  destinatarios_filtro: string
+  fecha_programada?: string | null
+}
