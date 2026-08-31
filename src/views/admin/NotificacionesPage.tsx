@@ -91,8 +91,8 @@ export function NotificacionesPage() {
                   return;
                 }
                 sendNotificationMutation.mutate({
-                  subject: titulo.trim(),
-                  message: mensaje.trim(),
+                  titulo: titulo.trim(),
+                  mensaje: mensaje.trim(),
                   destinatarios_filtro: dest as any,
                   fecha_programada: null
                 });

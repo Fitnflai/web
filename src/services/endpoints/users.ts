@@ -1,5 +1,6 @@
 import { apiClient } from '@/services/api/client'
-import type { User, Professional, AdminProfessionalStats, AssignedPatient } from '@/types'
+import type { User, Professional, AdminProfessionalStats, AssignedPatient, SpecialistPatientCabeceraResponse } from '@/types'
+import { useAppStore } from '@/store/useAppStore'
 import { MOCK_USERS } from '@/services/mocks/users.mock'
 import { MOCK_PLAN } from '@/services/mocks/plan.mock'
 import { MOCK_PROFESSIONALS } from '@/services/mocks/professionals.mock'
@@ -384,7 +385,12 @@ export const usersService = {
     if (fecha_inicio_plan) params.fecha_inicio_plan = fecha_inicio_plan;
     if (fecha_fin_plan) params.fecha_fin_plan = fecha_fin_plan;
 
-    const { data } = await apiClient.get(`/admin/usuarios/detalle/${id_usuario}/detalle`, {
+    const isSpecialist = useAppStore.getState().userRole === 'specialist';
+    const url = isSpecialist
+      ? `/specialist/specialist/pacientes/${id_usuario}/detalle`
+      : `/admin/usuarios/detalle/${id_usuario}/detalle`;
+
+    const { data } = await apiClient.get(url, {
       params
     });
     return data;
@@ -392,6 +398,38 @@ export const usersService = {
   getUserHeaderDetalle: async (id_usuario: string): Promise<any> => {
     if (USE_MOCK || isMockId(id_usuario)) {
       return MOCK_USERS.find(user => user.id_usuario === id_usuario);
+    }
+    const isSpecialist = useAppStore.getState().userRole === 'specialist';
+    if (isSpecialist) {
+      const { data } = await apiClient.get<SpecialistPatientCabeceraResponse>(`/specialist/specialist/pacientes/${id_usuario}/cabecera`);
+      
+      const getInitials = (name: string): string => {
+        const parts = name.trim().split(/\s+/)
+        if (parts.length === 0 || !parts[0]) return 'U'
+        if (parts.length === 1) return parts[0].charAt(0).toUpperCase()
+        return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase()
+      }
+
+      const getColorFromString = (str: string): string => {
+        const colors = ['#E8622A', '#4CAF82', '#4A7CC7', '#E24B4A', '#9B59B6', '#7F8C8D']
+        let hash = 0
+        for (let i = 0; i < str.length; i++) {
+          hash = str.charCodeAt(i) + ((hash << 5) - hash)
+        }
+        const index = Math.abs(hash) % colors.length
+        return colors[index]
+      }
+
+      return {
+        ...data,
+        id_usuario,
+        initials: getInitials(data.nombre || 'Usuario'),
+        color: getColorFromString(data.nombre || 'Usuario'),
+        plan_idx: data.membresia === 'Elite' ? 2 : data.membresia === 'Pro' ? 1 : 0,
+        nombre_plan_activo: data.membresia,
+        nombre_disciplina: data.disciplina,
+        registro_activo: data.estado === 'Activo' || data.estado === 'activo'
+      }
     }
     const { data } = await apiClient.get(`/admin/usuarios/detalle/${id_usuario}/cabecera`);
     return data;

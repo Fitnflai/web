@@ -387,8 +387,111 @@ export interface RecentCampaign {
 }
 
 export interface SendNotificationPayload {
-  subject: string
-  message: string
+  titulo: string
+  mensaje: string
   destinatarios_filtro: string
   fecha_programada?: string | null
+}
+
+// ─── Specialist Patients ───────────────────────────────────────────────
+export interface SpecialistPatient {
+  id_usuario: string
+  nombre_completo: string
+  email: string
+  disciplinas: string[]
+  nivel: string
+  ciudad: string
+  membresia: string | null
+  onboarding_completo: boolean
+  estado: string
+  avatar_url: string | null
+  // We can also define clinical status and rendering fields that our mapper will compute
+  initials?: string
+  color?: string
+  nombre?: string
+  disciplina?: string
+  registro_activo?: boolean
+  estado_clinico?: string
+}
+
+export interface SpecialistPatientsResponse {
+  total_asignados: number
+  total_nuevos: number
+  total_pendientes: number
+  total_revision: number
+  total_inactivos: number
+  pacientes: SpecialistPatient[]
+}
+
+// --- Specialist Dashboard ---
+export interface SpecialistDashboardStats {
+  asignados: number
+  nuevos: number
+  pendientes: number
+  en_seguimiento: number
+  inactivos: number
+  citas_hoy: number
+}
+
+export interface SpecialistActivePatientsMonth {
+  mes: string
+  total_pacientes: number
+}
+
+export interface SpecialistDashboardResponse {
+  id_especialista: string
+  nombre: string
+  estadisticas: SpecialistDashboardStats
+  pacientes_activos_mes: SpecialistActivePatientsMonth[]
+}
+
+// --- Specialist Dashboard Tabs ---
+export interface SpecialistDashboardCita {
+  id_cita: number
+  hora: string
+  nombre_paciente: string
+  tipo_cita: string
+}
+
+export interface SpecialistDashboardRevision {
+  id_usuario: string
+  username: string
+  nombre_completo: string
+  avatar_color: string
+}
+
+export interface SpecialistDashboardNuevo {
+  id_usuario: string
+  username: string
+  estado_onboarding: boolean
+}
+
+export interface SpecialistDashboardTabResponse {
+  tab_activo: string
+  total_agenda: number
+  total_revisiones: number
+  total_nuevos: number
+  agenda: SpecialistDashboardCita[] | null
+  revisiones: SpecialistDashboardRevision[] | null
+  nuevos: SpecialistDashboardNuevo[] | null
+}
+
+export interface SpecialistPatientCabeceraResponse {
+  nombre: string
+  apodo: string
+  estado: string
+  edad: number
+  peso: string
+  altura: string
+  ciudad: string
+  membresia: string
+  disciplina: string
+  nivel_motor: number
+  // computed frontend fields for legacy UI:
+  initials?: string
+  color?: string
+  plan_idx?: number
+  nombre_plan_activo?: string
+  nombre_disciplina?: string
+  registro_activo?: boolean
 }

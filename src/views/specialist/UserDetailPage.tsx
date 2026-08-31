@@ -2409,6 +2409,13 @@ export function UserDetailPage() {
     u.id_usuario = (u as any).id
   }
 
+  // Fetch live header details for the specialist's view of the patient
+  const { data: headerData, isLoading: isLoadingHeader } = useQuery({
+    queryKey: ['specialistUserHeader', u.id_usuario],
+    queryFn: () => usersService.getUserHeaderDetalle(u.id_usuario),
+    enabled: !!u.id_usuario,
+  })
+
   const tabs: { id: Tab; label: string }[] = [
     { id: 'perfil',       label: 'Perfil' },
     { id: 'progreso',     label: 'Progreso' },
@@ -2418,20 +2425,48 @@ export function UserDetailPage() {
     { id: 'notificaciones',  label: 'Notificaciones' },
   ]
 
+  // Merge loaded header details back into the local patient object to keep PerfilTab and others aligned
+  const mergedPatient = useMemo(() => {
+    if (!headerData) return u
+    return {
+      ...u,
+      nombre: headerData.nombre,
+      apodo: headerData.apodo,
+      ciudad: headerData.ciudad,
+      plan_idx: headerData.plan_idx ?? u.plan_idx,
+      nombre_plan_activo: headerData.nombre_plan_activo,
+      nombre_disciplina: headerData.nombre_disciplina,
+      registro_activo: headerData.registro_activo,
+      edad: headerData.edad ?? u.edad,
+      peso: headerData.peso ? parseFloat(headerData.peso) || u.peso : u.peso,
+      altura: headerData.altura ? parseFloat(headerData.altura) || u.altura : u.altura,
+    }
+  }, [u, headerData])
+
   return (
     <div>
       <Button variant="ghost" size="sm" onClick={() => setPage(userRole === 'admin' ? 'usuarios' : 'mis-pacientes')} className="mb-4">
         <ChevronLeft size={14} /> Volver
       </Button>
 
-      <div className="card-base flex items-start gap-4 mb-5">
-        <Avatar initials={u.initials} color={u.color} size="lg" />
+      <div className="card-base flex items-start gap-4 mb-5 text-left">
+        <Avatar 
+          initials={isLoadingHeader ? '...' : (headerData?.initials || u.initials || 'U')} 
+          color={isLoadingHeader ? '#7F8C8D' : (headerData?.color || u.color)} 
+          size="lg" 
+        />
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-[17px] font-bold text-white">{u.nombre}</span>
-            <Badge variant="yellow">👑 {PLAN_NAMES[u.plan_idx]}</Badge>
+            <span className="text-[17px] font-bold text-white">
+              {isLoadingHeader ? 'Cargando...' : (headerData?.nombre || u.nombre)}
+            </span>
+            <Badge variant="yellow">
+              👑 {PLAN_NAMES[isLoadingHeader ? 0 : (headerData?.plan_idx ?? u.plan_idx)]}
+            </Badge>
           </div>
-          <div className="text-[11px] text-surface-muted">{u.nombre_disciplina} · {u.ciudad}</div>
+          <div className="text-[11px] text-surface-muted">
+            {isLoadingHeader ? '...' : (headerData?.nombre_disciplina || u.nombre_disciplina)} · {isLoadingHeader ? '...' : (headerData?.ciudad || u.ciudad)}
+          </div>
         </div>
       </div>
 
@@ -2444,12 +2479,12 @@ export function UserDetailPage() {
         ))}
       </div>
 
-      {tab === 'perfil' && <PerfilTab u={u} />}
-      {tab === 'plan' && <SpecialistPlanTab key={u.id_usuario} userId={u.id_usuario} />}
-      {tab === 'nutricion' && <SpecialistNutritionTab key={u.id_usuario} userId={u.id_usuario} />}
-      {tab === 'progreso' && <ProgressTab patientId={u.id_usuario} isSpecialist={true} />}
-      {tab === 'reporte-clinico' && <ClinicalReportTab patientId={u.id_usuario} />}
-      {tab === 'notificaciones' && <NotificacionesTab userId={u.id_usuario} />}
+      {tab === 'perfil' && <PerfilTab u={mergedPatient} />}
+      {tab === 'plan' && <SpecialistPlanTab key={mergedPatient.id_usuario} userId={mergedPatient.id_usuario} />}
+      {tab === 'nutricion' && <SpecialistNutritionTab key={mergedPatient.id_usuario} userId={mergedPatient.id_usuario} />}
+      {tab === 'progreso' && <ProgressTab patientId={mergedPatient.id_usuario} isSpecialist={true} />}
+      {tab === 'reporte-clinico' && <ClinicalReportTab patientId={mergedPatient.id_usuario} />}
+      {tab === 'notificaciones' && <NotificacionesTab userId={mergedPatient.id_usuario} />}
     </div>
   )
 }
