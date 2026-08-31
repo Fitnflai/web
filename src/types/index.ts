@@ -16,6 +16,7 @@ export interface User {
   nivel_motor_actual: number
   clasificacion_visible_actual: string
   nombre_disciplina: string
+  id_disciplina?: string
   objetivo_principal: string
   duracion_semanas_objetivo: number
   tiempo_sin_entrenar: string
@@ -24,7 +25,7 @@ export interface User {
   dias_entrenamiento: string[]
   alimentacion: string
   equipo: string[]
-  historial_lesiones: string[]
+  historial_lesiones: any[]
   idioma: string
   estilo_comunicacion: string
   intensidad_notificaciones: string
@@ -43,6 +44,9 @@ export interface User {
   color: string
   initials: string
   estado?: 'Activo' | 'Suspendido Temporalmente' | 'Suspendido Permanentemente' | 'Inactivo'
+  estado_cuenta?: 'activo' | 'suspendido_temporal' | 'suspendido_permanente'
+  fecha_fin_suspencion?: string | null
+  motivo_suspencion?: string | null
   docTipo?: string
   docNumero?: string
   docDelantero?: string
@@ -85,6 +89,7 @@ export interface TrajectoryItem {
   inicio: string
   fin: string
   desc: string
+  id_evento?: string
 }
 
 export interface AssignedPatient {

@@ -16,11 +16,135 @@ import { ClinicalReportTab } from '@/components/patient/ClinicalReportTab'
 import { SpecialistNutritionTab } from '../specialist/UserDetailPage'
 
 import { PLAN_NAMES, PLAN_MONTOS, DAYS_ES } from '@/constants'
+const TODAY = '2026-06-06'
 import { formatDate, getPlanState, STATE_LABEL, typeColor } from '@/utils'
 import { cn } from '@/utils'
-import type { Workout, PlanItem, WorkoutExercise } from '@/types'
+import { useQueryClient, useMutation } from '@tanstack/react-query'
+import type { Workout, PlanItem, WorkoutExercise, User, Patient, TrajectoryItem } from '@/types'
+import type { StatusPayload, SportsEventPayload, SportsEventResponse } from '@/services/endpoints/users'
+
+function deepClone<T>(obj: T): T {
+  return JSON.parse(JSON.stringify(obj));
+}
 
 type Tab = 'perfil' | 'plan' | 'nutricion' | 'progreso' | 'reporte-clinico' | 'dispositivos'
+
+function DisciplineAutocomplete({
+  value,
+  onChange,
+  onSelect,
+  disabled,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  onSelect: (id: string, name: string) => void;
+  disabled: boolean;
+}) {
+  const [disciplineQuery, setDisciplineQuery] = useState(value);
+  const [disciplineOptions, setDisciplineOptions] = useState<any[]>([]);
+  const [showDisciplineOptions, setShowDisciplineOptions] = useState(false);
+
+  const debouncedSearch = useMemo(
+    () =>
+      debounce(async (query: string) => {
+        if (query.length > 1) {
+          try {
+            // Assuming usersService.searchDisciplines exists and returns an array of { id, name }
+            const response = await usersService.searchDisciplines(query);
+            setDisciplineOptions(response || []);
+            setShowDisciplineOptions(true);
+          } catch (error) {
+            console.error('Error searching disciplines:', error);
+            setDisciplineOptions([]);
+          }
+        } else {
+          setDisciplineOptions([]);
+          setShowDisciplineOptions(false);
+        }
+      }, 300),
+    []
+  );
+
+  useEffect(() => {
+    if (disciplineQuery !== value) {
+      onChange(disciplineQuery);
+      debouncedSearch(disciplineQuery);
+    }
+    // Cleanup debounce on unmount
+    return () => {
+      debouncedSearch.cancel();
+    };
+  }, [disciplineQuery, value, onChange, debouncedSearch]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setDisciplineQuery(e.target.value);
+    if (!e.target.value) {
+      setShowDisciplineOptions(false);
+      onSelect('', ''); // Clear selected discipline
+    }
+  };
+
+  const handleSelectOption = (option: { id_disciplina: string; nombre_disciplina: string }) => {
+    setDisciplineQuery(option.nombre_disciplina);
+    onSelect(option.id_disciplina, option.nombre_disciplina);
+    setShowDisciplineOptions(false);
+  };
+
+  if (disabled) {
+    return (
+      <input
+        type="text"
+        value={value}
+        disabled={true}
+        className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-orange disabled:opacity-75 disabled:cursor-not-allowed"
+      />
+    );
+  }
+
+  return (
+    <div className="relative">
+      <input
+        type="text"
+        value={disciplineQuery}
+        onChange={handleInputChange}
+        onFocus={() => setShowDisciplineOptions(disciplineOptions.length > 0)}
+        onBlur={() => setTimeout(() => setShowDisciplineOptions(false), 100)} // Delay to allow click on options
+        placeholder="Buscar disciplina..."
+        className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-orange"
+      />
+      {showDisciplineOptions && disciplineOptions.length > 0 && (
+        <ul className="absolute z-10 w-full bg-surface-card border border-surface-border rounded-lg mt-1 max-h-60 overflow-y-auto shadow-lg">
+          {disciplineOptions.map((option) => (
+            <li
+              key={option.id_disciplina}
+              onMouseDown={() => handleSelectOption(option)} // Use onMouseDown to trigger before onBlur
+              className="px-3 py-2 text-[12px] cursor-pointer hover:bg-surface-card2"
+            >
+              {option.nombre_disciplina}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function debounce<T extends (...args: any[]) => any>(func: T, delay: number): T & { cancel: () => void } {
+  let timeout: ReturnType<typeof setTimeout>;
+
+  const debounced = ((...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), delay);
+  }) as T & { cancel: () => void };
+
+  debounced.cancel = () => {
+    clearTimeout(timeout);
+  };
+
+  return debounced;
+}
+
+
 
 function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -136,22 +260,55 @@ function EditableChipList({
 }
 
 export function UserDetailPage() {
-  const { selectedUser: u, detailOrigin, setPage } = useAppStore()
+  const { selectedUser: u, detailOrigin, setPage, setSelectedUser, setSelectedPatient } = useAppStore()
   const [tab, setTab] = useState<Tab>('perfil')
   const [isEditing, setIsEditing] = useState(false)
+  const [editForm, setEditForm] = useState<User | null>(null)
+  const [isSuspensionModalOpen, setIsSuspensionModalOpen] = useState(false)
+  const [suspensionReason, setSuspensionReason] = useState('')
+  const [suspensionEndDate, setSuspensionEndDate] = useState('2026-07-06') // Default date
 
   // Local state to track updates and force renders
   const [updateTick, setUpdateTick] = useState(0)
   const triggerUpdate = () => setUpdateTick(t => t + 1)
 
+  const assignDisciplineMutation = useMutation({
+    mutationFn: (id_disciplina: string) => usersService.assignDiscipline(u!.id_usuario, { id_disciplina }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['userTabDetalle', u!.id_usuario] });
+      queryClient.invalidateQueries({ queryKey: ['userHeaderDetalle', u!.id_usuario] });
+      queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
+      queryClient.invalidateQueries({ queryKey: ['adminDashboardList'] });
+      toast.show('Disciplina asignada con éxito', 'success');
+    },
+    onError: (error) => {
+      toast.show(`Error al asignar disciplina: ${error.message}`, 'error');
+    }
+  });
+
+  // useEffect to manage editForm state
+  useEffect(() => {
+    if (isEditing && u) {
+      setEditForm(deepClone(u))
+    } else {
+      setEditForm(null)
+      setSuspensionReason('')
+      setSuspensionEndDate('2026-07-06')
+    }
+  }, [isEditing, u])
+
+
   if (!u) { setPage('usuarios'); return null }
+
+  // Define currentUser based on edit mode (guaranteed to be non-null after if (!u) check)
+  const currentUser = isEditing && editForm ? editForm : u;
 
   // Normalize ID (the real backend list uses 'id' but detail expects 'id_usuario')
   if (!u.id_usuario && (u as any).id) {
     u.id_usuario = (u as any).id
   }
 
-  const displayEstado = typeof u.estado === 'string' ? u.estado : (u.registro_activo ? 'Activo' : 'Inactivo')
+    const displayEstado = typeof currentUser.estado === 'string' ? currentUser.estado : (currentUser.registro_activo ? 'Activo' : 'Inactivo')
 
   const isPac = detailOrigin === 'pacientes'
 
@@ -220,6 +377,148 @@ export function UserDetailPage() {
       }
     }
   }, [u, headerData, isEditing])
+  const queryClient = useQueryClient();
+
+  const updateUserProfileMutation = useMutation({
+    mutationFn: (data: User) => usersService.updateUserProfile(u!.id_usuario, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['userTabDetalle', u!.id_usuario] });
+      queryClient.invalidateQueries({ queryKey: ['userHeaderDetalle', u!.id_usuario] });
+      queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
+      queryClient.invalidateQueries({ queryKey: ['adminDashboardList'] });
+      
+      if (editForm) {
+        setSelectedUser({ ...u, ...editForm });
+        if (isPac) {
+          setSelectedPatient({ ...u, ...editForm } as Patient);
+        }
+      }
+      setIsEditing(false);
+      toast.show('Cambios guardados con éxito', 'success');
+    },
+    onError: (error) => {
+      toast.show(`Error al guardar cambios: ${error.message}`, 'error');
+    },
+  });
+
+  const updateUserStatusMutation = useMutation({
+    mutationFn: ({ userId, statusPayload }: { userId: string, statusPayload: StatusPayload }) =>
+      usersService.updateUserStatus(userId, statusPayload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['userTabDetalle'] });
+      queryClient.invalidateQueries({ queryKey: ['userHeaderDetalle'] });
+      queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
+      queryClient.invalidateQueries({ queryKey: ['adminDashboardList'] });
+      setIsSuspensionModalOpen(false); // Close modal on success
+      toast.show('Estado de usuario actualizado con éxito', 'success');
+    },
+    onError: (error) => {
+      toast.show(`Error al actualizar estado: ${error.message}`, 'error');
+    },
+  });
+
+  const registerInjuryMutation = useMutation({
+    mutationFn: (newInjury: { zona_afectada: string, descripcion_molestia: string }) =>
+      usersService.registerInjury(u!.id_usuario, newInjury),
+    onSuccess: (returnedInjury) => {
+      if (editForm) {
+        setEditForm((prevEditForm) => ({
+          ...prevEditForm!,
+          historial_lesiones: [...(prevEditForm!.historial_lesiones || []), returnedInjury],
+        }));
+      }
+      queryClient.invalidateQueries({ queryKey: ['userTabDetalle', u!.id_usuario] });
+      queryClient.invalidateQueries({ queryKey: ['userHeaderDetalle', u!.id_usuario] });
+      toast.show('Lesión registrada con éxito', 'success');
+      triggerUpdate();
+    },
+    onError: (error) => {
+      toast.show(`Error al registrar lesión: ${error.message}`, 'error');
+    },
+  });
+
+  const removeInjuryMutation = useMutation({
+    mutationFn: (id_lesion_usuario: string) =>
+      usersService.removeInjury(u!.id_usuario, id_lesion_usuario),
+    onSuccess: (_, id_lesion_usuario) => {
+      if (editForm) {
+        setEditForm((prevEditForm) => ({
+          ...prevEditForm!,
+          historial_lesiones: prevEditForm!.historial_lesiones.filter(
+            (injury: any) => injury.id_lesion_usuario !== id_lesion_usuario
+          ),
+        }));
+      }
+      queryClient.invalidateQueries({ queryKey: ['userTabDetalle', u!.id_usuario] });
+      queryClient.invalidateQueries({ queryKey: ['userHeaderDetalle', u!.id_usuario] });
+      toast.show('Lesión eliminada con éxito', 'success');
+      triggerUpdate();
+    },
+    onError: (error) => {
+      toast.show(`Error al eliminar lesión: ${error.message}`, 'error');
+    },
+  });
+
+  const registerSportsEventMutation = useMutation({
+    mutationFn: (payload: SportsEventPayload) => {
+      if (!u) {
+        throw new Error("User is undefined for registering sports event.");
+      }
+      return usersService.registerSportsEvent(u.id_usuario, payload);
+    },
+    onSuccess: (returnedEvent, variables) => {
+      if (editForm && u) {
+        setEditForm((prevEditForm) => {
+          const newTrajectoryItem: TrajectoryItem = {
+            titulo: variables.nombre,
+            org: variables.lugar,
+            inicio: variables.fecha.substring(0, 4), // Extract year from fecha
+            fin: '', // 'fin' is not in SportsEventPayload, assuming empty
+            desc: '', // 'desc' is not in SportsEventPayload, assuming empty
+            id_evento: returnedEvent.id_evento,
+          };
+          return {
+            ...prevEditForm!,
+            tray: [...(prevEditForm!.tray || []), newTrajectoryItem],
+          };
+        });
+        queryClient.invalidateQueries({ queryKey: ['userTabDetalle', u.id_usuario] });
+        queryClient.invalidateQueries({ queryKey: ['userHeaderDetalle', u.id_usuario] });
+        toast.show('Logro registrado con éxito', 'success');
+        triggerUpdate();
+      }
+    },
+    onError: (error) => {
+      toast.show(`Error al registrar logro: ${error.message}`, 'error');
+    },
+  });
+
+  const removeSportsEventMutation = useMutation({
+    mutationFn: (id_evento: string) => {
+      if (!u) {
+        throw new Error("User is undefined for removing sports event.");
+      }
+      return usersService.removeSportsEvent(u.id_usuario, id_evento);
+    },
+    onSuccess: (_, id_evento) => {
+      if (editForm && u) {
+        setEditForm((prevEditForm) => ({
+          ...prevEditForm!,
+          tray: (prevEditForm!.tray || []).filter((event: any) => event.id_evento !== id_evento),
+        }));
+        queryClient.invalidateQueries({ queryKey: ['userTabDetalle', u!.id_usuario] }); // Assert non-null
+        queryClient.invalidateQueries({ queryKey: ['userHeaderDetalle', u!.id_usuario] }); // Assert non-null
+        toast.show('Logro eliminado con éxito', 'success');
+        triggerUpdate();
+      }
+
+      triggerUpdate();
+    },
+    onError: (error) => {
+      toast.show(`Error al eliminar logro: ${error.message}`, 'error');
+    },
+  });
+
   const backPage = isPac ? 'pacientes' : 'usuarios'
   const backLabel = isPac ? 'Pacientes' : 'Usuarios'
 
@@ -242,16 +541,16 @@ export function UserDetailPage() {
       {/* Hero */}
       <div className="card-base flex items-start gap-4 mb-5 flex-wrap">
         <div className="relative">
-          <Avatar initials={u.initials} color={isPac ? '#9B59B6' : u.color} size="lg" />
-          <div className={`absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full border-2 border-surface-card ${u.registro_activo ? 'bg-brand-green' : 'bg-brand-red'}`} />
+          <Avatar initials={currentUser.initials} color={isPac ? '#9B59B6' : currentUser.color} size="lg" />
+          <div className={`absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full border-2 border-surface-card ${currentUser.registro_activo ? 'bg-brand-green' : 'bg-brand-red'}`} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className="text-[17px] font-bold">{u.apodo}</span>
-            {u.plan_idx > 0 ? (
-              <Badge variant="yellow">👑 {PLAN_NAMES[u.plan_idx]}</Badge>
-            ) : (u.nombre_plan_activo && u.nombre_plan_activo !== 'Sin membresía' && u.nombre_plan_activo !== 'Essential' ? (
-              <Badge variant="yellow">👑 {u.nombre_plan_activo}</Badge>
+            <span className="text-[17px] font-bold">{currentUser.apodo}</span>
+            {currentUser.plan_idx > 0 ? (
+              <Badge variant="yellow">👑 {PLAN_NAMES[currentUser.plan_idx]}</Badge>
+            ) : (currentUser.nombre_plan_activo && currentUser.nombre_plan_activo !== 'Sin membresía' && currentUser.nombre_plan_activo !== 'Essential' ? (
+              <Badge variant="yellow">👑 {currentUser.nombre_plan_activo}</Badge>
             ) : (
               <Badge variant="muted">Essential</Badge>
             ))}
@@ -264,9 +563,9 @@ export function UserDetailPage() {
             </Badge>
             {isPac && <Badge variant="purple">🩺 Paciente</Badge>}
           </div>
-          <div className="text-[11px] text-surface-muted">{u.nombre_disciplina} · {u.ciudad} · Nivel motor {u.nivel_motor_actual}</div>
+          <div className="text-[11px] text-surface-muted">{currentUser.nombre_disciplina} · {currentUser.ciudad} · Nivel motor {currentUser.nivel_motor_actual}</div>
           <div className="flex gap-4 mt-3 flex-wrap">
-            {[['Nombre',u.nombre],['Edad',`${u.edad} años`],['Peso',`${u.peso}${u.unidad_peso}`],['Altura',`${u.altura}${u.unidad_altura}`],['Clasificación',u.clasificacion_visible_actual]].map(([l,v]) => (
+            {[['Nombre',currentUser.nombre],['Edad',`${currentUser.edad} años`],['Peso',`${currentUser.peso}${currentUser.unidad_peso}`],['Altura',`${currentUser.altura}${currentUser.unidad_altura}`],['Clasificación',currentUser.clasificacion_visible_actual]].map(([l,v]) => (
               <div key={l}><div className="text-[10px] text-surface-muted">{l}</div><div className="font-semibold text-[12px]">{v}</div></div>
             ))}
           </div>
@@ -286,10 +585,51 @@ export function UserDetailPage() {
               <Button
                 variant="primary"
                 style={{ background: '#4CAF82', borderColor: '#4CAF82' }}
-                onClick={() => {
-                  setIsEditing(false)
-                  toast.show('Cambios guardados con éxito', 'success')
-                  triggerUpdate()
+                onClick={async () => {
+                  if (editForm && u) {
+                    try {
+                      // 1. Filter new achievements (those without id_evento)
+                      const newAchievements = editForm.tray?.filter((event) => !event.id_evento) || [];
+                      const existingAchievements = editForm.tray?.filter((event) => event.id_evento) || [];
+
+                      // 2. Register new achievements in parallel
+                      const registeredAchievements = await Promise.all(
+                        newAchievements.map(async (event) => {
+                          const payload = {
+                            nombre: event.titulo,
+                            lugar: event.org,
+                            fecha: (event.inicio || "2026") + "-06-06"
+                          };
+                          // Call the service directly, not the mutation, to get the return value for mapping
+                          const response = await usersService.registerSportsEvent(u.id_usuario, payload);
+                          return { ...event, id_evento: response.id_evento }; // Map back to TrajectoryItem with ID
+                        })
+                      );
+
+                      // 3. Map returned response events (with IDs) back into editForm.tray
+                      const finalTray = [...existingAchievements, ...registeredAchievements];
+
+                      // 4. Prepare finalEditForm (cloning to avoid direct state mutation issues)
+                      const finalEditForm = { ...editForm, tray: finalTray };
+
+                      // 5. Call updateUserProfile
+                      const updatedUser = await usersService.updateUserProfile(u.id_usuario, finalEditForm);
+
+                      // 6. Upon final success, invalidate query caches, dispatch Zustand actions, close edit mode, and show success toast.
+        queryClient.invalidateQueries({ queryKey: ['userTabDetalle', u!.id_usuario] });
+        queryClient.invalidateQueries({ queryKey: ['userHeaderDetalle', u!.id_usuario] });
+                      queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
+                      queryClient.invalidateQueries({ queryKey: ['adminDashboardList'] });
+                      setSelectedUser(updatedUser);
+                      if (isPac) {
+                        setSelectedPatient(updatedUser as Patient);
+                      }
+                      setIsEditing(false);
+                      toast.show('Cambios guardados con éxito', 'success');
+                    } catch (error: any) {
+                      toast.show(`Error al guardar cambios: ${error.message}`, 'error');
+                    }
+                  }
                 }}
               >
                 💾 Guardar Cambios
@@ -312,10 +652,7 @@ export function UserDetailPage() {
                   variant="primary"
                   style={{ background: '#4CAF82', borderColor: '#4CAF82' }}
                   onClick={() => {
-                    u.estado = 'Activo'
-                    u.registro_activo = true // restore access
-                    triggerUpdate()
-                    toast.show('Usuario reactivado con éxito', 'success')
+                    updateUserStatusMutation.mutate({ userId: u.id_usuario, statusPayload: { estado: 'activo' } });
                   }}
                 >
                   🟢 Reactivar Usuario
@@ -326,10 +663,7 @@ export function UserDetailPage() {
                     variant="ghost"
                     className="text-brand-orange hover:bg-brand-orange/10 border border-brand-orange/20"
                     onClick={() => {
-                      u.estado = 'Suspendido Temporalmente'
-                      u.registro_activo = false // revoke access
-                      triggerUpdate()
-                      toast.show('Usuario suspendido temporalmente', 'warning')
+                      setIsSuspensionModalOpen(true);
                     }}
                   >
                     🟡 Suspender Temporalmente
@@ -337,10 +671,7 @@ export function UserDetailPage() {
                   <Button
                     variant="danger"
                     onClick={() => {
-                      u.estado = 'Suspendido Permanentemente'
-                      u.registro_activo = false // revoke access
-                      triggerUpdate()
-                      toast.show('Usuario suspendido permanentemente', 'error')
+                      updateUserStatusMutation.mutate({ userId: u.id_usuario, statusPayload: { estado: 'suspendido_permanente', motivo_suspencion: 'Suspensión permanente' } });
                     }}
                   >
                     🔴 Suspender Permanentemente
@@ -379,7 +710,7 @@ export function UserDetailPage() {
               {/* Left: Avatar and Upload button */}
               <div className="flex flex-col items-center justify-center shrink-0">
                 <div className="relative">
-                  <Avatar initials={u.initials} color={isPac ? '#9B59B6' : u.color} size="lg" className="w-16 h-16 text-xl border-[3px] border-surface-card" />
+                  <Avatar initials={currentUser.initials} color={isPac ? '#9B59B6' : currentUser.color} size="lg" className="w-16 h-16 text-xl border-[3px] border-surface-card" />
                   {isEditing && (
                     <div className="absolute bottom-0 right-0 w-5 h-5 rounded-full flex items-center justify-center cursor-pointer border border-surface-card bg-brand-orange">
                       <span className="text-[10px] text-white">⬆</span>
@@ -392,10 +723,10 @@ export function UserDetailPage() {
               <div className="flex-1 w-full">
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">OBJETIVO PRINCIPAL</label>
                 <textarea
-                  value={u.objetivo_principal || ''}
+                  value={currentUser.objetivo_principal || ''}
                   disabled={!isEditing}
                   onChange={(e) => {
-                    u.objetivo_principal = e.target.value
+                    if (editForm) setEditForm({ ...editForm, objetivo_principal: e.target.value });
                     triggerUpdate()
                   }}
                   placeholder="Escribe el objetivo principal del deportista..."
@@ -410,10 +741,10 @@ export function UserDetailPage() {
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">NOMBRE COMPLETO</label>
                 <input
                   type="text"
-                  value={u.nombre || ''}
+                  value={currentUser.nombre || ''}
                   disabled={!isEditing}
                   onChange={(e) => {
-                    u.nombre = e.target.value
+                    if (editForm) setEditForm({ ...editForm, nombre: e.target.value });
                     triggerUpdate()
                   }}
                   placeholder="Ej. Falcao García"
@@ -424,10 +755,10 @@ export function UserDetailPage() {
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">EMAIL</label>
                 <input
                   type="email"
-                  value={u.email || ''}
+                  value={currentUser.email || ''}
                   disabled={!isEditing}
                   onChange={(e) => {
-                    u.email = e.target.value
+                    if (editForm) setEditForm({ ...editForm, email: e.target.value });
                     triggerUpdate()
                   }}
                   placeholder="Ej. usuario@email.com"
@@ -438,10 +769,10 @@ export function UserDetailPage() {
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">APODO</label>
                 <input
                   type="text"
-                  value={u.apodo || ''}
+                  value={currentUser.apodo || ''}
                   disabled={!isEditing}
                   onChange={(e) => {
-                    u.apodo = e.target.value
+                    if (editForm) setEditForm({ ...editForm, apodo: e.target.value });
                     triggerUpdate()
                   }}
                   placeholder="Ej. falcao"
@@ -452,10 +783,10 @@ export function UserDetailPage() {
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">GÉNERO</label>
                 <input
                   type="text"
-                  value={u.genero || ''}
+                  value={currentUser.genero || ''}
                   disabled={!isEditing}
                   onChange={(e) => {
-                    u.genero = e.target.value
+                    if (editForm) setEditForm({ ...editForm, genero: e.target.value });
                     triggerUpdate()
                   }}
                   placeholder="Ej. Masculino, Femenino"
@@ -466,10 +797,10 @@ export function UserDetailPage() {
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">FECHA DE NACIMIENTO</label>
                 <input
                   type="text"
-                  value={u.fecha_nacimiento ? u.fecha_nacimiento.substring(0, 10) : '1990-01-01'}
+                  value={currentUser.fecha_nacimiento ? currentUser.fecha_nacimiento.substring(0, 10) : '1990-01-01'}
                   disabled={!isEditing}
                   onChange={(e) => {
-                    u.fecha_nacimiento = e.target.value
+                    if (editForm) setEditForm({ ...editForm, fecha_nacimiento: e.target.value });
                     triggerUpdate()
                   }}
                   placeholder="AAAA-MM-DD"
@@ -480,10 +811,10 @@ export function UserDetailPage() {
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">EDAD</label>
                 <input
                   type="number"
-                  value={u.edad || 0}
+                  value={currentUser.edad || 0}
                   disabled={!isEditing}
                   onChange={(e) => {
-                    u.edad = Number(e.target.value)
+                    if (editForm) setEditForm({ ...editForm, edad: Number(e.target.value) });
                     triggerUpdate()
                   }}
                   placeholder="Ej. 30"
@@ -494,10 +825,10 @@ export function UserDetailPage() {
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">CIUDAD</label>
                 <input
                   type="text"
-                  value={u.ciudad || ''}
+                  value={currentUser.ciudad || ''}
                   disabled={!isEditing}
                   onChange={(e) => {
-                    u.ciudad = e.target.value
+                    if (editForm) setEditForm({ ...editForm, ciudad: e.target.value });
                     triggerUpdate()
                   }}
                   placeholder="Ej. Medellín"
@@ -508,10 +839,10 @@ export function UserDetailPage() {
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">ALTITUD (M)</label>
                 <input
                   type="number"
-                  value={u.altitud || 0}
+                  value={currentUser.altitud || 0}
                   disabled={!isEditing}
                   onChange={(e) => {
-                    u.altitud = Number(e.target.value)
+                    if (editForm) setEditForm({ ...editForm, altitud: Number(e.target.value) });
                     triggerUpdate()
                   }}
                   placeholder="Ej. 1500"
@@ -522,10 +853,10 @@ export function UserDetailPage() {
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">IDIOMA</label>
                 <input
                   type="text"
-                  value={u.idioma || ''}
+                  value={currentUser.idioma || ''}
                   disabled={!isEditing}
                   onChange={(e) => {
-                    u.idioma = e.target.value
+                    if (editForm) setEditForm({ ...editForm, idioma: e.target.value });
                     triggerUpdate()
                   }}
                   placeholder="Ej. es"
@@ -554,26 +885,26 @@ export function UserDetailPage() {
             <h3 className="text-sm font-bold text-white mb-4">Datos Físicos y Antropométricos</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               <div>
-                <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">PESO ({u.unidad_peso || 'kg'})</label>
+                <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">PESO ({currentUser.unidad_peso || 'kg'})</label>
                 <input
                   type="number"
-                  value={u.peso || 0}
+                  value={currentUser.peso || 0}
                   disabled={!isEditing}
                   onChange={(e) => {
-                    u.peso = Number(e.target.value)
+                    if (editForm) setEditForm({ ...editForm, peso: Number(e.target.value) });
                     triggerUpdate()
                   }}
                   className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-orange disabled:opacity-75 disabled:cursor-not-allowed"
                 />
               </div>
               <div>
-                <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">ALTURA ({u.unidad_altura || 'cm'})</label>
+                <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">ALTURA ({currentUser.unidad_altura || 'cm'})</label>
                 <input
                   type="number"
-                  value={u.altura || 0}
+                  value={currentUser.altura || 0}
                   disabled={!isEditing}
                   onChange={(e) => {
-                    u.altura = Number(e.target.value)
+                    if (editForm) setEditForm({ ...editForm, altura: Number(e.target.value) });
                     triggerUpdate()
                   }}
                   className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-orange disabled:opacity-75 disabled:cursor-not-allowed"
@@ -585,10 +916,10 @@ export function UserDetailPage() {
                   type="number"
                   min="0"
                   max="5"
-                  value={u.nivel_actividad ?? 0}
+                  value={currentUser.nivel_actividad ?? 0}
                   disabled={!isEditing}
                   onChange={(e) => {
-                    u.nivel_actividad = Number(e.target.value)
+                    if (editForm) setEditForm({ ...editForm, nivel_actividad: Number(e.target.value) });
                     triggerUpdate()
                   }}
                   className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-orange disabled:opacity-75 disabled:cursor-not-allowed"
@@ -600,10 +931,10 @@ export function UserDetailPage() {
                   type="number"
                   min="0"
                   max="5"
-                  value={u.nivel_motor_actual ?? 0}
+                  value={currentUser.nivel_motor_actual ?? 0}
                   disabled={!isEditing}
                   onChange={(e) => {
-                    u.nivel_motor_actual = Number(e.target.value)
+                    if (editForm) setEditForm({ ...editForm, nivel_motor_actual: Number(e.target.value) });
                     triggerUpdate()
                   }}
                   className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-orange disabled:opacity-75 disabled:cursor-not-allowed"
@@ -613,10 +944,10 @@ export function UserDetailPage() {
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">CLASIFICACIÓN MOTOR</label>
                 <input
                   type="text"
-                  value={u.clasificacion_visible_actual || ''}
+                  value={currentUser.clasificacion_visible_actual || ''}
                   disabled={!isEditing}
                   onChange={(e) => {
-                    u.clasificacion_visible_actual = e.target.value
+                    if (editForm) setEditForm({ ...editForm, clasificacion_visible_actual: e.target.value });
                     triggerUpdate()
                   }}
                   placeholder="Ej. Avanzado, Intermedio"
@@ -627,10 +958,10 @@ export function UserDetailPage() {
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">TIEMPO SIN ENTRENAR</label>
                 <input
                   type="text"
-                  value={u.tiempo_sin_entrenar || ''}
+                  value={currentUser.tiempo_sin_entrenar || ''}
                   disabled={!isEditing}
                   onChange={(e) => {
-                    u.tiempo_sin_entrenar = e.target.value
+                    if (editForm) setEditForm({ ...editForm, tiempo_sin_entrenar: e.target.value });
                     triggerUpdate()
                   }}
                   placeholder="Ej. 2 semanas"
@@ -646,25 +977,28 @@ export function UserDetailPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               <div>
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">DISCIPLINA / DEPORTE</label>
-                <input
-                  type="text"
-                  value={u.nombre_disciplina || ''}
-                  disabled={!isEditing}
-                  onChange={(e) => {
-                    u.nombre_disciplina = e.target.value
-                    triggerUpdate()
+                <DisciplineAutocomplete
+                  value={currentUser.nombre_disciplina || ''}
+                  onChange={(val) => {
+                    if (editForm) setEditForm({ ...editForm, nombre_disciplina: val });
+                    triggerUpdate();
                   }}
-                  className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-orange disabled:opacity-75 disabled:cursor-not-allowed"
+                  onSelect={(id, name) => {
+                    if (editForm) setEditForm({ ...editForm, nombre_disciplina: name, id_disciplina: id });
+                    triggerUpdate();
+                    assignDisciplineMutation.mutate(id);
+                  }}
+                  disabled={!isEditing}
                 />
               </div>
               <div>
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">DURACIÓN OBJETIVO (SEMANAS)</label>
                 <input
                   type="number"
-                  value={u.duracion_semanas_objetivo || 0}
+                  value={currentUser.duracion_semanas_objetivo || 0}
                   disabled={!isEditing}
                   onChange={(e) => {
-                    u.duracion_semanas_objetivo = Number(e.target.value)
+                    if (editForm) setEditForm({ ...editForm, duracion_semanas_objetivo: Number(e.target.value) });
                     triggerUpdate()
                   }}
                   className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-orange disabled:opacity-75 disabled:cursor-not-allowed"
@@ -674,10 +1008,10 @@ export function UserDetailPage() {
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">FECHA INICIO PREFERIDA</label>
                 <input
                   type="text"
-                  value={u.fecha_inicio_preferida || ''}
+                  value={currentUser.fecha_inicio_preferida || ''}
                   disabled={!isEditing}
                   onChange={(e) => {
-                    u.fecha_inicio_preferida = e.target.value
+                    if (editForm) setEditForm({ ...editForm, fecha_inicio_preferida: e.target.value });
                     triggerUpdate()
                   }}
                   placeholder="AAAA-MM-DD"
@@ -688,10 +1022,10 @@ export function UserDetailPage() {
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">PRÓXIMA COMPETENCIA</label>
                 <input
                   type="text"
-                  value={u.proxima_competencia ? u.proxima_competencia.substring(0, 10) : '—'}
+                  value={currentUser.proxima_competencia ? currentUser.proxima_competencia.substring(0, 10) : '—'}
                   disabled={!isEditing}
                   onChange={(e) => {
-                    u.proxima_competencia = e.target.value
+                    if (editForm) setEditForm({ ...editForm, proxima_competencia: e.target.value });
                     triggerUpdate()
                   }}
                   placeholder="AAAA-MM-DD"
@@ -702,10 +1036,10 @@ export function UserDetailPage() {
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">ALIMENTACIÓN</label>
                 <input
                   type="text"
-                  value={u.alimentacion || ''}
+                  value={currentUser.alimentacion || ''}
                   disabled={!isEditing}
                   onChange={(e) => {
-                    u.alimentacion = e.target.value
+                    if (editForm) setEditForm({ ...editForm, alimentacion: e.target.value });
                     triggerUpdate()
                   }}
                   placeholder="Ej. Omnívoro, Vegetariano, Vegano"
@@ -716,10 +1050,10 @@ export function UserDetailPage() {
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">PLAN ACTIVO</label>
                 <input
                   type="text"
-                  value={u.nombre_plan_activo || PLAN_NAMES[u.plan_idx] || 'Essential'}
+                  value={currentUser.nombre_plan_activo || PLAN_NAMES[currentUser.plan_idx] || 'Essential'}
                   disabled={!isEditing}
                   onChange={(e) => {
-                    u.nombre_plan_activo = e.target.value
+                    if (editForm) setEditForm({ ...editForm, nombre_plan_activo: e.target.value });
                     triggerUpdate()
                   }}
                   className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-orange disabled:opacity-75 disabled:cursor-not-allowed"
@@ -729,10 +1063,10 @@ export function UserDetailPage() {
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">ESTADO SUSCRIPCIÓN</label>
                 <input
                   type="text"
-                  value={u.estado_suscripcion || (u.tiene_plan_activo ? 'Activa' : 'Inactiva')}
+                  value={currentUser.estado_suscripcion || (currentUser.tiene_plan_activo ? 'Activa' : 'Inactiva')}
                   disabled={!isEditing}
                   onChange={(e) => {
-                    u.estado_suscripcion = e.target.value
+                    if (editForm) setEditForm({ ...editForm, estado_suscripcion: e.target.value });
                     triggerUpdate()
                   }}
                   className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-orange disabled:opacity-75 disabled:cursor-not-allowed"
@@ -742,10 +1076,10 @@ export function UserDetailPage() {
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">FIN SUSCRIPCIÓN</label>
                 <input
                   type="text"
-                  value={u.fecha_fin_suscripcion ? u.fecha_fin_suscripcion.substring(0, 10) : '—'}
+                  value={currentUser.fecha_fin_suscripcion ? currentUser.fecha_fin_suscripcion.substring(0, 10) : '—'}
                   disabled={!isEditing}
                   onChange={(e) => {
-                    u.fecha_fin_suscripcion = e.target.value
+                    if (editForm) setEditForm({ ...editForm, fecha_fin_suscripcion: e.target.value });
                     triggerUpdate()
                   }}
                   placeholder="AAAA-MM-DD"
@@ -755,8 +1089,8 @@ export function UserDetailPage() {
               <div>
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">¿TIENE PLAN ACTIVO?</label>
                 <div className="flex items-center gap-2 h-[38px]">
-                  <Badge variant={u.tiene_plan_activo ?? u.plan_idx > 0 ? 'green' : 'muted'}>
-                    {u.tiene_plan_activo ?? u.plan_idx > 0 ? 'SÍ' : 'NO'}
+                  <Badge variant={currentUser.tiene_plan_activo ?? currentUser.plan_idx > 0 ? 'green' : 'muted'}>
+                    {currentUser.tiene_plan_activo ?? currentUser.plan_idx > 0 ? 'SÍ' : 'NO'}
                   </Badge>
                 </div>
               </div>
@@ -771,10 +1105,10 @@ export function UserDetailPage() {
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">ESTILO DE COMUNICACIÓN</label>
                 <input
                   type="text"
-                  value={u.estilo_comunicacion || ''}
+                  value={currentUser.estilo_comunicacion || ''}
                   disabled={!isEditing}
                   onChange={(e) => {
-                    u.estilo_comunicacion = e.target.value
+                    if (editForm) setEditForm({ ...editForm, estilo_comunicacion: e.target.value });
                     triggerUpdate()
                   }}
                   className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-orange disabled:opacity-75 disabled:cursor-not-allowed"
@@ -784,10 +1118,10 @@ export function UserDetailPage() {
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">INTENSIDAD NOTIFICACIONES</label>
                 <input
                   type="text"
-                  value={u.intensidad_notificaciones || ''}
+                  value={currentUser.intensidad_notificaciones || ''}
                   disabled={!isEditing}
                   onChange={(e) => {
-                    u.intensidad_notificaciones = e.target.value
+                    if (editForm) setEditForm({ ...editForm, intensidad_notificaciones: e.target.value });
                     triggerUpdate()
                   }}
                   className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-orange disabled:opacity-75 disabled:cursor-not-allowed"
@@ -797,10 +1131,10 @@ export function UserDetailPage() {
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">DÍA DE REPORTE</label>
                 <input
                   type="text"
-                  value={u.dia_reporte || ''}
+                  value={currentUser.dia_reporte || ''}
                   disabled={!isEditing}
                   onChange={(e) => {
-                    u.dia_reporte = e.target.value
+                    if (editForm) setEditForm({ ...editForm, dia_reporte: e.target.value });
                     triggerUpdate()
                   }}
                   className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-orange disabled:opacity-75 disabled:cursor-not-allowed"
@@ -810,10 +1144,10 @@ export function UserDetailPage() {
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">HORA DE REPORTE</label>
                 <input
                   type="text"
-                  value={u.hora_reporte || ''}
+                  value={currentUser.hora_reporte || ''}
                   disabled={!isEditing}
                   onChange={(e) => {
-                    u.hora_reporte = e.target.value
+                    if (editForm) setEditForm({ ...editForm, hora_reporte: e.target.value });
                     triggerUpdate()
                   }}
                   placeholder="Ej. 08:00"
@@ -824,10 +1158,10 @@ export function UserDetailPage() {
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">HORA DE NOTIFICACIÓN</label>
                 <input
                   type="text"
-                  value={u.notification_time || ''}
+                  value={currentUser.notification_time || ''}
                   disabled={!isEditing}
                   onChange={(e) => {
-                    u.notification_time = e.target.value
+                    if (editForm) setEditForm({ ...editForm, notification_time: e.target.value });
                     triggerUpdate()
                   }}
                   placeholder="Ej. 07:30"
@@ -849,16 +1183,21 @@ export function UserDetailPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <EditableChipList
               title="Días de Entrenamiento"
-              items={u.dias_entrenamiento || []}
+              items={currentUser.dias_entrenamiento || []}
               isEditing={isEditing}
               onAdd={(val) => {
-                if (!u.dias_entrenamiento) u.dias_entrenamiento = []
-                u.dias_entrenamiento.push(val)
+                if (editForm) {
+                  const updatedDays = [...(editForm.dias_entrenamiento || []), val];
+                  setEditForm({ ...editForm, dias_entrenamiento: updatedDays });
+                }
                 triggerUpdate()
                 toast.show('Día de entrenamiento agregado', 'success')
               }}
               onRemove={(idx) => {
-                u.dias_entrenamiento = u.dias_entrenamiento.filter((_, i) => i !== idx)
+                if (editForm) {
+                  const updatedDays = editForm.dias_entrenamiento.filter((_, i) => i !== idx);
+                  setEditForm({ ...editForm, dias_entrenamiento: updatedDays });
+                }
                 triggerUpdate()
                 toast.show('Día de entrenamiento removido', 'error')
               }}
@@ -867,16 +1206,21 @@ export function UserDetailPage() {
 
             <EditableChipList
               title="Equipamiento"
-              items={u.equipo || []}
+              items={currentUser.equipo || []}
               isEditing={isEditing}
               onAdd={(val) => {
-                if (!u.equipo) u.equipo = []
-                u.equipo.push(val)
+                if (editForm) {
+                  const updatedEquipo = [...(editForm.equipo || []), val];
+                  setEditForm({ ...editForm, equipo: updatedEquipo });
+                }
                 triggerUpdate()
                 toast.show('Equipamiento agregado', 'success')
               }}
               onRemove={(idx) => {
-                u.equipo = u.equipo.filter((_, i) => i !== idx)
+                if (editForm) {
+                  const updatedEquipo = editForm.equipo.filter((_, i) => i !== idx);
+                  setEditForm({ ...editForm, equipo: updatedEquipo });
+                }
                 triggerUpdate()
                 toast.show('Equipamiento removido', 'error')
               }}
@@ -885,18 +1229,17 @@ export function UserDetailPage() {
 
             <EditableChipList
               title="Historial de Lesiones"
-              items={u.historial_lesiones || []}
+              items={currentUser.historial_lesiones || []}
               isEditing={isEditing}
               onAdd={(val) => {
-                if (!u.historial_lesiones) u.historial_lesiones = []
-                u.historial_lesiones.push(val)
-                triggerUpdate()
-                toast.show('Lesión registrada', 'success')
+                if (editForm && u) {
+                  registerInjuryMutation.mutate({ zona_afectada: val, descripcion_molestia: val });
+                }
               }}
               onRemove={(idx) => {
-                u.historial_lesiones = u.historial_lesiones.filter((_, i) => i !== idx)
-                triggerUpdate()
-                toast.show('Registro de lesión eliminado', 'error')
+                if (editForm && u && editForm.historial_lesiones && editForm.historial_lesiones[idx]) {
+                  removeInjuryMutation.mutate(editForm.historial_lesiones[idx].id_lesion_usuario);
+                }
               }}
               placeholder="Añadir lesión (ej: Rodilla 2025)"
             />
@@ -909,14 +1252,17 @@ export function UserDetailPage() {
               {isEditing && (
                 <button
                   onClick={() => {
-                    if (!u.tray) u.tray = []
-                    u.tray.push({
-                      titulo: '',
-                      org: '',
-                      inicio: '2025',
-                      fin: '',
-                      desc: ''
-                    })
+                    if (editForm) {
+                      const updatedTray = [...(editForm.tray || [])];
+                      updatedTray.push({
+                        titulo: '',
+                        org: '',
+                        inicio: '2025',
+                        fin: '',
+                        desc: ''
+                      });
+                      setEditForm({ ...editForm, tray: updatedTray });
+                    }
                     triggerUpdate()
                     toast.show('Nueva trayectoria deportiva añadida', 'success')
                   }}
@@ -927,11 +1273,11 @@ export function UserDetailPage() {
               )}
             </div>
             
-            {(!u.tray || u.tray.length === 0) ? (
+            {(!currentUser.tray || currentUser.tray.length === 0) ? (
               <div className="text-center py-6 text-surface-muted text-[12px]">Sin logros o trayectoria registrada.</div>
             ) : (
               <div className="space-y-3">
-                {u.tray.map((t, idx) => (
+                {currentUser.tray?.map((t, idx) => (
                   <div key={idx} className="flex flex-col md:flex-row gap-3 items-center w-full">
                     <div className="flex-1 w-full">
                       <input
@@ -939,7 +1285,11 @@ export function UserDetailPage() {
                         value={t.titulo || ''}
                         disabled={!isEditing}
                         onChange={(e) => {
-                          t.titulo = e.target.value
+                          if (editForm) {
+                            const updatedTray = [...(editForm.tray || [])];
+                            updatedTray[idx] = { ...updatedTray[idx], titulo: e.target.value };
+                            setEditForm({ ...editForm, tray: updatedTray });
+                          }
                           triggerUpdate()
                         }}
                         placeholder="Logro o Carrera (ej: Trail 15k)"
@@ -952,7 +1302,11 @@ export function UserDetailPage() {
                         value={t.org || ''}
                         disabled={!isEditing}
                         onChange={(e) => {
-                          t.org = e.target.value
+                          if (editForm) {
+                            const updatedTray = [...(editForm.tray || [])];
+                            updatedTray[idx] = { ...updatedTray[idx], org: e.target.value };
+                            setEditForm({ ...editForm, tray: updatedTray });
+                          }
                           triggerUpdate()
                         }}
                         placeholder="Organizador o Lugar (ej: Liga de Bogotá)"
@@ -965,14 +1319,16 @@ export function UserDetailPage() {
                         value={(t.inicio && t.fin) ? `${t.inicio}-${t.fin}` : (t.inicio || '2025')}
                         disabled={!isEditing}
                         onChange={(e) => {
-                          const val = e.target.value
-                          if (val.includes('-')) {
-                            const [ini, fin] = val.split('-')
-                            t.inicio = ini.trim()
-                            t.fin = fin.trim()
-                          } else {
-                            t.inicio = val
-                            t.fin = ''
+                          if (editForm) {
+                            const updatedTray = [...(editForm.tray || [])];
+                            const val = e.target.value
+                            if (val.includes('-')) {
+                              const [ini, fin] = val.split('-')
+                              updatedTray[idx] = { ...updatedTray[idx], inicio: ini.trim(), fin: fin.trim() };
+                            } else {
+                              updatedTray[idx] = { ...updatedTray[idx], inicio: val, fin: '' };
+                            }
+                            setEditForm({ ...editForm, tray: updatedTray });
                           }
                           triggerUpdate()
                         }}
@@ -983,9 +1339,18 @@ export function UserDetailPage() {
                     {isEditing && (
                       <button
                         onClick={() => {
-                          u.tray = u.tray?.filter((_, i) => i !== idx)
-                          triggerUpdate()
-                          toast.show('Logro deportivo eliminado', 'error')
+                          if (editForm && editForm.tray && editForm.tray[idx]) {
+                            const eventToRemove = editForm.tray[idx];
+                            if (eventToRemove.id_evento) {
+                              removeSportsEventMutation.mutate(eventToRemove.id_evento);
+                            } else {
+                              // If no id_evento, it's a new unsaved event, remove locally
+                              const updatedTray = editForm.tray.filter((_, i) => i !== idx);
+                              setEditForm({ ...editForm, tray: updatedTray });
+                              triggerUpdate();
+                              toast.show('Logro deportivo eliminado localmente', 'info');
+                            }
+                          }
                         }}
                         className="p-2 text-brand-red hover:bg-brand-red/10 rounded-lg transition-all shrink-0 cursor-pointer bg-transparent border-0"
                         title="Eliminar historial"
@@ -1037,6 +1402,67 @@ export function UserDetailPage() {
           </div>
         </div>
       )}
+      {/* Suspension Modal */}
+      <Modal
+        isOpen={isSuspensionModalOpen}
+        onClose={() => setIsSuspensionModalOpen(false)}
+        title="Suspender Usuario Temporalmente"
+      >
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="suspensionEndDate" className="form-label block text-[12px] font-medium mb-1">
+              Fecha de fin de suspensión
+            </label>
+            <input
+              type="date"
+              id="suspensionEndDate"
+              value={suspensionEndDate}
+              onChange={(e) => setSuspensionEndDate(e.target.value)}
+              className="form-input w-full px-3 py-2 text-[12px] rounded-lg border border-surface-border bg-surface-card2 focus:outline-none focus:border-brand-orange"
+            />
+          </div>
+          <div>
+            <label htmlFor="suspensionReason" className="form-label block text-[12px] font-medium mb-1">
+              Motivo de la suspensión <span className="text-brand-red">*</span>
+            </label>
+            <textarea
+              id="suspensionReason"
+              value={suspensionReason}
+              onChange={(e) => setSuspensionReason(e.target.value)}
+              placeholder="Indica el motivo de la suspensión temporal..."
+              rows={4}
+              className="form-input w-full px-3 py-2 text-[12px] rounded-lg border border-surface-border bg-surface-card2 focus:outline-none focus:border-brand-orange resize-y"
+            ></textarea>
+          </div>
+          <div className="flex justify-end gap-3 mt-4">
+            <Button
+              variant="ghost"
+              onClick={() => setIsSuspensionModalOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                if (!suspensionReason.trim()) {
+                  toast.show('El motivo de la suspensión es obligatorio', 'error');
+                  return;
+                }
+                updateUserStatusMutation.mutate({
+                  userId: u.id_usuario,
+                  statusPayload: {
+                    estado: 'suspendido_temporal',
+                    fecha_fin_suspencion: suspensionEndDate,
+                    motivo_suspencion: suspensionReason,
+                  },
+                });
+              }}
+            >
+              Confirmar Suspensión
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

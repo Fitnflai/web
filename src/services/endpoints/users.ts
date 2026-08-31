@@ -6,6 +6,59 @@ import { MOCK_PROFESSIONALS } from '@/services/mocks/professionals.mock'
 import { parseISO, format, addDays, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
 
+// New endpoint functions added to usersService:
+export interface InjuryPayload {
+  zona_afectada: string;
+  descripcion_molestia: string;
+}
+
+export interface InjuryResponse {
+  id_lesion_usuario: string;
+  zona_afectada: string;
+  descripcion_molestia: string;
+  nombre_lesion: string;
+}
+
+export interface SportsEventPayload {
+  nombre: string;
+  lugar: string;
+  fecha: string; // YYYY-MM-DD
+}
+
+export interface SportsEventResponse {
+  id_evento: string;
+  nombre: string;
+  lugar: string;
+  fecha: string;
+}
+
+export interface DisciplineResponse {
+  id_disciplina: string;
+  nombre_disciplina: string;
+}
+
+export interface StatusPayload {
+  estado: 'suspendido_temporal' | 'suspendido_permanente' | 'activo';
+  fecha_fin_suspencion?: string | null;
+  motivo_suspencion?: string | null;
+}
+
+// Mock stores for new functionalities
+const MOCK_USER_INJURIES: { [userId: string]: InjuryResponse[] } = {
+  'uid-1': [{ id_lesion_usuario: 'inj-1', zona_afectada: 'Rodilla', descripcion_molestia: 'Dolor leve', nombre_lesion: 'Esguince' }],
+};
+
+const MOCK_USER_SPORTS_EVENTS: { [userId: string]: SportsEventResponse[] } = {
+  'uid-1': [{ id_evento: 'evt-1', nombre: 'Maratón de Buenos Aires', lugar: 'Buenos Aires', fecha: '2025-10-12' }],
+};
+
+const MOCK_DISCIPLINES: DisciplineResponse[] = [
+  { id_disciplina: 'disc-1', nombre_disciplina: 'Fútbol' },
+  { id_disciplina: 'disc-2', nombre_disciplina: 'Baloncesto' },
+  { id_disciplina: 'disc-3', nombre_disciplina: 'Atletismo' },
+  { id_disciplina: 'disc-4', nombre_disciplina: 'Natación' },
+];
+
 const USE_MOCK = false // flip to false when backend ready
 
 const isMockId = (id: string): boolean => {
@@ -170,6 +223,139 @@ export const usersService = {
     if (USE_MOCK || isMockId(id)) return { ...MOCK_USERS.find(u => u.id_usuario === id)!, ...payload }
     const { data } = await apiClient.patch(`/users/${id}`, payload)
     return data
+  },
+
+  updateUserStatus: async (id_usuario: string, payload: StatusPayload): Promise<User> => {
+    if (USE_MOCK || isMockId(id_usuario)) {
+      const userIndex = MOCK_USERS.findIndex(u => u.id_usuario === id_usuario);
+      if (userIndex > -1) {
+        const user = MOCK_USERS[userIndex];
+        user.estado_cuenta = payload.estado;
+        user.fecha_fin_suspencion = payload.fecha_fin_suspencion;
+        user.motivo_suspencion = payload.motivo_suspencion;
+        MOCK_USERS[userIndex] = { ...user };
+        return MOCK_USERS[userIndex];
+      }
+      return Promise.reject(new Error('User not found for status update'));
+    }
+    const { data } = await apiClient.patch(`/admin/usuarios/${id_usuario}/modificar-estado`, payload);
+    return data;
+  },
+
+  registerInjury: async (id_usuario: string, payload: InjuryPayload): Promise<InjuryResponse> => {
+    if (USE_MOCK || isMockId(id_usuario)) {
+      const user = MOCK_USERS.find(u => u.id_usuario === id_usuario);
+      if (user) {
+        const newInjury: InjuryResponse = {
+          id_lesion_usuario: `inj-${Date.now()}`,
+          ...payload,
+          nombre_lesion: payload.zona_afectada // Using zona_afectada as nombre_lesion for mock
+        };
+        if (!MOCK_USER_INJURIES[id_usuario]) {
+          MOCK_USER_INJURIES[id_usuario] = [];
+        }
+        MOCK_USER_INJURIES[id_usuario].push(newInjury);
+        return newInjury;
+      }
+      return Promise.reject(new Error('User not found for injury registration'));
+    }
+    const { data } = await apiClient.post(`/admin/usuarios/${id_usuario}/resgistar-lesion`, payload);
+    return data;
+  },
+
+  removeInjury: async (id_usuario: string, id_lesion_usuario: string): Promise<any> => {
+    if (USE_MOCK || isMockId(id_usuario)) {
+      const user = MOCK_USERS.find(u => u.id_usuario === id_usuario);
+      if (user && MOCK_USER_INJURIES[id_usuario]) {
+        const initialLength = MOCK_USER_INJURIES[id_usuario].length;
+        MOCK_USER_INJURIES[id_usuario] = MOCK_USER_INJURIES[id_usuario].filter(inj => inj.id_lesion_usuario !== id_lesion_usuario);
+        if (MOCK_USER_INJURIES[id_usuario].length < initialLength) {
+          return { success: true, message: "Lesión eliminada con éxito" };
+        }
+        return Promise.reject(new Error('Injury not found'));
+      }
+      return Promise.reject(new Error('User not found or no injuries to remove'));
+    }
+    const { data } = await apiClient.delete(`/admin/usuarios/${id_usuario}/remover-lesion/${id_lesion_usuario}`);
+    return data;
+  },
+
+  registerSportsEvent: async (id_usuario: string, payload: SportsEventPayload): Promise<SportsEventResponse> => {
+    if (USE_MOCK || isMockId(id_usuario)) {
+      const user = MOCK_USERS.find(u => u.id_usuario === id_usuario);
+      if (user) {
+        const newEvent: SportsEventResponse = {
+          id_evento: `evt-${Date.now()}`,
+          ...payload,
+        };
+        if (!MOCK_USER_SPORTS_EVENTS[id_usuario]) {
+          MOCK_USER_SPORTS_EVENTS[id_usuario] = [];
+        }
+        MOCK_USER_SPORTS_EVENTS[id_usuario].push(newEvent);
+        return newEvent;
+      }
+      return Promise.reject(new Error('User not found for sports event registration'));
+    }
+    const { data } = await apiClient.post(`/admin/usuarios/historial-deportivo/registrar-evento`, payload, {
+      params: { id_usuario } // id_usuario as query parameter
+    });
+    return data;
+  },
+
+  removeSportsEvent: async (id_usuario: string, id_evento: string): Promise<any> => {
+    if (USE_MOCK || isMockId(id_usuario)) {
+      const user = MOCK_USERS.find(u => u.id_usuario === id_usuario);
+      if (user && MOCK_USER_SPORTS_EVENTS[id_usuario]) {
+        const initialLength = MOCK_USER_SPORTS_EVENTS[id_usuario].length;
+        MOCK_USER_SPORTS_EVENTS[id_usuario] = MOCK_USER_SPORTS_EVENTS[id_usuario].filter(event => event.id_evento !== id_evento);
+        if (MOCK_USER_SPORTS_EVENTS[id_usuario].length < initialLength) {
+          return { success: true, message: "Evento deportivo eliminado con éxito" };
+        }
+        return Promise.reject(new Error('Sports event not found'));
+      }
+      return Promise.reject(new Error('User not found or no sports events to remove'));
+    }
+    const { data } = await apiClient.delete(`/admin/usuarios/${id_usuario}/historial-deportivo/remover-evento/${id_evento}`);
+    return data;
+  },
+
+  searchDisciplines: async (query: string): Promise<DisciplineResponse[]> => {
+    if (USE_MOCK) {
+      if (!query) return [];
+      return MOCK_DISCIPLINES.filter(d => d.nombre_disciplina.toLowerCase().includes(query.toLowerCase()));
+    }
+    const { data } = await apiClient.get(`/admin/usuarios/buscar-disciplina`, { params: { q: query } });
+    return data;
+  },
+
+  assignDiscipline: async (id_usuario: string, payload: { id_disciplina: string }): Promise<any> => {
+    if (USE_MOCK || isMockId(id_usuario)) {
+      const userIndex = MOCK_USERS.findIndex(u => u.id_usuario === id_usuario);
+      if (userIndex > -1) {
+        const discipline = MOCK_DISCIPLINES.find(d => d.id_disciplina === payload.id_disciplina);
+        if (discipline) {
+          MOCK_USERS[userIndex].nombre_disciplina = discipline.nombre_disciplina; // Assuming user has a single main discipline
+          return { success: true, message: "Disciplina asignada con éxito" };
+        }
+        return Promise.reject(new Error('Discipline not found'));
+      }
+      return Promise.reject(new Error('User not found for discipline assignment'));
+    }
+    const { data } = await apiClient.post(`/admin/usuarios/${id_usuario}/asignar-disciplina`, payload);
+    return data;
+  },
+
+  updateUserProfile: async (id_usuario: string, payload: Partial<User>): Promise<User> => {
+    if (USE_MOCK || isMockId(id_usuario)) {
+      const userIndex = MOCK_USERS.findIndex(u => u.id_usuario === id_usuario);
+      if (userIndex > -1) {
+        MOCK_USERS[userIndex] = { ...MOCK_USERS[userIndex], ...payload };
+        return MOCK_USERS[userIndex];
+      }
+      return Promise.reject(new Error('User not found for profile update'));
+    }
+    const { data } = await apiClient.patch(`/admin/usuarios/${id_usuario}/actualizar-perfil`, payload);
+    return data;
   },
   getAdminUsers: async (page: number, pageSize: number, filtro: string, search: string): Promise<{ total: number, data: any[] }> => {
     if (USE_MOCK) return { total: MOCK_USERS.length, data: MOCK_USERS.slice((page - 1) * pageSize, page * pageSize) };
