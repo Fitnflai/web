@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import { toast } from '@/components/ui/Toast'
-import { specialistsService, SpecialistAppointment, SpecialistAgendaSummary } from '@/services/endpoints/specialists'
+import { specialistsService, SpecialistAppointment, SpecialistAgendaSummary, AdminWeeklyAgendaSummary, CreateAppointmentPayload } from '@/services/endpoints/specialists'
 import { MOCK_USERS } from '@/services/mocks/users.mock'
 import {
   ChevronLeft, ChevronRight, Plus, Video, Clock,
@@ -17,7 +17,7 @@ import { useAppStore } from '@/store/useAppStore'
 import { MOCK_APPOINTMENTS, MOCK_AVAILABILITY } from '@/services/mocks/agenda.mock'
 import { MOCK_PROFESSIONALS } from '@/services/mocks/professionals.mock'
 import { cn } from '@/utils'
-import type { Appointment, AppointmentStatus, AvailabilitySlot } from '@/types'
+import type { Appointment, AppointmentStatus, AvailabilitySlot, Professional, User as FitnflaiUser } from '@/types'
 
 // ─── Constants ────────────────────────────────────────────────────
 const WEEK_DAYS = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'] as const
@@ -466,84 +466,7 @@ function AvailabilityManager() {
 }
 
 // ─── New Appointment Modal ────────────────────────────────────────
-function NewAppointmentModal() {
-  const { openModal, setOpenModal, showToast } = useAppStore()
-  return (
-    <Modal isOpen={openModal === 'modal-nueva-cita'} onClose={() => setOpenModal(null)} title="Nueva cita virtual">
-      <div className="grid grid-cols-2 gap-3 mb-3">
-        <div className="col-span-2">
-          <div className="form-label">Tipo de cita</div>
-          <select className="form-input">
-            {Object.entries(TYPE_META).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
-          </select>
-        </div>
-        <div>
-          <div className="form-label">Profesional</div>
-          <select className="form-input">
-            {MOCK_PROFESSIONALS.slice(0,3).map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-          </select>
-        </div>
-        <div>
-          <div className="form-label">Paciente</div>
-          <select className="form-input">
-            <option>falcao</option>
-            <option>ana_m</option>
-            <option>carlos_r</option>
-            <option>mig_89</option>
-            <option>luisa_p</option>
-          </select>
-        </div>
-        <div>
-          <div className="form-label">Fecha</div>
-          <input type="date" className="form-input" defaultValue="2026-06-10" />
-        </div>
-        <div>
-          <div className="form-label">Hora inicio</div>
-          <select className="form-input">
-            {HOURS.map(h => <option key={h}>{h}</option>)}
-          </select>
-        </div>
-        <div>
-          <div className="form-label">Duración</div>
-          <select className="form-input">
-            <option>30 min</option>
-            <option>45 min</option>
-            <option>60 min</option>
-          </select>
-        </div>
-        <div>
-          <div className="form-label">Estado inicial</div>
-          <select className="form-input">
-            <option value="pendiente">Pendiente</option>
-            <option value="confirmada">Confirmada</option>
-          </select>
-        </div>
-        <div className="col-span-2">
-          <div className="form-label">Motivo de la cita</div>
-          <input type="text" className="form-input" placeholder="Describe el motivo de la consulta..." />
-        </div>
-        <div className="col-span-2">
-          <div className="form-label">Notas adicionales</div>
-          <textarea className="form-input resize-none" rows={2} placeholder="Notas previas, contexto..." />
-        </div>
-        <div className="col-span-2">
-          <div className="form-label">Link de videollamada</div>
-          <div className="flex gap-2">
-            <input type="text" className="form-input flex-1" placeholder="https://meet.fitnflai.com/..." defaultValue="https://meet.fitnflai.com/new-apt" />
-            <button className="px-2.5 py-1.5 text-[11px] rounded-lg bg-surface-card border border-surface-border text-white whitespace-nowrap cursor-pointer">Auto-generar</button>
-          </div>
-        </div>
-      </div>
-      <div className="flex gap-2 justify-end mt-2">
-        <button onClick={() => setOpenModal(null)} className="px-3.5 py-[7px] text-[12px] rounded-lg bg-surface-card border border-surface-border text-white cursor-pointer">Cancelar</button>
-        <button onClick={() => { setOpenModal(null); showToast('Cita creada · notificación enviada a ambas partes') }}
-          className="px-3.5 py-[7px] text-[12px] rounded-lg bg-brand-orange text-white font-medium cursor-pointer flex items-center gap-1.5">
-          <Calendar size={13}/> Crear cita
-        </button>
-      </div>
-    </Modal>
-  )
-}
+
 
 // ─── Main Page ────────────────────────────────────────────────────
 function mapBackendAppointmentsToAppointments(list: SpecialistAppointment[]): Appointment[] {
@@ -610,6 +533,132 @@ function mapBackendAppointmentsToAppointments(list: SpecialistAppointment[]): Ap
 
 type AgendaTab = 'calendario' | 'lista' | 'disponibilidad'
 
+// ─── New Appointment Modal ────────────────────────────────────────
+function NewAppointmentModal() {
+  const { openModal, setOpenModal, showToast } = useAppStore()
+
+  const [tipoCita, setTipoCita] = useState<'consulta' | 'seguimiento' | 'evaluacion' | 'emergencia'>('consulta')
+  const [profId, setProfId] = useState('pro-001')
+  const [pacienteId, setPacienteId] = useState(MOCK_USERS[0]?.id_usuario || 'uid-001')
+  const [fecha, setFecha] = useState('2026-06-10')
+  const [horaInicio, setHoraInicio] = useState('09:00')
+  const [duracionMinutos, setDuracionMinutos] = useState(30)
+  const [estado, setEstado] = useState<'pendiente' | 'confirmada'>('pendiente')
+  const [motivo, setMotivo] = useState('')
+  const [notas, setNotas] = useState('')
+  const [linkVideo, setLinkVideo] = useState('https://meet.fitnflai.com/new-apt')
+
+  const createMutation = useMutation({
+    mutationFn: specialistsService.createAppointment,
+    onSuccess: () => {
+      setOpenModal(null)
+      toast.show('Cita creada exitosamente', 'success')
+      // TODO: Invalidate queries to refetch appointment lists
+    },
+    onError: (err) => {
+      toast.show(`Error al crear cita: ${err.message}`, 'error')
+    },
+  })
+
+  const handleSubmit = () => {
+    const parsedProfId = parseInt(profId.replace('pro-', ''), 10) // Extract numeric ID from 'pro-001'
+    
+    const payload: CreateAppointmentPayload = {
+      tipo_cita: tipoCita,
+      id_especialista: parsedProfId,
+      id_usuario: pacienteId,
+      id_seguimiento: 1, // Default as per instructions
+      fecha: fecha,
+      hora_inicio: `${horaInicio}:00`, // Add seconds for ISO format
+      duracion_minutos: duracionMinutos,
+      estado: estado === 'confirmada' ? 'Programado' : 'Pendiente', // Map to backend status
+      motivo: motivo,
+      notas_adicionales: notas,
+      link_videollamada: linkVideo,
+      time_zone: 'America/Managua', // Default for now
+    }
+    createMutation.mutate(payload)
+  }
+
+  return (
+    <Modal isOpen={openModal === 'modal-nueva-cita'} onClose={() => setOpenModal(null)} title="Nueva cita virtual">
+      <div className="grid grid-cols-2 gap-3 mb-3">
+        <div className="col-span-2">
+          <div className="form-label">Tipo de cita</div>
+          <select className="form-input" value={tipoCita} onChange={e => setTipoCita(e.target.value as any)}>
+            {Object.entries(TYPE_META).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
+          </select>
+        </div>
+        <div>
+          <div className="form-label">Profesional</div>
+          <select className="form-input" value={profId} onChange={e => setProfId(e.target.value)}>
+            {MOCK_PROFESSIONALS.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+          </select>
+        </div>
+        <div>
+          <div className="form-label">Paciente</div>
+          <select className="form-input" value={pacienteId} onChange={e => setPacienteId(e.target.value)}>
+            {MOCK_USERS.map(u => <option key={u.id_usuario} value={u.id_usuario}>{u.nombre} ({u.apodo})</option>)}
+          </select>
+        </div>
+        <div>
+          <div className="form-label">Fecha</div>
+          <input type="date" className="form-input" value={fecha} onChange={e => setFecha(e.target.value)} />
+        </div>
+        <div>
+          <div className="form-label">Hora inicio</div>
+          <select className="form-input" value={horaInicio} onChange={e => setHoraInicio(e.target.value)}>
+            {HOURS.map(h => <option key={h}>{h}</option>)}
+          </select>
+        </div>
+        <div>
+          <div className="form-label">Duración</div>
+          <select className="form-input" value={duracionMinutos} onChange={e => setDuracionMinutos(parseInt(e.target.value))}>
+            <option value={30}>30 min</option>
+            <option value={45}>45 min</option>
+            <option value={60}>60 min</option>
+          </select>
+        </div>
+        <div>
+          <div className="form-label">Estado inicial</div>
+          <select className="form-input" value={estado} onChange={e => setEstado(e.target.value as any)}>
+            <option value="pendiente">Pendiente</option>
+            <option value="confirmada">Confirmada</option>
+          </select>
+        </div>
+        <div className="col-span-2">
+          <div className="form-label">Motivo de la cita</div>
+          <input type="text" className="form-input" placeholder="Describe el motivo de la consulta..." value={motivo} onChange={e => setMotivo(e.target.value)} />
+        </div>
+        <div className="col-span-2">
+          <div className="form-label">Notas adicionales</div>
+          <textarea className="form-input resize-none" rows={2} placeholder="Notas previas, contexto..." value={notas} onChange={e => setNotas(e.target.value)} />
+        </div>
+        <div className="col-span-2">
+          <div className="form-label">Link de videollamada</div>
+          <div className="flex gap-2">
+            <input type="text" className="form-input flex-1" placeholder="https://meet.fitnflai.com/..." value={linkVideo} onChange={e => setLinkVideo(e.target.value)} />
+            <button className="px-2.5 py-1.5 text-[11px] rounded-lg bg-surface-card border border-surface-border text-white whitespace-nowrap cursor-pointer">Auto-generar</button>
+          </div>
+        </div>
+      </div>
+      <div className="flex gap-2 justify-end mt-2">
+        <button onClick={() => setOpenModal(null)} className="px-3.5 py-[7px] text-[12px] rounded-lg bg-surface-card border border-surface-border text-white cursor-pointer">Cancelar</button>
+        <button onClick={handleSubmit}
+          className="px-3.5 py-[7px] text-[12px] rounded-lg bg-brand-orange text-white font-medium cursor-pointer flex items-center gap-1.5"
+          disabled={createMutation.isPending}>
+          <Calendar size={13}/> {createMutation.isPending ? 'Creando...' : 'Crear cita'}
+        </button>
+      </div>
+    </Modal>
+  )
+}
+
+function parseProfId(profIdString: string): number {
+  const match = profIdString.match(/pro-(\d+)/);
+  return match ? parseInt(match[1], 10) : 0; // Default to 0 or throw error if format is unexpected
+}
+
 export function AgendaPage() {
   const [tab, setTab] = useState<AgendaTab>('calendario')
   const [weekOffset, setWeekOffset] = useState(0)
@@ -620,20 +669,41 @@ export function AgendaPage() {
   const { setOpenModal, userRole, showToast } = useAppStore()
   const weekDates = useMemo(() => getWeekDates(weekOffset), [weekOffset])
 
-  const { data: apiSummary, error: summaryError } = useQuery<SpecialistAgendaSummary>({
-    queryKey: ['specialistAgendaSummary', toISODate(weekDates[0]), toISODate(weekDates[6])],
-    queryFn: () => specialistsService.getWeeklyAgendaSummary(toISODate(weekDates[0]), toISODate(weekDates[6])),
-    enabled: userRole === 'specialist',
+  // --- API Summary Query ---
+  const { data: apiSummary, error: summaryError } = useQuery<SpecialistAgendaSummary | AdminWeeklyAgendaSummary>({
+    queryKey: ['agendaSummary', userRole, toISODate(weekDates[0]), toISODate(weekDates[6]), filterProf],
+    queryFn: () => {
+      const fecha_inicio = toISODate(weekDates[0])
+      const fecha_fin = toISODate(weekDates[6])
+
+      if (userRole === 'specialist') {
+        return specialistsService.getWeeklyAgendaSummary(fecha_inicio, fecha_fin)
+      } else { // userRole === 'admin'
+        if (filterProf === 'todos') {
+          return specialistsService.getAdminWeeklyAgendaSummary(fecha_inicio, fecha_fin)
+        } else {
+          return specialistsService.getAdminSpecialistWeeklyAgendaSummary(parseProfId(filterProf), fecha_inicio, fecha_fin)
+        }
+      }
+    },
+    enabled: userRole === 'specialist' || (userRole === 'admin'),
   })
 
+  // --- API Appointments Query ---
   const { data: apiAppointments, error: appointmentsError } = useQuery<SpecialistAppointment[]>({
-    queryKey: ['specialistAppointments', toISODate(weekDates[0]), toISODate(weekDates[6]), filterStatus === 'todos' ? undefined : filterStatus],
-    queryFn: () => specialistsService.getSpecialistAppointments(
-      toISODate(weekDates[0]),
-      toISODate(weekDates[6]),
-      filterStatus === 'todos' ? undefined : filterStatus
-    ),
-    enabled: userRole === 'specialist',
+    queryKey: ['agendaAppointments', userRole, toISODate(weekDates[0]), toISODate(weekDates[6]), filterProf, filterStatus],
+    queryFn: () => {
+      const fecha_inicio = toISODate(weekDates[0])
+      const fecha_fin = toISODate(weekDates[6])
+      const estado = filterStatus === 'todos' ? null : filterStatus
+
+      if (userRole === 'specialist') {
+        return specialistsService.getSpecialistAppointments(fecha_inicio, fecha_fin, estado || undefined)
+      } else { // userRole === 'admin'
+        return specialistsService.getAdminSpecialistAppointments(parseProfId(filterProf), fecha_inicio, fecha_fin, estado)
+      }
+    },
+    enabled: userRole === 'specialist' || (userRole === 'admin' && filterProf !== 'todos'),
   })
 
   useEffect(() => {
@@ -647,6 +717,10 @@ export function AgendaPage() {
     if (userRole === 'specialist' && apiAppointments) {
       return mapBackendAppointmentsToAppointments(apiAppointments)
     }
+    if (userRole === 'admin' && filterProf !== 'todos' && apiAppointments) {
+      return mapBackendAppointmentsToAppointments(apiAppointments)
+    }
+    // Fallback to local mock filtering if admin and 'todos' professionals selected, or no API data
     return appointments.filter(a => {
       const dateOk = weekDates.some(d => toISODate(d) === a.fecha)
       const profOk = filterProf === 'todos' || a.profesional.id === filterProf
@@ -662,22 +736,23 @@ export function AgendaPage() {
 
   // Stats for current week
   const stats = useMemo(() => {
-    if (userRole === 'specialist' && apiSummary) {
+    if (apiSummary) { // Use API summary if available for any role
       return {
         total: apiSummary.citas_esta_semana,
         confirmada: apiSummary.confirmadas,
         pendiente: apiSummary.pendientes,
         cancelada: apiSummary.canceladas,
-        programadas: apiSummary.programadas, // Assuming programadas is equivalent to total in the context
+        programadas: apiSummary.programadas,
       }
     }
+    // Fallback to local mock data if no API summary
     const weekApts = appointments.filter(a => weekDates.some(d => toISODate(d) === a.fecha))
     return {
       total:      weekApts.length,
       confirmada: weekApts.filter(a => a.estado === 'confirmada').length,
       pendiente:  weekApts.filter(a => a.estado === 'pendiente').length,
       cancelada:  weekApts.filter(a => a.estado === 'cancelada').length,
-      programadas: weekApts.length, // Fallback for programadas
+      programadas: weekApts.length,
     }
   }, [appointments, weekDates, apiSummary, userRole])
 
@@ -709,7 +784,7 @@ export function AgendaPage() {
       {/* Stats */}
       <div className="grid grid-cols-4 gap-3 mb-5">
         <StatCard label="Citas esta semana" value={stats.total}       valueColor="#4A7CC7" />
-        <StatCard label="Confirmadas"        value={stats.confirmada}  valueColor="#4CAF82" delta={`de ${stats.total} citas`} />
+        <StatCard label="Confirmadas"        value={stats.confirmada}  valueColor="#4CAF82" delta={stats.total > 0 ? `de ${stats.total} citas` : ''} />
         <StatCard label="Pendientes"         value={stats.pendiente}   valueColor="#F5C842" />
         <StatCard label="Canceladas"         value={stats.cancelada}   valueColor="#E24B4A" />
       </div>
@@ -748,7 +823,7 @@ export function AgendaPage() {
               {userRole === 'admin' && (
                 <select value={filterProf} onChange={e => setFilterProf(e.target.value)} className="form-input w-auto text-[11px] py-1.5">
                   <option value="todos">Todos los profesionales</option>
-                  {MOCK_PROFESSIONALS.slice(0,3).map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                  {MOCK_PROFESSIONALS.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
                 </select>
               )}
               <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)} className="form-input w-auto text-[11px] py-1.5">

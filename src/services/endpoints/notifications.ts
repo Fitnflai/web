@@ -6,6 +6,18 @@ import type {
   SendNotificationPayload
 } from '@/types'
 
+export interface AdminReceivedNotification {
+  id_notificacion: string
+  id_campania: number
+  id_usuario: string
+  tipo: string
+  mensaje: string
+  enviada: boolean
+  leido: boolean
+  created_at: string
+  tiempo_transcurrido: string
+}
+
 export const notificationsService = {
   getStats: async (): Promise<NotificationStats> => {
     const { data } = await apiClient.get<NotificationStats | NotificationStats[]>('/admin/notifications/estadisticas-campania-notificaciones')
@@ -24,5 +36,10 @@ export const notificationsService = {
 
   send: async (payload: SendNotificationPayload): Promise<void> => {
     await apiClient.post('/admin/notifications/enviar-notificaciones', payload)
+  },
+
+  getReceivedNotifications: async (): Promise<AdminReceivedNotification[]> => {
+    const { data } = await apiClient.get<AdminReceivedNotification[]>('/admin/notifications/notificaciones-recibidas-admin')
+    return data
   }
 }

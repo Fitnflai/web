@@ -1,24 +1,150 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { Plus, Trash2, Upload, Edit, Save, Bell, Check, Clock } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAppStore } from '@/store/useAppStore'
-import { MOCK_PROFESSIONALS } from '@/services/mocks/professionals.mock'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { toast } from '@/components/ui/Toast'
 import type { Professional } from '@/types'
 import { cn } from '@/utils'
+import {
+  specialistsService,
+  SpecialistProfile,
+  UpdateSpecialistProfilePayload,
+  SpecialistWorkHistory,
+  SpecialistCertificate
+} from '@/services/endpoints/specialists'
+
+interface LocalProfessional extends Professional {
+  certs?: {
+    id: string;
+    nombre: string;
+    org?: string;
+    año?: string;
+    venc?: string;
+  }[];
+}
 
 export function PerfilEspecialista() {
   const { setPage } = useAppStore()
+  const queryClient = useQueryClient()
 
-  const original = useMemo(() => {
-    return MOCK_PROFESSIONALS.find(prof => prof.id === 'pro-002') || MOCK_PROFESSIONALS[1]
-  }, [])
-
-  const [p, setP] = useState<Professional>(() => JSON.parse(JSON.stringify(original)))
+  const [p, setP] = useState<LocalProfessional | null>(null)
   const [isEditing, setIsEditing] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
+
+  const fileInputRefFrente = useRef<HTMLInputElement>(null)
+  const fileInputRefDorso = useRef<HTMLInputElement>(null)
+  const fileInputRefCert = useRef<HTMLInputElement>(null)
+
+  const { data: specialistProfile, isLoading: isLoadingProfile, isError: isErrorProfile } = useQuery<SpecialistProfile>({ // Use Query
+    queryKey: ['specialistProfile'],
+    queryFn: specialistsService.getSpecialistProfile,
+  })
+
+  useEffect(() => {
+    if (specialistProfile) {
+      const [ciudad, pais] = specialistProfile.ciudad_pais.split(', ').map(s => s.trim())
+      setP({
+        id: 'pro-002', // This ID is hardcoded in the mock, needs to be dynamic with real auth
+        initials: specialistProfile.email.substring(0, 2).toUpperCase(), // Placeholder
+        color: 'blue', // Placeholder
+        bio: specialistProfile.biografia,
+        email: specialistProfile.email,
+        especialidad: specialistProfile.especialidad,
+        experiencia: specialistProfile.anios_experiencia || 0,
+        ciudad: specialistProfile.ciudad_pais, // Keep original for display, split for payload
+        tel: specialistProfile.telefono,
+        estado: specialistProfile.estado_cuenta, // Need to map to Professional['estado'] type
+        accesoNivel: 'Acceso Total', // Placeholder
+        docTipo: specialistProfile.tipo_documento,
+        docNumero: specialistProfile.numero_documento,
+        docDelantero: specialistProfile.url_doc_frente || undefined,
+        docTrasero: specialistProfile.url_doc_dorso || undefined,
+        tray: specialistProfile.historial_laboral.map(item => {
+          const [inicio, fin = ''] = item.periodo.split('-').map(s => s.trim())
+          return { titulo: item.puesto, org: item.empresa, inicio, fin, desc: '' } // desc is missing in backend
+        }),
+        certs: specialistProfile.certificados.map(cert => ({
+          id: cert.id_certificado,
+          nombre: cert.nombre,
+          org: cert.organizacion_emisora || undefined,
+          año: cert.anio_obtencion || undefined,
+          venc: cert.fecha_vencimiento === null ? 'Sin vencimiento' : cert.fecha_vencimiento || undefined,
+        })),
+        nombre: 'Specialist',
+        apellido: 'Mock',
+      })
+    }
+  }, [specialistProfile])
+
+  // Mutations
+  const updateProfileMutation = useMutation({
+    mutationFn: (payload: UpdateSpecialistProfilePayload) => specialistsService.updateSpecialistProfile(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['specialistProfile'] })
+      toast.success('Perfil actualizado con éxito')
+      setIsEditing(false)
+    },
+    onError: (error) => {
+      toast.error(`Error al actualizar el perfil: ${error.message}`)
+    },
+  })
+
+  const uploadDocMutation = useMutation({
+    mutationFn: ({ file, tipo }: { file: File; tipo: 'frente' | 'dorso' }) => specialistsService.uploadSpecialistDocument(file, tipo),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['specialistProfile'] })
+      toast.success('Documento cargado con éxito')
+    },
+    onError: (error) => {
+      toast.error(`Error al cargar documento: ${error.message}`)
+    },
+  })
+
+  const deleteDocMutation = useMutation({
+    mutationFn: (tipo: 'frente' | 'dorso') => specialistsService.deleteSpecialistDocument(tipo),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['specialistProfile'] })
+      toast.success('Documento eliminado con éxito')
+    },
+    onError: (error) => {
+      toast.error(`Error al eliminar documento: ${error.message}`)
+    },
+  })
+
+  const uploadCertMutation = useMutation({
+    mutationFn: (file: File) => specialistsService.uploadSpecialistCertificate(file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['specialistProfile'] })
+      toast.success('Certificado cargado con éxito')
+    },
+    onError: (error) => {
+      toast.error(`Error al cargar certificado: ${error.message}`)
+    },
+  })
+
+  const deleteCertMutation = useMutation({
+    mutationFn: (certificado_id: string) => specialistsService.deleteSpecialistCertificate(certificado_id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['specialistProfile'] })
+      toast.success('Certificado eliminado con éxito')
+    },
+    onError: (error) => {
+      toast.error(`Error al eliminar certificado: ${error.message}`)
+    },
+  })
+
+  const isSaving = updateProfileMutation.isPending || uploadDocMutation.isPending || deleteDocMutation.isPending || uploadCertMutation.isPending || deleteCertMutation.isPending
+
+  if (isLoadingProfile || !p) {
+    return (
+      <div className="flex items-center justify-center h-full text-white">
+        <Clock size={24} className="animate-spin mr-2" />
+        Cargando perfil...
+      </div>
+    )
+  }
 
   const handleFieldChange = (field: keyof Professional, val: any) => {
     setP(prev => ({ ...prev, [field]: val }))
@@ -33,22 +159,31 @@ export function PerfilEspecialista() {
           variant={isEditing ? 'primary' : 'ghost'}
           onClick={async () => {
             if (isEditing) {
-              setIsSaving(true)
-              await new Promise(resolve => setTimeout(resolve, 500))
-              // Commit local state changes to global MOCK_PROFESSIONALS
-              const idx = MOCK_PROFESSIONALS.findIndex(prof => prof.id === 'pro-002')
-              if (idx !== -1) {
-                MOCK_PROFESSIONALS[idx] = p
+              // Prepare payload for updateProfileMutation
+              if (!p) return
+              const [ciudad_only, pais_only] = p.ciudad.split(', ').map(s => s.trim())
+              const payload: UpdateSpecialistProfilePayload = {
+                email: p.email || '',
+                biografia: p.bio || '',
+                especialidad: p.especialidad || '',
+                anios_experiencia: p.experiencia || 0,
+                ciudad: ciudad_only,
+                pais: pais_only,
+                telefono_contacto: p.tel || '',
+                tipo_documento: p.docTipo || '',
+                numero_documento: p.docNumero || '',
+                historial_laboral: (p.tray || []).map(item => ({
+                  puesto: item.titulo || '',
+                  empresa: item.org || '',
+                  periodo: item.fin === 'Presente' ? `${item.inicio}-Presente` : `${item.inicio}-${item.fin}`,
+                })),
               }
-              setIsSaving(false)
-              setIsEditing(false)
-              toast.show('Perfil actualizado con éxito', 'success')
+              updateProfileMutation.mutate(payload)
             } else {
               setIsEditing(true)
             }
           }}
-          disabled={isSaving}
-        >
+          disabled={isSaving || isLoadingProfile || updateProfileMutation.isPending}        >
           {isSaving ? 'Guardando...' : isEditing ? <><Save size={16} className="mr-2" />Guardar Cambios</> : <><Edit size={16} className="mr-2" />Editar Perfil</>}
         </Button>
       </div>
@@ -60,31 +195,49 @@ export function PerfilEspecialista() {
           {/* Left: Avatar and Upload button */}
           <div className="flex flex-col items-center justify-center shrink-0">
             <div className="relative">
-              <Avatar initials={p.initials} color={p.color} size="lg" className="w-16 h-16 text-xl border-[3px] border-surface-card" />
-              <div
-                className={cn(
-                  "absolute bottom-0 right-0 w-5 h-5 rounded-full flex items-center justify-center border border-surface-card bg-brand-orange",
-                  !isEditing && "opacity-40 cursor-not-allowed pointer-events-none"
-                )}
-                aria-disabled={!isEditing || isSaving}
-              >
-                <Upload size={10} className="text-white"/>
+                <Avatar initials={p.initials} color={p.color} size="lg" className="w-16 h-16 text-xl border-[3px] border-surface-card" />
+                <input
+                  type="file"
+                  ref={fileInputRefFrente} // Using ref for triggering click programmatically if needed for avatar upload
+                  style={{ display: 'none' }} // Hide the input
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      // Assuming avatar upload would use a similar mutation. For now, it's just a placeholder.
+                      // This part needs to be connected to a specific avatar upload endpoint when available.
+                      toast.info(`Avatar file selected: ${file.name}`)
+                    }
+                  }}
+                />
+                <div
+                  className={cn(
+                    "absolute bottom-0 right-0 w-5 h-5 rounded-full flex items-center justify-center border border-surface-card bg-brand-orange",
+                    !isEditing && "opacity-40 cursor-not-allowed pointer-events-none"
+                  )}
+                  aria-disabled={!isEditing || isSaving}
+                  onClick={() => {
+                    if (isEditing && fileInputRefFrente.current) {
+                      fileInputRefFrente.current.click() // Trigger hidden file input
+                    }
+                  }}
+                >
+                  <Upload size={10} className="text-white"/>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Middle: Biografía */}
-          <div className="flex-1 w-full">
-            <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">BIOGRAFÍA</label>
-            <textarea
-              value={p.bio || ''}
-              disabled={!isEditing || isSaving}
-              onChange={(e) => handleFieldChange('bio', e.target.value)}
-              placeholder="Escribe la biografía del especialista..."
-              className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-purple min-h-[80px] resize-y disabled:opacity-75 disabled:cursor-not-allowed"
-            />
+            {/* Middle: Biografía */}
+            <div className="flex-1 w-full">
+              <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">BIOGRAFÍA</label>
+              <textarea
+                value={p.bio || ''}
+                disabled={!isEditing || isSaving || updateProfileMutation.isPending}
+                onChange={(e) => handleFieldChange('bio', e.target.value)}
+                placeholder="Escribe la biografía del especialista..."
+                className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-purple min-h-[80px] resize-y disabled:opacity-75 disabled:cursor-not-allowed"
+              />
+            </div>
           </div>
-        </div>
 
         {/* Grid of details */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 border-t border-surface-border pt-4">
@@ -202,7 +355,7 @@ export function PerfilEspecialista() {
                         📄
                       </div>
                       <div className="min-w-0">
-                        <div className="text-[11px] font-semibold text-white truncate max-w-[100px]" title={p.docDelantero}>{p.docDelantero}</div>
+                        <div className="text-[11px] font-semibold text-white truncate max-w-[100px]" title={p.docDelantero}>{(p.docDelantero.split('/').pop() || 'documento.pdf')}</div>
                         <div className="text-[9px] text-brand-green font-medium">Verificado</div>
                       </div>
                     </div>
@@ -211,38 +364,34 @@ export function PerfilEspecialista() {
                         variant="ghost"
                         size="sm"
                         className="px-1.5 h-7 text-[10px]"
-                        onClick={() => toast.show('Visualizando copia...', 'info')}
+                        onClick={() => window.open(p.docDelantero, '_blank')}
                       >
                         Ver
                       </Button>
                         <button
-                          onClick={() => {
-                            if (isEditing) {
-                              setP(prev => ({ ...prev, docDelantero: undefined }))
-                              toast.show('Parte delantera removida', 'error')
-                            }
-                          }}
+                          onClick={() => deleteDocMutation.mutate('frente')}
                           className={cn(
                             "p-1 text-brand-red hover:bg-brand-red/10 rounded-lg transition-all bg-transparent border-0",
-                            !isEditing && "opacity-40 cursor-not-allowed pointer-events-none"
+                            (!isEditing || isSaving || deleteDocMutation.isPending) && "opacity-40 cursor-not-allowed pointer-events-none"
                           )}
                           title="Eliminar frente"
-                          disabled={!isEditing || isSaving}
+                          disabled={!isEditing || isSaving || deleteDocMutation.isPending}
                         >
                           <Trash2 size={13} />
                         </button>
                     </div>
                   </div>
                 ) : (
-                  <label className={cn("border border-dashed border-surface-border rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer hover:bg-white/[0.01] transition-all h-[68px]", !isEditing && "pointer-events-none opacity-50")}>
+                  <label className={cn("border border-dashed border-surface-border rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer hover:bg-white/[0.01] transition-all h-[68px]", (!isEditing || isSaving || uploadDocMutation.isPending) && "pointer-events-none opacity-50")}>
                     <input
                       type="file"
                       className="hidden"
+                      ref={fileInputRefFrente}
                       onChange={(e) => {
                         const file = e.target.files?.[0]
                         if (file) {
-                          setP(prev => ({ ...prev, docDelantero: file.name }))
-                          toast.show(`Frente "${file.name}" cargado con éxito`, 'success')
+                          uploadDocMutation.mutate({ file, tipo: 'frente' })
+                          e.target.value = '' // Clear the input
                         }
                       }}
                     />
@@ -262,7 +411,7 @@ export function PerfilEspecialista() {
                         📄
                       </div>
                       <div className="min-w-0">
-                        <div className="text-[11px] font-semibold text-white truncate max-w-[100px]" title={p.docTrasero}>{p.docTrasero}</div>
+                        <div className="text-[11px] font-semibold text-white truncate max-w-[100px]" title={p.docTrasero}>{(p.docTrasero.split('/').pop() || 'documento.pdf')}</div>
                         <div className="text-[9px] text-brand-green font-medium">Verificado</div>
                       </div>
                     </div>
@@ -271,38 +420,34 @@ export function PerfilEspecialista() {
                         variant="ghost"
                         size="sm"
                         className="px-1.5 h-7 text-[10px]"
-                        onClick={() => toast.show('Visualizando copia...', 'info')}
+                        onClick={() => window.open(p.docTrasero, '_blank')}
                       >
                         Ver
                       </Button>
                         <button
-                          onClick={() => {
-                            if (isEditing) {
-                              setP(prev => ({ ...prev, docTrasero: undefined }))
-                              toast.show('Parte trasera removida', 'error')
-                            }
-                          }}
+                          onClick={() => deleteDocMutation.mutate('dorso')}
                           className={cn(
                             "p-1 text-brand-red hover:bg-brand-red/10 rounded-lg transition-all bg-transparent border-0",
-                            !isEditing && "opacity-40 cursor-not-allowed pointer-events-none"
+                            (!isEditing || isSaving || deleteDocMutation.isPending) && "opacity-40 cursor-not-allowed pointer-events-none"
                           )}
                           title="Eliminar dorso"
-                          disabled={!isEditing || isSaving}
+                          disabled={!isEditing || isSaving || deleteDocMutation.isPending}
                         >
                           <Trash2 size={13} />
                         </button>
                     </div>
                   </div>
                 ) : (
-                  <label className={cn("border border-dashed border-surface-border rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer hover:bg-white/[0.01] transition-all h-[68px]", !isEditing && "pointer-events-none opacity-50")}>
+                  <label className={cn("border border-dashed border-surface-border rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer hover:bg-white/[0.01] transition-all h-[68px]", (!isEditing || isSaving || uploadDocMutation.isPending) && "pointer-events-none opacity-50")}>
                     <input
                       type="file"
                       className="hidden"
+                      ref={fileInputRefDorso}
                       onChange={(e) => {
                         const file = e.target.files?.[0]
                         if (file) {
-                          setP(prev => ({ ...prev, docTrasero: file.name }))
-                          toast.show(`Dorso "${file.name}" cargado con éxito`, 'success')
+                          uploadDocMutation.mutate({ file, tipo: 'dorso' })
+                          e.target.value = '' // Clear the input
                         }
                       }}
                     />
@@ -326,36 +471,35 @@ export function PerfilEspecialista() {
                 if (isEditing) {
                   setP(prev => ({
                     ...prev,
-                    tray: [...(prev.tray || []), { titulo: '', org: '', inicio: '2020', fin: 'Presente', desc: '' }]
+                    tray: [...(prev?.tray || []), { titulo: '', org: '', inicio: '', fin: '', desc: '' }]
                   }))
-                  toast.show('Nueva trayectoria añadida', 'success')
                 }
               }}
               className={cn(
                 "text-[11px] font-semibold text-brand-orange hover:text-brand-orange/80 transition-colors bg-transparent border-0",
-                !isEditing && "opacity-40 cursor-not-allowed pointer-events-none"
+                (!isEditing || isSaving || updateProfileMutation.isPending) && "opacity-40 cursor-not-allowed pointer-events-none"
               )}
-              disabled={!isEditing || isSaving}
+              disabled={!isEditing || isSaving || updateProfileMutation.isPending}
             >
               + Añadir
             </button>
         </div>
         
-        {(!p.tray || p.tray.length === 0) ? (
+        {(!p?.tray || p.tray.length === 0) ? (
           <div className="text-center py-6 text-surface-muted text-[12px]">Sin historial laboral registrado.</div>
         ) : (
           <div className="space-y-3">
-            {p.tray.map((t, idx) => (
+            {(p.tray || []).map((t, idx) => (
               <div key={idx} className="flex flex-col md:flex-row gap-3 items-center w-full">
                 <div className="flex-1 w-full">
                   <input
                     type="text"
                     value={t.titulo || ''}
-                    disabled={!isEditing || isSaving}
+                    disabled={!isEditing || isSaving || updateProfileMutation.isPending}
                     onChange={(e) => {
-                      const newTray = [...p.tray!]
-                      newTray[idx].titulo = e.target.value
-                      setP(prev => ({ ...prev, tray: newTray }))
+                      const newTray = [...(p?.tray || [])]
+                      newTray[idx] = { ...newTray[idx], titulo: e.target.value }
+                      setP(prev => ({ ...prev!, tray: newTray }))
                     }}
                     placeholder="Cargo (ej: Nutricionista)"
                     className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-purple disabled:opacity-75 disabled:cursor-not-allowed"
@@ -365,11 +509,11 @@ export function PerfilEspecialista() {
                   <input
                     type="text"
                     value={t.org || ''}
-                    disabled={!isEditing || isSaving}
+                    disabled={!isEditing || isSaving || updateProfileMutation.isPending}
                     onChange={(e) => {
-                      const newTray = [...p.tray!]
-                      newTray[idx].org = e.target.value
-                      setP(prev => ({ ...prev, tray: newTray }))
+                      const newTray = [...(p?.tray || [])]
+                      newTray[idx] = { ...newTray[idx], org: e.target.value }
+                      setP(prev => ({ ...prev!, tray: newTray }))
                     }}
                     placeholder="Organización (ej: Club Deportivo)"
                     className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-purple disabled:opacity-75 disabled:cursor-not-allowed"
@@ -378,20 +522,18 @@ export function PerfilEspecialista() {
                 <div className="w-full md:w-44">
                   <input
                     type="text"
-                    value={(t.inicio && t.fin) ? `${t.inicio}-${t.fin}` : (t.inicio || '2020-Presente')}
-                    disabled={!isEditing || isSaving}
+                    value={(t.inicio && t.fin) ? `${t.inicio}-${t.fin}` : t.inicio}
+                    disabled={!isEditing || isSaving || updateProfileMutation.isPending}
                     onChange={(e) => {
                       const val = e.target.value
-                      const newTray = [...p.tray!]
+                      const newTray = [...(p?.tray || [])]
                       if (val.includes('-')) {
                         const [ini, fin] = val.split('-')
-                        newTray[idx].inicio = ini.trim()
-                        newTray[idx].fin = fin.trim()
+                        newTray[idx] = { ...newTray[idx], inicio: ini.trim(), fin: fin.trim() }
                       } else {
-                        newTray[idx].inicio = val
-                        newTray[idx].fin = ''
+                        newTray[idx] = { ...newTray[idx], inicio: val, fin: '' }
                       }
-                      setP(prev => ({ ...prev, tray: newTray }))
+                      setP(prev => ({ ...prev!, tray: newTray }))
                     }}
                     placeholder="Período (ej: 2020-Presente)"
                     className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-purple disabled:opacity-75 disabled:cursor-not-allowed"
@@ -400,16 +542,15 @@ export function PerfilEspecialista() {
                   <button
                     onClick={() => {
                       if (isEditing) {
-                        setP(prev => ({ ...prev, tray: prev.tray!.filter((_, i) => i !== idx) }))
-                        toast.show('Trayectoria eliminada', 'error')
+                        setP(prev => ({ ...prev!, tray: (prev?.tray || []).filter((_, i) => i !== idx) }))
                       }
                     }}
                     className={cn(
                       "p-2 text-brand-red hover:bg-brand-red/10 rounded-lg transition-all shrink-0 bg-transparent border-0",
-                      !isEditing && "opacity-40 cursor-not-allowed pointer-events-none"
+                      (!isEditing || isSaving || updateProfileMutation.isPending) && "opacity-40 cursor-not-allowed pointer-events-none"
                     )}
                     title="Eliminar historial"
-                    disabled={!isEditing || isSaving}
+                    disabled={!isEditing || isSaving || updateProfileMutation.isPending}
                   >
                     <Trash2 size={14} />
                   </button>
@@ -424,53 +565,40 @@ export function PerfilEspecialista() {
         <h3 className="text-sm font-bold text-white mb-4">Gestor de Certificados</h3>
         
         {/* Dotted upload zone */}
-        <label className={cn("border border-dashed border-surface-border rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-white/[0.01] transition-all mb-4", (!isEditing || isSaving) && "pointer-events-none opacity-50")}>
+        <label className={cn("border border-dashed border-surface-border rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-white/[0.01] transition-all mb-4", (!isEditing || isSaving || uploadCertMutation.isPending) && "pointer-events-none opacity-50")}>
           <input
             type="file"
             className="hidden"
+            ref={fileInputRefCert}
             onChange={(e) => {
               const file = e.target.files?.[0]
               if (file) {
-                setP(prev => ({
-                  ...prev,
-                  certs: [...(prev.certs || []), {
-                    nombre: file.name.replace(/\.[^/.]+$/, ""), // remove extension
-                    org: 'Subido por el usuario',
-                    año: new Date().getFullYear().toString(),
-                    venc: 'Sin vencimiento',
-                    id: `USR-${Math.floor(1000 + Math.random() * 9000)}`
-                  }]
-                }))
-                toast.show(`Certificado "${file.name}" cargado con éxito`, 'success')
+                uploadCertMutation.mutate(file)
+                e.target.value = '' // Clear the input
               }
             }}
-            disabled={!isEditing || isSaving}
+            disabled={!isEditing || isSaving || uploadCertMutation.isPending}
           />
           <Upload size={24} className="text-surface-muted mb-2" />
           <span className="text-[12px] text-surface-muted">Arrastra aquí tus diplomas o licencias (PDF/JPG) o haz clic para seleccionar</span>
         </label>
 
         {/* Certs list */}
-        {(!p.certs || p.certs.length === 0) ? (
+        {(!p?.certs || p.certs.length === 0) ? (
           <div className="text-center py-4 text-surface-muted text-[12px]">Sin certificados cargados.</div>
         ) : (
           <div className="space-y-2">
-            {p.certs.map((c, idx) => (
-              <div key={idx} className="flex items-center justify-between py-2 border-b border-surface-border last:border-0">
+            {(p.certs || []).map((c) => (
+              <div key={c.id} className="flex items-center justify-between py-2 border-b border-surface-border last:border-0">
                 <span className="text-[12px] text-white">{c.nombre}</span>
                   <button
-                    onClick={() => {
-                      if (isEditing) {
-                        setP(prev => ({ ...prev, certs: prev.certs!.filter((_, i) => i !== idx) }))
-                        toast.show('Certificado eliminado', 'error')
-                      }
-                    }}
+                    onClick={() => deleteCertMutation.mutate(c.id)}
                     className={cn(
                       "p-1.5 text-brand-red hover:bg-brand-red/10 rounded-lg transition-all bg-transparent border-0",
-                      !isEditing && "opacity-40 cursor-not-allowed pointer-events-none"
+                      (!isEditing || isSaving || deleteCertMutation.isPending) && "opacity-40 cursor-not-allowed pointer-events-none"
                     )}
                     title="Eliminar certificado"
-                    disabled={!isEditing || isSaving}
+                    disabled={!isEditing || isSaving || deleteCertMutation.isPending}
                   >
                     <Trash2 size={14} />
                   </button>

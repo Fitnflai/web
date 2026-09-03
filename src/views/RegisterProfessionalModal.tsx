@@ -1,12 +1,14 @@
 import { useState, useRef } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/Select';
+import { Select, SelectOption } from '@/components/ui/Select';
 import { useTranslation } from '@/i18n/useTranslation';
 import { T } from '@/components/ui/Typography';
 import { toast } from '@/components/ui/Toast';
 import { MOCK_PROFESSIONALS } from '@/services/mocks/professionals.mock';
+import { usersService, SpecialityTypeResponse, RegisterProfessionalPayload } from '@/services/endpoints/users';
 import type { Professional, ProfRole } from '@/types';
 import {
   IconSparkles,
@@ -85,8 +87,87 @@ const initialState: RegistrationState = {
   certificados: [],
 };
 
+
+const DEFAULT_SPECIALTY_OPTIONS: SelectOption[] = [
+  { label: 'Coach', value: '1' },
+  { label: 'Deportologo', value: '2' },
+  { label: 'Fisioterapeuta', value: '3' },
+];
+
 export function RegisterProfessionalModal({ isOpen, onClose }: RegisterProfessionalModalProps) {
   const { t } = useTranslation();
+
+  const { data: specialityTypes, isLoading: isLoadingSpecialityTypes } = useQuery<SpecialityTypeResponse[]>({
+    queryKey: ['specialityTypes'],
+    queryFn: () => usersService.getSpecialityTypes(),
+    initialData: [],
+    staleTime: Infinity,
+  });
+
+  const specialtyOptions: SelectOption[] = isLoadingSpecialityTypes || !specialityTypes?.length
+    ? DEFAULT_SPECIALTY_OPTIONS
+    : specialityTypes.map(st => ({
+        label: st.nombre,
+        value: st.id_tipo_especialista,
+      }));
+
+  const registerMutation = useMutation({
+    mutationFn: (payload: RegisterProfessionalPayload) => usersService.registerProfessional(payload),
+    onSuccess: (data) => {
+      console.log('Professional registered successfully', data);
+      // Fallback locally by appending the new professional to MOCK_PROFESSIONALS
+      // This part is for local simulation when USE_MOCK is true in users.ts
+      const resolvedSpecialty = specialtyOptions.find(opt => opt.value === formData.especialidad)?.label || 'Coach';
+      const newProfessional: Professional = {
+        id: `pro-${data.id_especialista}`,
+        nombre: data.nombre,
+        initials: `${data.nombre.split(' ')[0]?.[0] || ''}${data.nombre.split(' ')[1]?.[0] || ''}`.toUpperCase(),
+        color: ['#9B59B6', '#4CAF82', '#4A7CC7', '#E8622A', '#E24B4A'][Math.floor(Math.random() * 5)],
+        email: data.email,
+        tel: formData.tel,
+        ciudad: formData.ciudad,
+        rol: 'Entrenador' as ProfRole,
+        especialidad: resolvedSpecialty,
+        regPro: `REG-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+        inst: formData.trayectos[0]?.org || 'Fitnflai',
+        idiomas: formData.idiomas,
+        ingreso: 'Jul 2026',
+        experiencia: parseInt(formData.experiencia, 10) || 0,
+        linkedin: formData.linkedin,
+        web: formData.web,
+        wa: formData.tel,
+        bio: formData.bio,
+        areas: resolvedSpecialty.split(', '),
+        pacientes: 0,
+        accesoNivel: data.nivel_acceso === 'completo' ? 'Completo' : data.nivel_acceso === 'parcial' ? 'Parcial' : data.nivel_acceso === 'lectura' ? 'Lectura' : 'Sin acceso',
+        accesoDesc: data.nivel_acceso || 'Cuenta pendiente de activación',
+        ultimoAcceso: 'Nunca',
+        estado: data.estado as any,
+        docTipo: formData.docTipo,
+        docNumero: formData.docNumero,
+        docDelantero: formData.docDelantero?.name || '',
+        docTrasero: formData.docTrasero?.name || '',
+        certs: formData.certificados.map(cert => ({
+          ...cert,
+          venc: cert.venc === '' ? 'Sin vencimiento' : cert.venc
+        })),
+        tray: formData.trayectos.map(tray => ({
+          ...tray,
+          fin: tray.fin === '' ? 'Actualidad' : tray.fin
+        })),
+        pacAsi: [],
+      };
+      MOCK_PROFESSIONALS.push(newProfessional);
+
+      toast.show(t('registerCoach.modal.successTitle'), 'success');
+      setSubmissionSuccess(true);
+    },
+    onError: (error) => {
+      console.error('Error registering professional', error);
+      toast.show("Error al registrar profesional: " + error.message, 'error');
+    },
+  });
+
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<RegistrationState>(initialState);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -299,49 +380,20 @@ export function RegisterProfessionalModal({ isOpen, onClose }: RegisterProfessio
   };
 
   const handleSubmit = () => {
-    const newProfessional: Professional = {
-      id: `pro-${Date.now()}`,
+    const payload: RegisterProfessionalPayload = {
       nombre: formData.nombre,
-      initials: `${formData.nombre.split(' ')[0]?.[0] || ''}${formData.nombre.split(' ')[1]?.[0] || ''}`.toUpperCase(),
-      color: ['#9B59B6', '#4CAF82', '#4A7CC7', '#E8622A', '#E24B4A'][Math.floor(Math.random() * 5)],
       email: formData.email,
-      tel: formData.tel,
+      password: formData.contrasena,
+      tipo_ids: [formData.especialidad],
+      id_disciplina: 1, // Assuming a default discipline ID
+      nivel_acceso: 'completo', // Default access level
       ciudad: formData.ciudad,
-      rol: 'Entrenador' as ProfRole,
-      especialidad: formData.especialidad,
-      regPro: `REG-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-      inst: formData.trayectos[0]?.org || 'Fitnflai',
-      idiomas: formData.idiomas,
-      ingreso: 'Jul 2026',
-      experiencia: parseInt(formData.experiencia, 10) || 0,
-      linkedin: formData.linkedin,
-      web: formData.web,
-      wa: formData.tel,
-      bio: formData.bio,
-      areas: formData.especialidad.split(', '),
-      pacientes: 0,
-      accesoNivel: 'Sin acceso',
-      accesoDesc: 'Cuenta pendiente de activación',
-      ultimoAcceso: 'Nunca',
-      estado: 'Pendiente',
-      docTipo: formData.docTipo,
-      docNumero: formData.docNumero,
-      docDelantero: formData.docDelantero?.name || '',
-      docTrasero: formData.docTrasero?.name || '',
-      certs: formData.certificados.map(cert => ({
-        ...cert,
-        venc: cert.venc === '' ? 'Sin vencimiento' : cert.venc
-      })),
-      tray: formData.trayectos.map(tray => ({
-        ...tray,
-        fin: tray.fin === '' ? 'Actualidad' : tray.fin
-      })),
-      pacAsi: [],
+      pais: 'Colombia', // Assuming default country
+      telefono_contacto: formData.tel,
+      anios_experiencia: parseInt(formData.experiencia, 10) || 0,
     };
 
-    MOCK_PROFESSIONALS.push(newProfessional);
-    toast.show(t('registerCoach.modal.successTitle'), 'success');
-    setSubmissionSuccess(true);
+    registerMutation.mutate(payload);
   };
 
   const renderStepIndicators = () => {
@@ -454,15 +506,14 @@ export function RegisterProfessionalModal({ isOpen, onClose }: RegisterProfessio
         {t('registerCoach.modal.step2.title')}
       </T.P>
       <div className="grid grid-cols-2 gap-3">
-        <Input
+        <Select
           label={t('registerCoach.modal.step2.specialty')}
-          placeholder="Trail running, Fisioterapia"
+          placeholder="Selecciona una especialidad"
           value={formData.especialidad}
-          onChange={(e) => handleFieldChange('especialidad', e.target.value)}
-          onBlur={() => handleBlur('especialidad')}
-          error={touched.especialidad ? errors.especialidad : ''}
-          required
+          onChange={(val) => { handleFieldChange('especialidad', val); handleBlur('especialidad'); }}
+          options={specialtyOptions}
         />
+        {touched.especialidad && errors.especialidad && ( <span className="text-[10px] text-brand-red mt-1 block text-left">{errors.especialidad}</span> )}
         <Input
           label={t('registerCoach.modal.step2.experience')}
           placeholder="5"

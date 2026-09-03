@@ -1,5 +1,5 @@
 import { apiClient } from '@/services/api/client'
-import type { User, Professional, AdminProfessionalStats, AssignedPatient, SpecialistPatientCabeceraResponse } from '@/types'
+import type { User, Professional, AdminProfessionalStats, AssignedPatient, SpecialistPatientCabeceraResponse, ProfRole } from '@/types'
 import { useAppStore } from '@/store/useAppStore'
 import { MOCK_USERS } from '@/services/mocks/users.mock'
 import { MOCK_PLAN } from '@/services/mocks/plan.mock'
@@ -33,6 +33,48 @@ export interface SportsEventResponse {
   fecha: string;
 }
 
+export interface EquipmentItemResponse {
+  id_implemento: number;
+  nombre: string;
+  descripcion: string;
+}
+
+export interface AssignEquipmentPayload {
+  nombre: string;
+}
+
+export interface SpecialityTypeResponse {
+  id_tipo_especialista: string;
+  nombre: string;
+  codigo: string;
+  descripcion: string;
+}
+
+export interface RegisterProfessionalPayload {
+  nombre: string;
+  email: string;
+  password?: string;
+  tipo_ids: string[];
+  id_disciplina: number;
+  nivel_acceso: string;
+  ciudad: string;
+  pais: string;
+  telefono_contacto: string;
+  anios_experiencia: number;
+}
+
+export interface RegisterProfessionalResponse {
+  id_especialista: number;
+  nombre: string;
+  email: string;
+  roles: string[];
+  especialidad_principal: string;
+  pacientes_activos: number;
+  certificaciones_count: number;
+  nivel_acceso: string;
+  estado: string;
+}
+
 export interface DisciplineResponse {
   id_disciplina: string;
   nombre_disciplina: string;
@@ -57,6 +99,18 @@ const MOCK_USER_INJURIES: { [userId: string]: InjuryResponse[] } = {
 
 const MOCK_USER_SPORTS_EVENTS: { [userId: string]: SportsEventResponse[] } = {
   'uid-1': [{ id_evento: 'evt-1', nombre: 'Maratón de Buenos Aires', lugar: 'Buenos Aires', fecha: '2025-10-12' }],
+};
+
+const MOCK_AVAILABLE_EQUIPMENT: EquipmentItemResponse[] = [
+  { id_implemento: 1, nombre: 'Cuerda para saltar', descripcion: 'Cuerda de velocidad ajustable.' },
+  { id_implemento: 2, nombre: 'Bandas de resistencia', descripcion: 'Set de 5 bandas elásticas de látex.' },
+  { id_implemento: 3, nombre: 'Pesa rusa (Kettlebell) 8kg', descripcion: 'Pesa rusa de hierro fundido de 8 kilogramos.' },
+  { id_implemento: 4, nombre: 'Colchoneta de Yoga', descripcion: 'Colchoneta antideslizante de 6mm.' },
+  { id_implemento: 5, nombre: 'Rodillo de espuma', descripcion: 'Rodillo de alta densidad para liberación miofascial.' },
+];
+
+const MOCK_USER_EQUIPMENT: { [userId: string]: EquipmentItemResponse[] } = {
+  'uid-1': [{ id_implemento: 1, nombre: 'Cuerda para saltar', descripcion: 'Cuerda de velocidad ajustable.' }],
 };
 
 const MOCK_DISCIPLINES: DisciplineResponse[] = [
@@ -646,7 +700,7 @@ export const usersService = {
     }
     const formData = new FormData();
     formData.append('file', file);
-    const { data } = await apiClient.post(`/admin/especialista/${id}/certificados/subir`, formData, {
+    const { data } = await apiClient.post(`/admin/especialista/${id}/certificado/subir`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
@@ -762,6 +816,64 @@ export const usersService = {
     return data;
   },
 
+  getSpecialityTypes: async (): Promise<SpecialityTypeResponse[]> => {
+    if (USE_MOCK) {
+      return [
+        { id_tipo_especialista: '1', nombre: 'Coach', codigo: 'COACH', descripcion: 'Entrenador deportivo' },
+        { id_tipo_especialista: '2', nombre: 'Deportologo', codigo: 'DEP', descripcion: 'Especialista en medicina deportiva' },
+        { id_tipo_especialista: '3', nombre: 'Fisioterapeuta', codigo: 'FISIO', descripcion: 'Especialista en rehabilitación' },
+      ];
+    }
+    const { data } = await apiClient.get('/admin/obtener-tipos-especialista');
+    return data;
+  },
+  registerProfessional: async (payload: RegisterProfessionalPayload): Promise<RegisterProfessionalResponse> => {
+    if (USE_MOCK) {
+      const newProfessional = {
+        id_especialista: Math.floor(Math.random() * 100000),
+        nombre: payload.nombre,
+        email: payload.email,
+        roles: ['professional'],
+        especialidad_principal: payload.tipo_ids[0] || 'Coach', // Assuming first speciality ID is the principal one for mock
+        pacientes_activos: 0,
+        certificaciones_count: 0,
+        nivel_acceso: payload.nivel_acceso,
+        estado: 'Activo',
+      };
+      MOCK_PROFESSIONALS.push({
+        id: String(newProfessional.id_especialista),
+        nombre: newProfessional.nombre,
+        initials: newProfessional.nombre.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
+        color: '#9B59B6',
+        email: newProfessional.email,
+        tel: payload.telefono_contacto,
+        ciudad: payload.ciudad,
+        rol: newProfessional.especialidad_principal as ProfRole,
+        especialidad: newProfessional.especialidad_principal,
+        regPro: '',
+        inst: '',
+        idiomas: '',
+        ingreso: '',
+        experiencia: 0,
+        linkedin: '',
+        web: '',
+        wa: '',
+        bio: '',
+        areas: [],
+        ultimoAcceso: '',
+        pacientes: 0,
+        accesoNivel: 'Completo',
+        accesoDesc: newProfessional.nivel_acceso,
+        estado: 'Activo',
+        certs: [],
+        tray: [],
+        pacAsi: [],
+      });
+      return newProfessional;
+    }
+    const { data } = await apiClient.post('/admin/registrar_profesional', payload);
+    return data;
+  },
   reassignPatientBetweenProfessionals: async (fromSpecialistId: string, toSpecialistId: string, patientName: string): Promise<any> => {
     if (USE_MOCK || isMockProfessionalId(fromSpecialistId) || isMockProfessionalId(toSpecialistId)) {
       const fromProfessional = MOCK_PROFESSIONALS.find(p => p.id === fromSpecialistId);
@@ -788,3 +900,84 @@ export const usersService = {
     return data;
   }
 }
+
+// Profile Service Interfaces
+export interface AdminProfile {
+  id_usuario: string;
+  nombre: string;
+  email: string;
+  telefono: string;
+  avatar_url: string | null;
+  biografia: string | null;
+}
+
+export interface AdminProfileResponse {
+  admin: AdminProfile;
+}
+
+export interface UpdateAdminProfilePayload {
+  nombre: string;
+  email: string;
+  telefono: string;
+  biografia?: string | null;
+}
+
+export interface UploadAvatarResponse {
+  foto_url: string;
+}
+
+// Mock Admin Profile
+const MOCK_ADMIN_PROFILE: AdminProfile = {
+  id_usuario: 'admin-1',
+  nombre: 'Admin User',
+  email: 'admin@example.com',
+  telefono: '123-456-7890',
+  avatar_url: 'https://cdn-icons-png.flaticon.com/512/147/147142.png',
+  biografia: 'Administrador principal del sistema FitnFlai',
+};
+
+export const profileService = {
+  getAdminProfile: async (): Promise<AdminProfileResponse> => {
+    if (USE_MOCK) {
+      return new Promise((resolve) => {
+        setTimeout(() => resolve({ admin: MOCK_ADMIN_PROFILE }), 500);
+      });
+    }
+    const { data } = await apiClient.get('/admin/profile/get-data-admin');
+    return data;
+  },
+
+  updateAdminProfile: async (payload: UpdateAdminProfilePayload): Promise<AdminProfileResponse> => {
+    if (USE_MOCK) {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          Object.assign(MOCK_ADMIN_PROFILE, payload);
+          resolve({ admin: MOCK_ADMIN_PROFILE });
+        }, 500);
+      });
+    }
+    const { data } = await apiClient.put('/admin/profile/update', payload);
+    return data;
+  },
+
+  updateAdminAvatar: async (file: File): Promise<UploadAvatarResponse> => {
+    if (USE_MOCK) {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          const newAvatarUrl = URL.createObjectURL(file);
+          MOCK_ADMIN_PROFILE.avatar_url = newAvatarUrl; // Update mock profile with new avatar
+          resolve({ foto_url: newAvatarUrl });
+        }, 500);
+      });
+    }
+    const formData = new FormData();
+    formData.append('file', file);
+    const { data } = await apiClient.post('/admin/profile/update-avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return data;
+  },
+};
+
