@@ -131,6 +131,8 @@ export interface Professional {
   tray: TrajectoryItem[]
   pacAsi: AssignedPatient[]
   estado?: 'Activo' | 'Suspendido Temporalmente' | 'Suspendido Permanentemente' | 'Pendiente'
+  fecha_fin_suspension?: string | null;
+  motivo_suspension?: string | null;
   docTipo?: string
   docNumero?: string
   docDelantero?: string

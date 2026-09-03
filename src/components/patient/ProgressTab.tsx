@@ -16,6 +16,64 @@ import AIFeedbackCard from './cards/AIFeedbackCard';
 
 import { toast } from '@/components/ui/Toast';
 
+const createFallbackProgressData = (weekIndex: number): WeeklyProgressData => {
+  const currentWeight = 75 - (weekIndex * 0.5); // Simulate weight loss
+  const targetWeight = currentWeight - 5;
+  const musclePct = 52 + (weekIndex * 0.2); // Simulate slight muscle gain
+  const fatPct = 48 - (weekIndex * 0.2); // Simulate slight fat loss
+
+  return {
+    weekIndex: weekIndex,
+    label: `Semana ${12 - weekIndex}`, // Assuming max 12 weeks, current week is 12, previous are 11, 10, etc.
+    status: weekIndex === 0 ? 'Excelente Progreso' : 'Progreso Moderado',
+    aiFeedback: `Este es un comentario de IA de respaldo para la semana ${12 - weekIndex}. Se recomienda revisar el progreso general.`,
+    painAlerts: weekIndex === 1 ? [{ area: 'Rodilla', level: 2, description: 'Leve molestia en la rodilla derecha.' }] : [],
+    wellnessIndex: {
+      overallScore: 70 + (weekIndex % 2 === 0 ? 5 : -2),
+      history8Weeks: Array.from({ length: 8 }, (_, i) => ({
+        weekLabel: `Sem ${12 - (weekIndex + 7 - i)}`,
+        sleep: 70 + Math.sin(i) * 10,
+        stress: 60 + Math.cos(i) * 10,
+        nutrition: 65,
+        energy: 75 + Math.sin(i * 1.2) * 10,
+      })),
+    },
+    weightTrend: {
+      currentWeight: parseFloat(currentWeight.toFixed(1)),
+      targetWeight: parseFloat(targetWeight.toFixed(1)),
+      musclePct: parseFloat(musclePct.toFixed(1)),
+      fatPct: parseFloat(fatPct.toFixed(1)),
+      muscleDelta: weekIndex === 0 ? 0.2 : -0.1,
+      fatDelta: weekIndex === 0 ? -0.3 : 0.1,
+      history7Weeks: Array.from({ length: 7 }, (_, i) => ({
+        weekLabel: `Sem ${12 - (weekIndex + 6 - i)}`,
+        weight: parseFloat((currentWeight + (i * 0.1)).toFixed(1)),
+      })).reverse(),
+    },
+    secondaryMetrics: {
+      bodyAge: 35 + weekIndex,
+      hydrationDeficit: weekIndex === 0 ? 0.1 : 0.3,
+      vo2Max: 45 - (weekIndex * 0.2),
+    },
+    weeklyInsights: [
+      {
+        title: 'Tiempo Activo',
+        value: `${120 + (weekIndex * 10)} min`,
+        description: `Sesiones completadas: ${3 + weekIndex % 2} de 5`,
+        type: 'success',
+      },
+      {
+        title: 'Hidratación Total',
+        value: `${2.5 + (weekIndex * 0.1)} L`,
+        description: `Meta semanal de 3 L`,
+        type: 'info',
+      },
+    ],
+  };
+};
+
+
+
 interface ProgressTabProps {
   patientId: string;
   isSpecialist?: boolean;
@@ -124,7 +182,7 @@ export const ProgressTab: React.FC<ProgressTabProps> = ({ patientId, isSpecialis
 
       if (isMockPatient) {
         try {
-          const data = await biometricRepository.getWeeklyProgress(patientId, activeWeekIndex);
+          const data = createFallbackProgressData(activeWeekIndex);
           setWeeklyProgressData(data);
         } catch (err) {
           setError('Failed to fetch progress data.');
@@ -159,17 +217,6 @@ export const ProgressTab: React.FC<ProgressTabProps> = ({ patientId, isSpecialis
   const displayLoading = isMockPatient ? loading : isApiLoading;
   const displayError = isMockPatient ? error : (isApiError ? apiError?.message || 'Failed to fetch progress data from API.' : null);
 
-  if (displayLoading) {
-    return <div className="p-4 text-center text-surface-muted">Cargando progreso del paciente...</div>;
-  }
-
-  if (displayError) {
-    return <div className="p-4 text-center text-brand-red">Error: {displayError}</div>;
-  }
-
-  if (!weeklyProgressData) {
-    return <div className="p-4 text-center text-surface-muted">No hay datos de progreso disponibles.</div>;
-  }
 
   return (
     <div className="space-y-4">
@@ -200,41 +247,52 @@ export const ProgressTab: React.FC<ProgressTabProps> = ({ patientId, isSpecialis
         </div>
       </div>
 
-      {lastReportSent && (
-        <p className="text-xs text-surface-muted text-right mb-4">
-          Último informe enviado: {lastReportSent.toLocaleDateString()} {lastReportSent.toLocaleTimeString()}
-        </p>
+      {/* Conditional Content Area */}
+      {displayLoading ? (
+        <div className="p-4 text-center text-surface-muted">Cargando progreso del paciente...</div>
+      ) : displayError ? (
+        <div className="p-4 text-center text-brand-red">Error: {displayError}</div>
+      ) : !weeklyProgressData ? (
+        <div className="p-4 text-center text-surface-muted">No hay datos de progreso disponibles.</div>
+      ) : (
+        <>
+          {lastReportSent && (
+            <p className="text-xs text-surface-muted text-right mb-4">
+              Último informe enviado: {lastReportSent.toLocaleDateString()} {lastReportSent.toLocaleTimeString()}
+            </p>
+          )}
+
+          {/* Graphs Row: side-by-side */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <WellnessIndexCard wellnessIndex={weeklyProgressData.wellnessIndex} />
+            <WeightTrendCard weightTrend={weeklyProgressData.weightTrend} />
+          </div>
+
+          {/* Cards Row: organized below the graphs */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Left Column: Status, Pain Alerts & Specialist Feedback */}
+            <div className="space-y-4">
+              <StatusBanner status={weeklyProgressData.status} />
+              <PainAlertCard painAlerts={weeklyProgressData.painAlerts} />
+              <AIFeedbackCard
+                feedback={weeklyProgressData.aiFeedback}
+                isEditable={isSpecialist && !readOnly}
+                onSave={(newFeedback) => {
+                  weeklyProgressData.aiFeedback = newFeedback;
+                  setWeeklyProgressData({ ...weeklyProgressData });
+                  toast.show('Mensaje actualizado con éxito', 'success');
+                }}
+              />
+            </div>
+
+            {/* Right Column: Weekly Insights & Secondary Metrics */}
+            <div className="space-y-4">
+              <WeeklyInsightsGrid insights={weeklyProgressData.weeklyInsights} />
+              <SecondaryMetricsGrid metrics={weeklyProgressData.secondaryMetrics} />
+            </div>
+          </div>
+        </>
       )}
-
-      {/* Graphs Row: side-by-side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <WellnessIndexCard wellnessIndex={weeklyProgressData.wellnessIndex} />
-        <WeightTrendCard weightTrend={weeklyProgressData.weightTrend} />
-      </div>
-
-      {/* Cards Row: organized below the graphs */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Left Column: Status, Pain Alerts & Specialist Feedback */}
-        <div className="space-y-4">
-          <StatusBanner status={weeklyProgressData.status} />
-          <PainAlertCard painAlerts={weeklyProgressData.painAlerts} />
-          <AIFeedbackCard
-            feedback={weeklyProgressData.aiFeedback}
-            isEditable={isSpecialist && !readOnly}
-            onSave={(newFeedback) => {
-              weeklyProgressData.aiFeedback = newFeedback;
-              setWeeklyProgressData({ ...weeklyProgressData });
-              toast.show('Mensaje actualizado con éxito', 'success');
-            }}
-          />
-        </div>
-
-        {/* Right Column: Weekly Insights & Secondary Metrics */}
-        <div className="space-y-4">
-          <WeeklyInsightsGrid insights={weeklyProgressData.weeklyInsights} />
-          <SecondaryMetricsGrid metrics={weeklyProgressData.secondaryMetrics} />
-        </div>
-      </div>
     </div>
   );
 };

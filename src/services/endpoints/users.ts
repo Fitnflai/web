@@ -44,6 +44,12 @@ export interface StatusPayload {
   motivo_suspencion?: string | null;
 }
 
+export interface ProfessionalStatusPayload {
+  estado: 'Activo' | 'Suspendido_Temporal' | 'Suspendido_Permanente' | string;
+  fecha_fin_suspension?: string | null;
+  motivo_suspension?: string | null;
+}
+
 // Mock stores for new functionalities
 const MOCK_USER_INJURIES: { [userId: string]: InjuryResponse[] } = {
   'uid-1': [{ id_lesion_usuario: 'inj-1', zona_afectada: 'Rodilla', descripcion_molestia: 'Dolor leve', nombre_lesion: 'Esguince' }],
@@ -464,6 +470,15 @@ export const usersService = {
       const names = (item.nombre || '').split(' ')
       const initials = names.map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
 
+      let professionalEstado = item.estado || 'Activo';
+      if (item.estado === 'suspendido_temporal') {
+        professionalEstado = 'Suspendido Temporalmente';
+      } else if (item.estado === 'suspendido_permanente') {
+        professionalEstado = 'Suspendido Permanentemente';
+      } else if (item.estado === 'activo') {
+        professionalEstado = 'Activo';
+      }
+
       return {
         id: String(item.id_especialista),
         nombre: item.nombre,
@@ -477,7 +492,7 @@ export const usersService = {
         pacientes: item.pacientes_activos || 0,
         accesoNivel,
         accesoDesc: item.nivel_acceso || '',
-        estado: item.estado || 'Activo',
+        estado: professionalEstado,
         certs: [],
         tray: [],
         pacAsi: []
@@ -652,12 +667,28 @@ export const usersService = {
     return data;
   },
 
-  updateProfessionalStatus: async (id: string, payload: { estado: string, motivo_suspencion?: string }): Promise<any> => {
+  updateProfessionalStatus: async (id: string, payload: ProfessionalStatusPayload): Promise<any> => {
     if (USE_MOCK || isMockProfessionalId(id)) {
       const professional = MOCK_PROFESSIONALS.find(p => p.id === id);
       if (professional) {
-        professional.estado = payload.estado as any;
-        professional.accesoNivel = payload.estado === 'Activo' ? 'Completo' : 'Sin acceso';
+        let uiEstado: string;
+        switch (payload.estado) {
+          case 'activo':
+            uiEstado = 'Activo';
+            break;
+          case 'suspendido_temporal':
+            uiEstado = 'Suspendido Temporalmente';
+            break;
+          case 'suspendido_permanente':
+            uiEstado = 'Suspendido Permanentemente';
+            break;
+          default:
+            uiEstado = 'Activo'; // Default to active if unknown
+        }
+        professional.estado = uiEstado as any; // Cast to any to match Professional type
+        professional.fecha_fin_suspension = payload.fecha_fin_suspension;
+        professional.motivo_suspension = payload.motivo_suspension;
+        professional.accesoNivel = payload.estado === 'activo' ? 'Completo' : 'Sin acceso';
         return { success: true, message: "Estado actualizado" };
       }
       return Promise.reject(new Error('Professional not found for status update'));
@@ -670,7 +701,7 @@ export const usersService = {
     if (USE_MOCK || isMockProfessionalId(id)) {
       return MOCK_PROFESSIONALS.find(p => p.id === id);
     }
-    const { data } = await apiClient.get(`/admin/${id}/detalle-especialista-cabecera`);
+    const { data } = await apiClient.get(`/admin/${id}/detalle-especialista-header`);
     return data;
   },
 

@@ -33,6 +33,11 @@ function ProfDetail({ onUpdate }: { onUpdate: () => void }) {
   const [isAssignOpen, setIsAssignOpen] = useState(false)
   const [selectedUserVal, setSelectedUserVal] = useState('')
 
+  // Local state for suspension modal
+  const [isSuspensionModalOpen, setIsSuspensionModalOpen] = useState(false)
+  const [suspensionReason, setSuspensionReason] = useState('')
+  const [suspensionEndDate, setSuspensionEndDate] = useState('2026-07-06') // Default date
+
   // Fetch assigned patients
   const { data: apiPatients, isLoading: isPatientsLoading } = useQuery({
     queryKey: ['professionalPatients', p?.id],
@@ -401,11 +406,13 @@ function ProfDetail({ onUpdate }: { onUpdate: () => void }) {
                         if (!isMockProfessional && p?.id) {
                           try {
                             await usersService.updateProfessionalStatus(p.id, { estado: 'Activo' });
+                            p.estado = 'Activo';
                             queryClient.invalidateQueries({ queryKey: ['professionalHeader', p.id] });
+                            queryClient.invalidateQueries({ queryKey: ['adminProfessionals'] }); // Invalidate all professionals list
                             toast.show('Especialista reactivado con éxito', 'success');
                             onUpdate();
                           } catch (error) {
-                            console.error('Error al reactivar especialista:', error);
+                            console.error('Error al reactivar especialista:', (error as any).response?.data || error);
                             toast.show('Error al reactivar especialista', 'error');
                           }
                         } else {
@@ -423,45 +430,32 @@ function ProfDetail({ onUpdate }: { onUpdate: () => void }) {
                       <Button
                         variant="ghost"
                         className="text-brand-orange hover:bg-brand-orange/10 border border-brand-orange/20"
-                        onClick={async () => {
-                          if (!isMockProfessional && p?.id) {
-                            try {
-                              await usersService.updateProfessionalStatus(p.id, { estado: 'Suspendido_Temporal', motivo_suspencion: 'Suspensión temporal por administrador' });
-                              queryClient.invalidateQueries({ queryKey: ['professionalHeader', p.id] });
-                              toast.show('Especialista suspendido temporalmente', 'warning');
-                              onUpdate();
-                            } catch (error) {
-                              console.error('Error al suspender temporalmente especialista:', error);
-                              toast.show('Error al suspender temporalmente especialista', 'error');
-                            }
-                          } else {
-                            p.estado = 'Suspendido Temporalmente'
-                            p.accesoNivel = 'Sin acceso' // revoke access
-                            onUpdate()
-                            toast.show('Especialista suspendido temporalmente', 'warning')
-                          }
-                        }}
+                        onClick={() => setIsSuspensionModalOpen(true)}
                       >
                         🟡 Suspender Temporalmente
                       </Button>
                       <Button
                         variant="danger"
                         onClick={async () => {
-                          if (!isMockProfessional && p?.id) {
-                            try {
-                              await usersService.updateProfessionalStatus(p.id, { estado: 'Suspendido_Permanente', motivo_suspencion: 'Suspensión permanente por administrador' });
-                              queryClient.invalidateQueries({ queryKey: ['professionalHeader', p.id] });
-                              toast.show('Especialista suspendido permanentemente', 'error');
-                              onUpdate();
-                            } catch (error) {
-                              console.error('Error al suspender permanentemente especialista:', error);
-                              toast.show('Error al suspender permanentemente especialista', 'error');
+                          if (window.confirm('¿Estás seguro de suspender permanentemente a este especialista? Esta acción no se puede deshacer fácilmente.')) {
+                            if (!isMockProfessional && p?.id) {
+                              try {
+                                await usersService.updateProfessionalStatus(p.id, { estado: 'Suspendido_Permanente', motivo_suspension: 'Suspensión permanente por administrador' });
+                                p.estado = 'Suspendido Permanentemente';
+                                queryClient.invalidateQueries({ queryKey: ['professionalHeader', p.id] });
+                                queryClient.invalidateQueries({ queryKey: ['adminProfessionals'] }); // Invalidate all professionals list
+                                 toast.show('Especialista suspendido permanentemente', 'success');
+                                onUpdate();
+                              } catch (error) {
+                                console.error('Error al suspender permanentemente especialista:', (error as any).response?.data || error);
+                                toast.show('Error al suspender permanentemente especialista', 'error');
+                              }
+                            } else {
+                              p.estado = 'Suspendido Permanentemente'
+                              p.accesoNivel = 'Sin acceso' // revoke access
+                              onUpdate()
+                              toast.show('Especialista suspendido permanentemente', 'success')
                             }
-                          } else {
-                            p.estado = 'Suspendido Permanentemente'
-                            p.accesoNivel = 'Sin acceso' // revoke access
-                            onUpdate()
-                            toast.show('Especialista suspendido permanentemente', 'error')
                           }
                         }}
                       >
@@ -1150,8 +1144,77 @@ function ProfDetail({ onUpdate }: { onUpdate: () => void }) {
           </Modal>
         </div>
       )}
+
+      {/* Suspension Modal */}
+      <Modal
+        isOpen={isSuspensionModalOpen}
+        onClose={() => setIsSuspensionModalOpen(false)}
+        title="Suspender Especialista Temporalmente"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">Fecha de fin de suspensión</label>
+            <input
+              type="date"
+              value={suspensionEndDate}
+              onChange={(e) => setSuspensionEndDate(e.target.value)}
+              className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-purple"
+            />
+          </div>
+          <div>
+            <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">Motivo de la suspensión</label>
+            <textarea
+              value={suspensionReason}
+              onChange={(e) => setSuspensionReason(e.target.value)}
+              placeholder="Ingrese el motivo de la suspensión temporal..."
+              className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-purple min-h-[80px] resize-y"
+            />
+          </div>
+          <div className="flex gap-2 justify-end mt-4">
+            <Button variant="ghost" onClick={() => setIsSuspensionModalOpen(false)}>Cancelar</Button>
+            <Button
+              variant="primary"
+              onClick={async () => {
+                if (!suspensionReason.trim()) {
+                  toast.show('El motivo de la suspensión es obligatorio', 'error')
+                  return
+                }
+                if (!isMockProfessional && p?.id) {
+                  try {
+                    await usersService.updateProfessionalStatus(p.id, {
+                      estado: 'Suspendido_Temporal',
+                      fecha_fin_suspension: suspensionEndDate,
+                      motivo_suspension: suspensionReason
+                    });
+                    p.estado = 'Suspendido Temporalmente';
+                    queryClient.invalidateQueries({ queryKey: ['professionalHeader', p.id] });
+                    queryClient.invalidateQueries({ queryKey: ['adminProfessionals'] });
+                    setIsSuspensionModalOpen(false);
+                    toast.show('Especialista suspendido temporalmente', 'warning');
+                    onUpdate();
+                  } catch (error) {
+                    console.error('Error al suspender temporalmente especialista:', (error as any).response?.data || error);
+                    toast.show('Error al suspender temporalmente especialista', 'error');
+                  }
+                } else {
+                  p.estado = 'Suspendido Temporalmente'
+                  p.accesoNivel = 'Sin acceso'
+                  // For mock, we need to manually set suspension details if they were part of the Professional type
+                  // p.fecha_fin_suspension = suspensionEndDate; // Assuming Professional type has this
+                  // p.motivo_suspension = suspensionReason;   // Assuming Professional type has this
+                  setIsSuspensionModalOpen(false)
+                  toast.show('Especialista suspendido temporalmente', 'warning')
+                  onUpdate()
+                }
+              }}
+            >
+              Confirmar Suspensión
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
-  )
+  );
 }
 
 // ─── List ──────────────────────────────────────────────────────────

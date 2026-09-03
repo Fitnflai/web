@@ -117,6 +117,99 @@ interface ApiClinicalReport {
   }[];
 }
 
+const createFallbackClinicalReport = (weekOffset: number, patient: any): EnrichedWeeklyClinicalReport => {
+  const currentWeekNum = 12 - weekOffset; // Assuming 12 weeks total, 0-offset means current week
+
+  const compositionActivityRows = [
+    { metric: 'Weight and Composition', label: 'Peso y Composición', target: '70kg', actual: `${(75 - weekOffset * 0.5).toFixed(1)}kg`, S_1: '75.0kg', S_4: '76.0kg' },
+    { metric: 'Hydration', label: 'Hidratación', target: '3L', actual: `${(2.5 + weekOffset * 0.1).toFixed(1)}L`, S_1: '2.5L', S_4: '2.4L' },
+    { metric: 'Muscle Load', label: 'Carga Muscular', target: 'Normal', actual: 'Normal', S_1: 'Normal', S_4: 'Normal' },
+  ];
+
+  const painLogRows = weekOffset === 1 ? [{ id: 'pain-1', zone: 'Rodilla derecha', intensity: '2/10' }] : [];
+
+  const evolution8WeeksRows = Array.from({ length: 8 }, (_, i) => {
+    const weekLabel = `S${currentWeekNum - (7 - i)}`;
+    const weight = (76 - (7 - i) * 0.2).toFixed(1);
+    const musclePct = (22 + (7 - i) * 0.1).toFixed(1);
+    const fatPct = (9 - (7 - i) * 0.05).toFixed(1);
+    return {
+      weekLabel,
+      weight: `${weight}kg`,
+      musclePct: `${musclePct}%`,
+      fatPct: `${fatPct}%`,
+      note: (i === 7 && weekOffset === 0) ? 'Excelente semana de entrenamiento!' : '',
+    };
+  });
+
+  const weightCompositionChartLabels = evolution8WeeksRows.map(row => row.weekLabel);
+  const muscleData = evolution8WeeksRows.map(row => parseFloat(row.musclePct.replace('%', '')));
+  const fatData = evolution8WeeksRows.map(row => parseFloat(row.fatPct.replace('%', '')));
+  const totalWeightData = evolution8WeeksRows.map(row => parseFloat(row.weight.replace('kg', '')));
+
+  const wellnessScores = Array.from({ length: 8 }, (_, i) => 65 + (i * 2) + (weekOffset % 2 === 0 ? 0 : -3));
+  const maxWellnessScore = Math.max(...wellnessScores);
+  const peakWeekIndex = wellnessScores.indexOf(maxWellnessScore);
+  const peakWeekLabel = weightCompositionChartLabels[peakWeekIndex] || '';
+
+
+  return {
+    weekOffset: weekOffset,
+    label: `Semana ${currentWeekNum}`,
+    status: weekOffset === 0 ? 'ADELANTE' : 'ADELANTE CON AJUSTE',
+    painAlert: weekOffset === 1 ? 'Paciente reporta leve molestia en rodilla derecha. Monitorear.' : 'No hay alertas.',
+    nextWeekPlan: 'Mantener la rutina actual y ajustar la hidratación. Enfocarse en la recuperación activa.',
+    compositionActivity: {
+      rows: compositionActivityRows,
+      comment: weekOffset === 0 ? 'Revisar detalles de composición y actividad con el paciente.' : '',
+    },
+    painLog: {
+      rows: painLogRows,
+      comment: weekOffset === 1 ? 'Seguimiento de la molestia en rodilla. Reducir carga de impacto.' : '',
+    },
+    evolution8Weeks: {
+      rows: evolution8WeeksRows,
+      comment: 'Progreso constante en peso y composición. Nivel de bienestar estable.',
+    },
+    generalObservations: weekOffset === 0 ? 'El paciente ha mostrado un compromiso excelente y una mejora significativa en todos los indicadores clave.' : '',
+    patientName: patient.nombre || 'Nombre del Paciente',
+    discipline: patient.nombre_disciplina || 'Disciplina Deportiva',
+    planType: `Pro - Sem. ${currentWeekNum}`,
+    altitude: `${patient.altitud || 0} msnm`,
+    objective: patient.objetivo_principal || 'Mejorar rendimiento',
+    metrics: [{ label: 'VO2 Máx', value: '45.0 ml/kg/min' }],
+    painAlertActive: painLogRows.length > 0,
+    painAlertFooter: '→ Monitorear intensidad. Considerar derivación si el dolor persiste o aumenta.',
+    wellnessIndex: {
+      overallScore: wellnessScores[wellnessScores.length - 1],
+      deltaVsLastWeek: weekOffset === 0 ? 2 : -1,
+      bestWeekScore: maxWellnessScore,
+      bestWeekLabel: peakWeekLabel,
+      factors: [
+        { label: 'Peso y composición', score: 75 + weekOffset, delta: 2, color: 'brand-orange' },
+        { label: 'Hidratación', score: 60 + weekOffset * 2, delta: 1, color: 'brand-blue' },
+        { label: 'Carga muscular', score: 80 - weekOffset, delta: 3, color: 'brand-purple' },
+        { label: 'Movimiento', score: 70 + weekOffset, delta: 0, color: 'brand-green' },
+      ],
+    },
+    weightCompositionChart: {
+      labels: weightCompositionChartLabels,
+      muscleData: muscleData,
+      fatData: fatData,
+      totalWeightData: totalWeightData,
+    },
+    wellnessIndexChart: {
+      labels: weightCompositionChartLabels,
+      scores: wellnessScores,
+      referenceLine: 70,
+      peakWeekLabel: peakWeekLabel,
+      peakWeekScore: maxWellnessScore,
+    },
+  };
+};
+
+
+
 const adaptApiClinicalReport = (apiData: ApiClinicalReport, weekOffset: number, patient: any): EnrichedWeeklyClinicalReport => {
   const latestWeightComposition = apiData.detalle_factor_peso_composicion?.[0];
   const latestHydration = apiData.detalle_factor_hidratacion?.[0];
@@ -177,7 +270,7 @@ const adaptApiClinicalReport = (apiData: ApiClinicalReport, weekOffset: number, 
 
   return {
     weekOffset: weekOffset,
-    label: apiData.semana_info || `Semana ${12 + weekOffset}`,
+    label: apiData.semana_info || `Semana ${12 - weekOffset}`,
     status: apiData.indice_bienestar >= 70 ? 'ADELANTE' : 'DETENER',
     painAlert: apiData.alertas?.detalle || 'No hay alertas.',
     nextWeekPlan: apiData.mensaje_ia || '',
@@ -196,7 +289,7 @@ const adaptApiClinicalReport = (apiData: ApiClinicalReport, weekOffset: number, 
     generalObservations: '',
     patientName: patient.nombre,
     discipline: patient.nombre_disciplina,
-    planType: `Pro - Sem. ${apiData.semana_info || weekOffset}`,
+    planType: `Pro - Sem. ${12 - weekOffset}`,
     altitude: `${patient.altitud} msnm`,
     objective: patient.objetivo_principal,
     metrics: [{ label: 'VO2 Máx', value: '46.6 ml/kg/min' }],
@@ -286,46 +379,8 @@ export const ClinicalReportTab: React.FC<ClinicalReportTabProps> = ({ patientId,
 
       if (isMockPatient) {
         try {
-          const fetchedReport: WeeklyClinicalReport = await biometricRepository.getClinicalReport(patientId, activeWeekOffset);
-          const enrichedReport: EnrichedWeeklyClinicalReport = {
-            ...fetchedReport,
-            patientName: patient.nombre,
-            discipline: patient.nombre_disciplina,
-            planType: `Pro - Sem. ${fetchedReport.label}`,
-            altitude: `${patient.altitud} msnm`,
-            objective: patient.objetivo_principal,
-            metrics: [{ label: 'VO2 Máx', value: '46.6 ml/kg/min' }],
-            painAlertActive: !!fetchedReport.painAlert,
-            painAlertFooter: '→ Sin impacto en tren inferior por 5 días. Derivar a traumatología si persiste en semana 13.',
-            wellnessIndex: {
-              overallScore: 74,
-              deltaVsLastWeek: 6,
-              bestWeekScore: 81,
-              bestWeekLabel: 'S9',
-              factors: [
-                { label: 'Peso y composición', score: 80, delta: 5, color: 'brand-orange' },
-                { label: 'Edad corporal', score: 85, delta: 2, color: 'brand-blue' },
-                { label: 'Hidratación', score: 60, delta: -3, color: 'brand-red' },
-                { label: 'Movimiento', score: 78, delta: 7, color: 'brand-green' },
-                { label: 'Carga muscular', score: 68, delta: 0, color: 'brand-purple' },
-              ],
-            },
-            weightCompositionChart: {
-              labels: ['S5', 'S6', 'S7', 'S8', 'S9', 'S10', 'S11', 'S12'],
-              muscleData: [20, 21, 20, 22, 21, 23, 22, 23],
-              fatData: [10, 9, 11, 8, 9, 7, 8, 7],
-              totalWeightData: [76.1, 75.5, 76.5, 74.2, 73.8, 72.9, 73.2, 72.4],
-            },
-            wellnessIndexChart: {
-              labels: ['S5', 'S6', 'S7', 'S8', 'S9', 'S10', 'S11', 'S12'],
-              scores: [65, 68, 70, 72, 81, 78, 75, 74],
-              referenceLine: 70,
-              peakWeekLabel: 'S9',
-              peakWeekScore: 81,
-            },
-            status: fetchedReport.status || 'PENDIENTE',
-          };
-          setReportDraft(enrichedReport);
+          const fetchedReport: EnrichedWeeklyClinicalReport = createFallbackClinicalReport(activeWeekOffset, patient);
+          setReportDraft(fetchedReport);
         } catch (error) {
           console.error('Failed to fetch clinical report:', error);
           setReportDraft(null);
@@ -427,13 +482,11 @@ export const ClinicalReportTab: React.FC<ClinicalReportTabProps> = ({ patientId,
 
   const isCurrentWeek = activeWeekOffset === 0;
 
-  if (!reportDraft || isApiLoading) {
-    return <div className="text-white p-4">Cargando informe clínico...</div>;
-  }
 
   // Helper for rendering charts
     const WeightCompositionChart = () => {
-    const { labels, muscleData, fatData, totalWeightData } = reportDraft.weightCompositionChart;
+      if (!reportDraft) return null;
+      const { labels, muscleData, fatData, totalWeightData } = reportDraft.weightCompositionChart;
 
     const viewBoxWidth = 500;
     const viewBoxHeight = 240;
@@ -527,7 +580,8 @@ export const ClinicalReportTab: React.FC<ClinicalReportTabProps> = ({ patientId,
   };
 
     const WellnessIndexChart = () => {
-    const { labels, scores, referenceLine, peakWeekLabel, peakWeekScore } = reportDraft.wellnessIndexChart;
+      if (!reportDraft) return null;
+      const { labels, scores, referenceLine, peakWeekLabel, peakWeekScore } = reportDraft.wellnessIndexChart;
 
     const viewBoxWidth = 500;
     const viewBoxHeight = 240;
@@ -633,15 +687,15 @@ export const ClinicalReportTab: React.FC<ClinicalReportTabProps> = ({ patientId,
             {patient?.nombre || "Carlos Mendoza"}
           </h2>
           <div className="text-[10px] text-surface-muted flex flex-wrap items-center justify-center md:justify-start gap-x-2">
-            <span>{reportDraft.discipline || patient.nombre_disciplina}</span>
+            <span>{reportDraft?.discipline || patient.nombre_disciplina}</span>
             <span className="text-surface-border">|</span>
-            <span>Pro - Sem. {reportDraft.label}</span> {/* Using reportDraft.label */}
+            <span>Pro - Sem. {reportDraft?.label || `Semana ${12 - activeWeekOffset}`}</span>
             <span className="text-surface-border">|</span>
-            <span>{reportDraft.altitude || `${patient.altitud} msnm`}</span>
+            <span>{reportDraft?.altitude || `${patient.altitud} msnm`}</span>
             <span className="text-surface-border">|</span>
-            <span>Objetivo: {reportDraft.objective || patient.objetivo_principal}</span>
+            <span>Objetivo: {reportDraft?.objective || patient.objetivo_principal}</span>
             <span className="text-surface-border">|</span>
-            <span>VO2 Máx: {reportDraft.metrics.find(m => m.label === 'VO2 Máx')?.value || '46.6 ml/kg/min'}</span>
+            <span>VO2 Máx: {reportDraft?.metrics?.find(m => m.label === 'VO2 Máx')?.value || '46.6 ml/kg/min'}</span>
           </div>
         </div>
 
@@ -651,7 +705,7 @@ export const ClinicalReportTab: React.FC<ClinicalReportTabProps> = ({ patientId,
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" onClick={() => setActiveWeekOffset(prev => Math.min(prev + 1, 4))}><ChevronLeft size={16} /></Button>
             <span className="text-xs font-medium text-surface-muted uppercase tracking-wider">
-              Semana {reportDraft.label} {isCurrentWeek ? '(Actual)' : activeWeekOffset > 0 ? `+${activeWeekOffset}` : ''}
+              Semana {reportDraft?.label || `Semana ${12 - activeWeekOffset}`} {isCurrentWeek ? '(Actual)' : activeWeekOffset > 0 ? `+${activeWeekOffset}` : ''}
             </span>
             <Button variant="ghost" size="sm" onClick={() => setActiveWeekOffset(prev => Math.max(prev - 1, 0))}><ChevronRight size={16} /></Button>
           </div>
@@ -667,14 +721,22 @@ export const ClinicalReportTab: React.FC<ClinicalReportTabProps> = ({ patientId,
                 onClick={() => toast.show('Informe aprobado/generado!', 'success')}
                 className="bg-brand-orange hover:bg-brand-orange/90 gap-2 text-white font-semibold"
               >
-                <CheckCircle2 size={16} /> {reportDraft.status === 'ADELANTE' ? 'APROBAR INFORME' : 'GENERAR INFORME'}
+                <CheckCircle2 size={16} /> {(reportDraft?.status || 'PENDIENTE') === 'ADELANTE' ? 'APROBAR INFORME' : 'GENERAR INFORME'}
               </Button>
             </div>
           )}
         </div>
       </div>
 
-      {/* Alerta de Dolor Activa Section */}
+      {isApiLoading ? (
+        <div className="text-white p-4 text-center animate-pulse">Cargando informe clínico...</div>
+      ) : apiError ? (
+        <div className="text-red-400 p-4 text-center font-mono">Error al cargar el informe clínico: {(apiError as any)?.message || 'Error'}</div>
+      ) : !reportDraft ? (
+        <div className="text-white p-4 text-center">No hay informe clínico disponible para esta semana.</div>
+      ) : (
+        <>
+          {/* Alerta de Dolor Activa Section */}
       {reportDraft.painAlertActive && isCurrentWeek && (
         <div className="border border-brand-red p-4 rounded-xl bg-brand-red/10 flex items-start gap-4">
           <div className="w-6 h-6 bg-brand-red rounded-full flex-shrink-0 flex items-center justify-center mt-1">
@@ -950,6 +1012,8 @@ export const ClinicalReportTab: React.FC<ClinicalReportTabProps> = ({ patientId,
           />
         </div>
       </div>
+    </>
+  )}
     </div>
   );
 };

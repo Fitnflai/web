@@ -2270,33 +2270,18 @@ function SpecialistProgressTab({ userId }: { userId: string }) {
   )
 }
 
-type Tab = 'perfil' | 'plan' | 'nutricion' | 'progreso' | 'reporte-clinico' | 'notificaciones'
-
-interface NotificationItem {
-  date: string;
-  title: string;
-  message: string;
-  category: 'Recordatorio' | 'Alerta de Salud' | 'Motivacional';
-}
+type Tab = 'perfil' | 'plan' | 'nutricion' | 'reporte-clinico' | 'notificaciones'
 
 const NotificacionesTab = ({ userId }: { userId: string }) => {
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [category, setCategory] = useState<'Recordatorio' | 'Alerta de Salud' | 'Motivacional'>('Recordatorio');
-  const [history, setHistory] = useState<NotificationItem[]>([
-    {
-      date: '2023-10-26 10:00',
-      title: 'Recordatorio Semanal',
-      message: 'No olvides registrar tu progreso semanal y tus medidas.',
-      category: 'Recordatorio',
-    },
-    {
-      date: '2023-10-25 14:30',
-      title: '¡Gran Esfuerzo!',
-      message: 'Tu dedicación en los entrenamientos es inspiradora. ¡Sigue así!',
-      category: 'Motivacional',
-    },
-  ]);
+
+  const { data: notificationsData, isLoading: isLoadingNotifications, isError: isErrorNotifications, error: errorNotifications } = useQuery({
+    queryKey: ['specialistPatientNotifications', userId],
+    queryFn: () => usersService.getUserTabDetalle(userId, 'notificaciones'),
+    enabled: !!userId,
+  })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -2305,21 +2290,13 @@ const NotificacionesTab = ({ userId }: { userId: string }) => {
       return;
     }
 
-    const newNotification: NotificationItem = {
-      date: new Date().toLocaleString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
-      title,
-      message,
-      category,
-    };
-
-    setHistory([newNotification, ...history]);
+    toast.show('Notificación enviada con éxito', 'success');
     setTitle('');
     setMessage('');
     setCategory('Recordatorio');
-    toast.show('Notificación enviada con éxito', 'success');
   };
 
-  const getBadgeVariant = (category: NotificationItem['category']) => {
+  const getBadgeVariant = (category: string) => {
     switch (category) {
       case 'Recordatorio':
         return 'orange';
@@ -2358,7 +2335,7 @@ const NotificacionesTab = ({ userId }: { userId: string }) => {
             <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Categoría</label>
             <select
               value={category}
-              onChange={(e) => setCategory(e.target.value as NotificationItem['category'])}
+              onChange={(e) => setCategory(e.target.value as any)}
               className="form-input text-[12px] py-2 bg-surface-card border border-surface-border uppercase font-semibold text-white outline-none focus:border-brand-orange transition-colors"
             >
               {['Recordatorio', 'Alerta de Salud', 'Motivacional'].map(cat => (
@@ -2373,24 +2350,37 @@ const NotificacionesTab = ({ userId }: { userId: string }) => {
       {/* Historial de Notificaciones Enviadas */}
       <div className="card-base p-5 bg-surface-card border border-surface-border rounded-xl text-left">
         <h3 className="text-sm font-bold text-white mb-4">Historial de Notificaciones Enviadas</h3>
-        {history.length === 0 ? (
+        {isLoadingNotifications ? (
+          <div className="text-center py-6 text-surface-muted text-[12px] animate-pulse">Cargando historial...</div>
+        ) : isErrorNotifications ? (
+          <div className="text-center py-6 text-red-400 text-[11px] font-mono">
+            Error al cargar historial: {(errorNotifications as any)?.message || 'Error de conexión'}
+          </div>
+        ) : !notificationsData || notificationsData.length === 0 ? (
           <div className="text-center py-6 text-surface-muted text-[12px]">No se han enviado notificaciones aún.</div>
         ) : (
           <div className="space-y-4">
-            {history.map((item, index) => (
-              <div key={index} className="flex items-start space-x-3 p-3 bg-surface-card2 rounded-lg border border-surface-border">
-                <Badge variant={getBadgeVariant(item.category)} className="shrink-0 mt-0.5">
-                  {item.category}
-                </Badge>
-                <div className="flex-1">
-                  <div className="flex justify-between items-center mb-1">
-                    <p className="text-white font-semibold text-[13px]">{item.title}</p>
-                    <span className="text-[10px] text-surface-muted ml-auto">{item.date}</span>
+            {notificationsData.map((item: any, index: number) => {
+              const isRead = item.leido
+              const dateText = item.fecha_lectura ? new Date(item.fecha_lectura).toLocaleString('es-ES') : 'No leído'
+              const badgeVariant = isRead ? 'green' : 'orange'
+              const badgeLabel = isRead ? 'Leída' : 'No leída'
+
+              return (
+                <div key={item.id_notificacion || index} className="flex items-start space-x-3 p-3 bg-surface-card2 rounded-lg border border-surface-border">
+                  <Badge variant={badgeVariant} className="shrink-0 mt-0.5">
+                    {badgeLabel}
+                  </Badge>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center mb-1">
+                      <p className="text-white font-semibold text-[13px]">{item.titulo || item.tipo || 'Notificación Push'}</p>
+                      <span className="text-[10px] text-surface-muted ml-auto">{dateText}</span>
+                    </div>
+                    <p className="text-[12px] text-surface-muted leading-relaxed">{item.mensaje || `ID: ${item.id_notificacion}`}</p>
                   </div>
-                  <p className="text-[12px] text-surface-muted leading-relaxed">{item.message}</p>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
@@ -2418,7 +2408,6 @@ export function UserDetailPage() {
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'perfil',       label: 'Perfil' },
-    { id: 'progreso',     label: 'Progreso' },
     { id: 'plan',         label: 'Plan' },
     { id: 'nutricion',    label: 'Nutrición' },
     { id: 'reporte-clinico', label: 'Reporte' },
@@ -2482,7 +2471,6 @@ export function UserDetailPage() {
       {tab === 'perfil' && <PerfilTab u={mergedPatient} />}
       {tab === 'plan' && <SpecialistPlanTab key={mergedPatient.id_usuario} userId={mergedPatient.id_usuario} />}
       {tab === 'nutricion' && <SpecialistNutritionTab key={mergedPatient.id_usuario} userId={mergedPatient.id_usuario} />}
-      {tab === 'progreso' && <ProgressTab patientId={mergedPatient.id_usuario} isSpecialist={true} />}
       {tab === 'reporte-clinico' && <ClinicalReportTab patientId={mergedPatient.id_usuario} />}
       {tab === 'notificaciones' && <NotificacionesTab userId={mergedPatient.id_usuario} />}
     </div>
