@@ -29,15 +29,24 @@ interface DashboardTransaction {
 
 const resolveListDataArray = (data: any, tab: string): any[] => {
   if (!data) return [];
-  if (Array.isArray(data)) return data;
-  if (data.data && Array.isArray(data.data)) return data.data;
-  if (data[tab] && Array.isArray(data[tab])) return data[tab];
-  if (data.items && Array.isArray(data.items)) return data.items;
-  if (data.result && Array.isArray(data.result)) return data.result;
+  let resolved = data;
+  if (typeof resolved === 'string') {
+    try {
+      resolved = JSON.parse(resolved);
+    } catch (e) {
+      console.error('Failed to parse dashboard list stringified JSON:', e);
+    }
+  }
+  if (!resolved) return [];
+  if (Array.isArray(resolved)) return resolved;
+  if (resolved.data && Array.isArray(resolved.data)) return resolved.data;
+  if (resolved[tab] && Array.isArray(resolved[tab])) return resolved[tab];
+  if (resolved.items && Array.isArray(resolved.items)) return resolved.items;
+  if (resolved.result && Array.isArray(resolved.result)) return resolved.result;
   
   // Deep search: find the first key inside the object that holds an array
-  const firstArrayKey = Object.keys(data).find(key => Array.isArray(data[key]));
-  if (firstArrayKey) return data[firstArrayKey];
+  const firstArrayKey = Object.keys(resolved).find(key => Array.isArray(resolved[key]));
+  if (firstArrayKey) return resolved[firstArrayKey];
   
   return [];
 };
@@ -290,8 +299,8 @@ export function DashboardPage() {
                   </thead>
                   <tbody>
                     {pendingSpecialists.length > 0 ? (
-                      pendingSpecialists.map((p) => (
-                        <tr key={p.id_usuario || p.id} className="hover:bg-white/[0.015]">
+                      pendingSpecialists.map((p, idx) => (
+                        <tr key={p.id_usuario || p.id || `spec-${idx}`} className="hover:bg-white/[0.015]">
                           <td className="p-2.5 border-b border-surface-border">
                             <div className="flex items-center gap-2">
                               <Avatar initials={p.initials || (p.nombre ? p.nombre.slice(0, 2).toUpperCase() : 'PE')} color={p.color || 'blue'} size="sm" />
@@ -358,7 +367,7 @@ export function DashboardPage() {
                         const isActive = u.registro_activo !== undefined ? u.registro_activo : (u.estado === true);
                         
                         return (
-                          <tr key={u.id_usuario || u.id} className="hover:bg-white/[0.015]">
+                          <tr key={u.id_usuario || u.id || `user-${idx}`} className="hover:bg-white/[0.015]">
                             <td className="p-2.5 border-b border-surface-border">
                               <div className="flex items-center gap-2">
                                 <Avatar initials={u.initials || (u.apodo || u.nombre ? (u.apodo || u.nombre).slice(0, 2).toUpperCase() : 'US')} color={u.color || 'blue'} size="sm" />
@@ -453,11 +462,11 @@ export function DashboardPage() {
                 <div className="col-span-full text-center text-brand-orange animate-pulse font-medium text-xs p-5">Cargando citas...</div>
               ) : (
                 <>
-                  {appointmentsToday.length > 0 ? (
-                    appointmentsToday.map((apt) => {
+                   {appointmentsToday.length > 0 ? (
+                    appointmentsToday.map((apt, idx) => {
                       const appointmentTime = apt.fecha ? apt.fecha.split('T')[1]?.slice(0, 5) : '';
                       return (
-                        <div key={apt.id_cita || apt.id} className="card-base p-4 flex items-start justify-between bg-surface-card2 hover:bg-white/[0.01] transition-colors border border-surface-border rounded-xl">
+                        <div key={apt.id_cita || apt.id || `apt-${idx}`} className="card-base p-4 flex items-start justify-between bg-surface-card2 hover:bg-white/[0.01] transition-colors border border-surface-border rounded-xl">
                           <div className="flex items-start gap-3">
                             <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-brand-orange/10 text-brand-orange mt-0.5 flex-shrink-0">
                               {(apt.tipo_cita || '').toLowerCase().includes('consulta') ? '🩺' : '🏃'}

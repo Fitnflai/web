@@ -16,21 +16,49 @@ import {
   SpecialistCertificate
 } from '@/services/endpoints/specialists'
 
-interface LocalProfessional extends Professional {
-  certs?: {
-    id: string;
-    nombre: string;
-    org?: string;
-    año?: string;
-    venc?: string;
-  }[];
-}
+
 
 export function PerfilEspecialista() {
   const { setPage } = useAppStore()
   const queryClient = useQueryClient()
 
-  const [p, setP] = useState<LocalProfessional | null>(null)
+  const original: Professional = useMemo(() => ({
+    id: 'pro-000',
+    nombre: '',
+    initials: 'XX',
+    color: 'blue',
+    email: '',
+    tel: '',
+    ciudad: '',
+    rol: 'Entrenador',
+    especialidad: '',
+    regPro: '',
+    inst: '',
+    idiomas: '',
+    ingreso: '',
+    experiencia: 0,
+    linkedin: '',
+    web: '',
+    wa: '',
+    bio: '',
+    areas: [],
+    pacientes: 0,
+    accesoNivel: 'Sin acceso',
+    accesoDesc: '',
+    ultimoAcceso: '',
+    certs: [],
+    tray: [],
+    pacAsi: [],
+    estado: 'Pendiente',
+    fecha_fin_suspension: null,
+    motivo_suspension: null,
+    docTipo: '',
+    docNumero: '',
+    docDelantero: undefined,
+    docTrasero: undefined,
+  }), []);
+
+  const [p, setP] = useState<Professional | null>(null)
   const [isEditing, setIsEditing] = useState(false)
 
   const fileInputRefFrente = useRef<HTMLInputElement>(null)
@@ -46,48 +74,47 @@ export function PerfilEspecialista() {
     if (specialistProfile) {
       const [ciudad, pais] = specialistProfile.ciudad_pais.split(', ').map(s => s.trim())
       setP({
-        id: 'pro-002', // This ID is hardcoded in the mock, needs to be dynamic with real auth
-        initials: specialistProfile.email.substring(0, 2).toUpperCase(), // Placeholder
-        color: 'blue', // Placeholder
-        bio: specialistProfile.biografia,
-        email: specialistProfile.email,
-        especialidad: specialistProfile.especialidad,
+        ...original,
+
+        initials: specialistProfile.email.substring(0, 2).toUpperCase(),
+        color: 'blue',
+        bio: specialistProfile.biografia || '',
+        email: specialistProfile.email || '',
+        especialidad: specialistProfile.especialidad || '',
         experiencia: specialistProfile.anios_experiencia || 0,
-        ciudad: specialistProfile.ciudad_pais, // Keep original for display, split for payload
-        tel: specialistProfile.telefono,
-        estado: specialistProfile.estado_cuenta, // Need to map to Professional['estado'] type
-        accesoNivel: 'Acceso Total', // Placeholder
-        docTipo: specialistProfile.tipo_documento,
-        docNumero: specialistProfile.numero_documento,
+        ciudad: specialistProfile.ciudad_pais || '',
+        tel: specialistProfile.telefono || '',
+        estado: (specialistProfile.estado_cuenta === 'Activo' || specialistProfile.estado_cuenta === 'activo' ? 'Activo' : 'Pendiente') as any,
+        docTipo: specialistProfile.tipo_documento || '',
+        docNumero: specialistProfile.numero_documento || '',
         docDelantero: specialistProfile.url_doc_frente || undefined,
         docTrasero: specialistProfile.url_doc_dorso || undefined,
-        tray: specialistProfile.historial_laboral.map(item => {
-          const [inicio, fin = ''] = item.periodo.split('-').map(s => s.trim())
-          return { titulo: item.puesto, org: item.empresa, inicio, fin, desc: '' } // desc is missing in backend
+        tray: (specialistProfile.historial_laboral || []).map(item => {
+          const [inicio, fin = ''] = (item.periodo || '').split('-').map(s => s.trim());
+          return { titulo: item.puesto, org: item.empresa, inicio, fin, desc: '' };
         }),
-        certs: specialistProfile.certificados.map(cert => ({
+        certs: (specialistProfile.certificados || []).map(cert => ({
           id: cert.id_certificado,
           nombre: cert.nombre,
-          org: cert.organizacion_emisora || undefined,
-          año: cert.anio_obtencion || undefined,
-          venc: cert.fecha_vencimiento === null ? 'Sin vencimiento' : cert.fecha_vencimiento || undefined,
+          org: cert.organizacion_emisora || 'Desconocido',
+          año: cert.anio_obtencion || '2026',
+          venc: cert.fecha_vencimiento === null ? 'Sin vencimiento' : cert.fecha_vencimiento || 'Sin vencimiento'
         })),
-        nombre: 'Specialist',
-        apellido: 'Mock',
+
       })
     }
-  }, [specialistProfile])
+  }, [specialistProfile, original])
 
   // Mutations
   const updateProfileMutation = useMutation({
     mutationFn: (payload: UpdateSpecialistProfilePayload) => specialistsService.updateSpecialistProfile(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['specialistProfile'] })
-      toast.success('Perfil actualizado con éxito')
+      toast.show('Perfil actualizado con éxito', 'success')
       setIsEditing(false)
     },
     onError: (error) => {
-      toast.error(`Error al actualizar el perfil: ${error.message}`)
+      toast.show(`Error al actualizar el perfil: ${error.message}`, 'error')
     },
   })
 
@@ -95,10 +122,10 @@ export function PerfilEspecialista() {
     mutationFn: ({ file, tipo }: { file: File; tipo: 'frente' | 'dorso' }) => specialistsService.uploadSpecialistDocument(file, tipo),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['specialistProfile'] })
-      toast.success('Documento cargado con éxito')
+      toast.show('Documento cargado con éxito', 'success')
     },
     onError: (error) => {
-      toast.error(`Error al cargar documento: ${error.message}`)
+      toast.show(`Error al cargar documento: ${error.message}`, 'error')
     },
   })
 
@@ -106,10 +133,10 @@ export function PerfilEspecialista() {
     mutationFn: (tipo: 'frente' | 'dorso') => specialistsService.deleteSpecialistDocument(tipo),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['specialistProfile'] })
-      toast.success('Documento eliminado con éxito')
+      toast.show('Documento eliminado con éxito', 'success')
     },
     onError: (error) => {
-      toast.error(`Error al eliminar documento: ${error.message}`)
+      toast.show(`Error al eliminar documento: ${error.message}`, 'error')
     },
   })
 
@@ -117,10 +144,10 @@ export function PerfilEspecialista() {
     mutationFn: (file: File) => specialistsService.uploadSpecialistCertificate(file),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['specialistProfile'] })
-      toast.success('Certificado cargado con éxito')
+      toast.show('Certificado cargado con éxito', 'success')
     },
     onError: (error) => {
-      toast.error(`Error al cargar certificado: ${error.message}`)
+      toast.show(`Error al cargar certificado: ${error.message}`, 'error')
     },
   })
 
@@ -128,10 +155,10 @@ export function PerfilEspecialista() {
     mutationFn: (certificado_id: string) => specialistsService.deleteSpecialistCertificate(certificado_id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['specialistProfile'] })
-      toast.success('Certificado eliminado con éxito')
+      toast.show('Certificado eliminado con éxito', 'success')
     },
     onError: (error) => {
-      toast.error(`Error al eliminar certificado: ${error.message}`)
+      toast.show(`Error al eliminar certificado: ${error.message}`, 'error')
     },
   })
 
@@ -147,7 +174,10 @@ export function PerfilEspecialista() {
   }
 
   const handleFieldChange = (field: keyof Professional, val: any) => {
-    setP(prev => ({ ...prev, [field]: val }))
+    setP(prev => {
+      if (!prev) return null;
+      return { ...prev, [field]: val };
+    })
   }
 
   return (
@@ -205,7 +235,7 @@ export function PerfilEspecialista() {
                     if (file) {
                       // Assuming avatar upload would use a similar mutation. For now, it's just a placeholder.
                       // This part needs to be connected to a specific avatar upload endpoint when available.
-                      toast.info(`Avatar file selected: ${file.name}`)
+                      toast.show(`Avatar file selected: ${file.name}`, 'info')
                     }
                   }}
                 />
@@ -469,10 +499,13 @@ export function PerfilEspecialista() {
             <button
               onClick={() => {
                 if (isEditing) {
-                  setP(prev => ({
-                    ...prev,
-                    tray: [...(prev?.tray || []), { titulo: '', org: '', inicio: '', fin: '', desc: '' }]
-                  }))
+                  setP(prev => {
+                    if (!prev) return null;
+                    return {
+                      ...prev,
+                      tray: [...(prev.tray || []), { titulo: '', org: '', inicio: '', fin: '', desc: '' }]
+                    };
+                  })
                 }
               }}
               className={cn(
@@ -499,7 +532,10 @@ export function PerfilEspecialista() {
                     onChange={(e) => {
                       const newTray = [...(p?.tray || [])]
                       newTray[idx] = { ...newTray[idx], titulo: e.target.value }
-                      setP(prev => ({ ...prev!, tray: newTray }))
+                      setP(prev => {
+                        if (!prev) return null;
+                        return { ...prev, tray: newTray };
+                      })
                     }}
                     placeholder="Cargo (ej: Nutricionista)"
                     className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-purple disabled:opacity-75 disabled:cursor-not-allowed"
@@ -513,7 +549,10 @@ export function PerfilEspecialista() {
                     onChange={(e) => {
                       const newTray = [...(p?.tray || [])]
                       newTray[idx] = { ...newTray[idx], org: e.target.value }
-                      setP(prev => ({ ...prev!, tray: newTray }))
+                      setP(prev => {
+                        if (!prev) return null;
+                        return { ...prev, tray: newTray };
+                      })
                     }}
                     placeholder="Organización (ej: Club Deportivo)"
                     className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-purple disabled:opacity-75 disabled:cursor-not-allowed"
@@ -533,7 +572,10 @@ export function PerfilEspecialista() {
                       } else {
                         newTray[idx] = { ...newTray[idx], inicio: val, fin: '' }
                       }
-                      setP(prev => ({ ...prev!, tray: newTray }))
+                      setP(prev => {
+                        if (!prev) return null;
+                        return { ...prev, tray: newTray };
+                      })
                     }}
                     placeholder="Período (ej: 2020-Presente)"
                     className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-purple disabled:opacity-75 disabled:cursor-not-allowed"
@@ -542,7 +584,10 @@ export function PerfilEspecialista() {
                   <button
                     onClick={() => {
                       if (isEditing) {
-                        setP(prev => ({ ...prev!, tray: (prev?.tray || []).filter((_, i) => i !== idx) }))
+                        setP(prev => {
+                          if (!prev) return null;
+                          return { ...prev, tray: (prev.tray || []).filter((_, i) => i !== idx) };
+                        })
                       }
                     }}
                     className={cn(

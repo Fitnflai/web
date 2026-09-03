@@ -130,7 +130,7 @@ export interface Professional {
   certs: Certification[]
   tray: TrajectoryItem[]
   pacAsi: AssignedPatient[]
-  estado?: 'Activo' | 'Suspendido Temporalmente' | 'Suspendido Permanentemente' | 'Pendiente'
+  estado?: 'Activo' | 'activo' | 'Suspendido Temporalmente' | 'Suspendido Permanentemente' | 'Pendiente'
   fecha_fin_suspension?: string | null;
   motivo_suspension?: string | null;
   docTipo?: string

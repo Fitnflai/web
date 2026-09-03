@@ -42,9 +42,9 @@ export function UsersTable({ users, origin, onSelect, isPacientes = false, page,
             </tr>
           </thead>
           <tbody>
-            {users.map((u) => {
+            {users.map((u, idx) => {
               return (
-                <tr key={u.id_usuario} className="cursor-pointer hover:bg-white/[0.015]" onClick={() => onSelect(u)}>
+                <tr key={`${u.id_usuario || u.id || 'user'}-${idx}`} className="cursor-pointer hover:bg-white/[0.015]" onClick={() => onSelect(u)}>
                   <td className="p-2.5 border-b border-surface-border">
                     <div className="flex items-center gap-2">
                       <Avatar initials={u.initials} color={u.color} size="sm" />

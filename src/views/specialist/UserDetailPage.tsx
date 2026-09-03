@@ -16,6 +16,17 @@ import type { User, PlanItem, Workout, RestDay, WorkoutExercise, Exercise } from
 import { PLAN_NAMES } from '@/constants'
 import { toast } from '@/components/ui/Toast'
 import type { PredefinedWorkout, Comment, DailyNutritionHydrationLog, Comida, BiometricEntry } from '@/core/domain/types'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { specialistsService } from '@/services/endpoints/specialists'
+
+interface MealModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  meal: Comida | null;
+  onSave: (updated: Comida, isNew: boolean) => void;
+  readOnly?: boolean;
+  onDelete?: (mealId: string) => void;
+}
 import { ProgressTab } from '@/components/patient/ProgressTab';
 import { ClinicalReportTab } from '@/components/patient/ClinicalReportTab';
 
@@ -1478,12 +1489,14 @@ export function SpecialistPlanTab({ userId, readOnly = false }: { userId: string
 interface MealModalProps {
   isOpen: boolean;
   onClose: () => void;
-  meal: Comida;
-  onSave: (updated: Comida) => void;
+  meal: Comida | null;
+  onSave: (updated: Comida, isNew: boolean) => void;
   readOnly?: boolean;
+  onDelete?: (mealId: string) => void;
 }
 
-function MealDetailModal({ isOpen, onClose, meal, onSave, readOnly = false }: MealModalProps) {
+function MealDetailModal({ isOpen, onClose, meal, onSave, readOnly = false, onDelete }: MealModalProps) {
+  const { userRole } = useAppStore()
   const [localMeal, setLocalMeal] = useState<Comida | null>(null)
 
   // Copy on open to shield parent state
@@ -1505,7 +1518,9 @@ function MealDetailModal({ isOpen, onClose, meal, onSave, readOnly = false }: Me
   }
 
   const handleSaveClick = () => {
-    onSave(localMeal)
+    if (!localMeal) return
+    const isNew = localMeal.id_comida.startsWith("meal-temp") || localMeal.id_comida.startsWith("temp-");
+    onSave(localMeal, isNew)
   }
 
   return (
@@ -1587,11 +1602,32 @@ function MealDetailModal({ isOpen, onClose, meal, onSave, readOnly = false }: Me
                 disabled={readOnly}
               />
             </div>
+            {userRole === "specialist" && (
+              <div className="col-span-2 flex flex-col gap-1 w-full">
+                <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Comentario de Seguimiento</label>
+                <textarea
+                  value={localMeal.comentario_seguimiento || ''}
+                  onChange={(e) => handleUpdateLocalField('comentario_seguimiento', e.target.value)}
+                  rows={2}
+                  className="bg-surface-card border border-surface-border rounded-lg p-2 text-[11px] text-white outline-none focus:border-brand-orange"
+                  disabled={readOnly}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       <div className="flex gap-2 justify-end mt-4 pt-3 border-t border-surface-border">
+        {onDelete && !readOnly && localMeal.id_comida && !localMeal.id_comida.startsWith("meal-temp") && !localMeal.id_comida.startsWith("temp-") && (
+          <Button
+            variant="ghost"
+            onClick={() => onDelete(localMeal.id_comida)}
+            className="gap-1.5 border-brand-red/20 text-brand-red hover:bg-brand-red/5 hover:border-brand-red/40"
+          >
+            <Trash2 size={13} /> Eliminar Comida
+          </Button>
+        )}
         <Button variant="ghost" onClick={onClose}>Cancelar</Button>
         {!readOnly && <Button variant="primary" onClick={handleSaveClick}>Guardar Comida</Button>}
       </div>
@@ -2276,12 +2312,27 @@ const NotificacionesTab = ({ userId }: { userId: string }) => {
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [category, setCategory] = useState<'Recordatorio' | 'Alerta de Salud' | 'Motivacional'>('Recordatorio');
+  const queryClient = useQueryClient();
 
   const { data: notificationsData, isLoading: isLoadingNotifications, isError: isErrorNotifications, error: errorNotifications } = useQuery({
     queryKey: ['specialistPatientNotifications', userId],
     queryFn: () => usersService.getUserTabDetalle(userId, 'notificaciones'),
     enabled: !!userId,
   })
+
+  const sendPatientNotificationMutation = useMutation({
+    mutationFn: specialistsService.sendPatientNotification,
+    onSuccess: () => {
+      toast.show('Notificación enviada con éxito', 'success');
+      setTitle('');
+      setMessage('');
+      setCategory('Recordatorio');
+      queryClient.invalidateQueries({ queryKey: ['specialistPatientNotifications', userId] });
+    },
+    onError: (error: any) => {
+      toast.show(`Error al enviar notificación: ${error.message || error}`, 'error');
+    },
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -2290,10 +2341,12 @@ const NotificacionesTab = ({ userId }: { userId: string }) => {
       return;
     }
 
-    toast.show('Notificación enviada con éxito', 'success');
-    setTitle('');
-    setMessage('');
-    setCategory('Recordatorio');
+    sendPatientNotificationMutation.mutate({
+      id_usuario: userId,
+      titulo: title.trim(),
+      mensaje: message.trim(),
+      tipo: category.toLowerCase(),
+    });
   };
 
   const getBadgeVariant = (category: string) => {

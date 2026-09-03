@@ -71,7 +71,27 @@ export function MembresíasPage() {
   const [tab, setTab] = useState<MTab>('planes')
   const [billing, setBilling] = useState<'m'|'a'>('m')
     const [disc, setDisc] = useState(15)
-  const [planDrafts, setPlanDrafts] = useState<Record<string, Partial<UpdatePlanPayload>>>({})
+    const [planDrafts, setPlanDrafts] = useState<Record<string, Partial<UpdatePlanPayload>>>({})
+
+  const handleUpdateDraft = (id_plan: string, field: keyof UpdatePlanPayload, value: any) => {
+    setPlanDrafts(prev => {
+      const existing = prev[id_plan] || { id_plan };
+      return {
+        ...prev,
+        [id_plan]: {
+          ...existing,
+          [field]: value
+        }
+      };
+    });
+  };
+
+  const getPlanMonthlyPrice = (p: any) => {
+    if (!p) return 0;
+    const draft = planDrafts[p.id_plan] || {};
+    if (draft.monto !== undefined) return draft.monto;
+    return p.precios?.find((pr: any) => pr.frecuencia === 'mensual')?.precio ?? 0;
+  };
 
   const [activeLinkPlanId, setActiveLinkPlanId] = useState<string | null>(null)
   const [selectedBenefitId, setSelectedBenefitId] = useState<string>('')
@@ -159,11 +179,11 @@ export function MembresíasPage() {
 
   // Calculate revenue based on fetched stats and plans
   const revenue = stats && plans ? Math.round(
-    stats.essential_activos * (plans.find((p: any) => normalizePlanId(p) === 'ess')?.precio?.monto ?? 0) +
-    stats.pro_activos * (plans.find((p: any) => normalizePlanId(p) === 'pro')?.precio?.monto ?? 0) +
-    stats.elite_activos * (plans.find((p: any) => normalizePlanId(p) === 'elite')?.precio?.monto ?? 0)
+    stats.essential_activos * getPlanMonthlyPrice(plans.find((p: any) => normalizePlanId(p) === 'ess')) +
+    stats.pro_activos * getPlanMonthlyPrice(plans.find((p: any) => normalizePlanId(p) === 'pro')) +
+    stats.elite_activos * getPlanMonthlyPrice(plans.find((p: any) => normalizePlanId(p) === 'elite'))
   ) : 0
-  const saving = plans ? (((plans.find((p: any) => normalizePlanId(p) === 'pro')?.precio?.monto ?? 0) * disc / 100 * 12).toFixed(2)) : '0.00'
+  const saving = plans ? (((getPlanMonthlyPrice(plans.find((p: any) => normalizePlanId(p) === 'pro')) * disc / 100 * 12).toFixed(2))) : '0.00'
 
   const tabs: {id:MTab;label:string}[] = [{id:'planes',label:'Planes'},{id:'comparativa',label:'Comparativa'}]
 
@@ -251,8 +271,129 @@ export function MembresíasPage() {
           </div>
 
           {/* Plans grid */}
-          <div className="grid grid-cols-3 gap-4 mb-4">
-            <div>Plans Section</div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            {isLoadingPlans ? (
+              <>
+                <div className="card-base h-80 animate-pulse bg-surface-card rounded-xl" />
+                <div className="card-base h-80 animate-pulse bg-surface-card rounded-xl" />
+                <div className="card-base h-80 animate-pulse bg-surface-card rounded-xl" />
+              </>
+            ) : isErrorPlans ? (
+              <div className="col-span-3 card-base p-6 text-center text-red-400 bg-red-950/10 border border-red-900/20 text-xs rounded-xl">
+                Error al cargar los planes: {(errorPlans as any)?.message || 'Error de conexión'}
+              </div>
+            ) : plans && plans.length > 0 ? (
+              plans.map((p: any) => {
+                const planKey = normalizePlanId(p)
+                const aesthetics = PLAN_AESTHETICS[planKey] || PLAN_AESTHETICS.ess
+                const draft = planDrafts[p.id_plan] || {}
+                
+                const baseMonthlyPrice = draft.monto !== undefined ? draft.monto : (p.precios?.find((pr: any) => pr.frecuencia === 'mensual')?.precio ?? 0)
+                const displayTrial = draft.dias_prueba !== undefined ? draft.dias_prueba : (p.dias_prueba ?? 0)
+                const displayDesc = draft.descripcion !== undefined ? draft.descripcion : (p.descripcion || '')
+                const displayActive = draft.activo !== undefined ? draft.activo : (p.activo ?? p.estado ?? true)
+                
+                return (
+                  <div key={p.id_plan} className={cn('card-base p-0 overflow-hidden bg-surface-card border border-surface-border rounded-xl flex flex-col justify-between', planKey === 'pro' && 'border-brand-orange border-2')}>
+                    <div>
+                      {/* Top Header line colored */}
+                      <div className="px-4 py-3 border-b border-surface-border flex items-center justify-between gap-2 flex-wrap" style={{borderTop:'3px solid '+aesthetics.color}}>
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0" style={{background:'' + aesthetics.color + '22'}}>{aesthetics.icon}</div>
+                          <div>
+                            <div className="text-[14px] font-bold text-white">{p.nombre}</div>
+                            <div className="text-[10px] text-surface-muted line-clamp-1">{displayDesc}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant={aesthetics.tagVariant}>{aesthetics.tagText}</Badge>
+                          <div className="flex items-center gap-1.5 text-[11px] text-surface-muted">
+                            Activo
+                            <Toggle 
+                              checked={displayActive} 
+                              onChange={v => handleUpdateDraft(p.id_plan, 'activo', v)} 
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Form Details */}
+                      <div className="p-4">
+                        <div className="grid grid-cols-2 gap-2 mb-4">
+                          <div>
+                            <div className="form-label text-[10px] text-surface-muted mb-1">Precio base mensual</div>
+                            <div className="flex items-center bg-surface-card2 border border-surface-border rounded-lg overflow-hidden focus-within:border-brand-purple">
+                              <span className="px-2 text-surface-muted text-[12px] border-r border-surface-border py-1.5">$</span>
+                              <input 
+                                type="number" 
+                                value={baseMonthlyPrice} 
+                                onChange={e => handleUpdateDraft(p.id_plan, 'monto', Number(e.target.value))} 
+                                className="bg-transparent border-0 outline-none text-[13px] font-bold text-white w-full px-2 py-1.5" 
+                                step="0.01" 
+                                min="0"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <div className="form-label text-[10px] text-surface-muted mb-1">Días prueba gratis</div>
+                            <input 
+                              type="number" 
+                              value={displayTrial} 
+                              onChange={e => handleUpdateDraft(p.id_plan, 'dias_prueba', Number(e.target.value))} 
+                              className="form-input bg-surface-card2 border border-surface-border rounded-lg text-[13px] font-bold text-white w-full px-2.5 py-1.5 outline-none focus:border-brand-purple" 
+                              min="0"
+                            />
+                          </div>
+                          <div className="col-span-2">
+                            <div className="form-label text-[10px] text-surface-muted mb-1">Descripción</div>
+                            <input 
+                              type="text" 
+                              value={displayDesc} 
+                              onChange={e => handleUpdateDraft(p.id_plan, 'descripcion', e.target.value)} 
+                              className="form-input bg-surface-card2 border border-surface-border rounded-lg text-[12px] text-white w-full px-2.5 py-1.5 outline-none focus:border-brand-purple" 
+                            />
+                          </div>
+                        </div>
+
+                        {/* Calculated pricing shorthand info */}
+                        <div className="text-[11px] mb-4 bg-surface-card2/50 border border-surface-border/30 rounded-lg p-2 text-surface-muted">
+                          {billing === 'm' ? (
+                            <span>💳 Facturado mensual: <strong className="text-white">${baseMonthlyPrice.toFixed(2)}/mes</strong></span>
+                          ) : (
+                            <span>📅 Facturado anual (-{p.descuento_anual || 15}% desc): <strong className="text-brand-green">${(baseMonthlyPrice * (1 - (p.descuento_anual || 15)/100)).toFixed(2)}/mes</strong></span>
+                          )}
+                        </div>
+                        
+                        {/* Characteristics */}
+                        <div className="text-[10px] text-surface-muted uppercase tracking-[0.7px] font-semibold mb-2">Características</div>
+                        <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                          {(p.caracteristicas || []).map((f: string) => (
+                            <div key={f} className="flex items-center gap-2 py-1 border-b border-surface-border last:border-0 text-[12px]">
+                              <div className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 text-[9px]" style={{background:'' + aesthetics.color + '22',color:aesthetics.color}}>✓</div>
+                              <span className="text-white/90 text-[11px]">{f}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-4 pt-0">
+                      <Button 
+                        onClick={() => setActiveLinkPlanId(p.id_plan)} 
+                        className="w-full py-1.5 text-[11px] border border-surface-border hover:bg-white/[0.02]" 
+                        variant="ghost"
+                      >
+                        + Vincular característica
+                      </Button>
+                    </div>
+                  </div>
+                )
+              })
+            ) : (
+              <div className="col-span-3 card-base p-6 text-center text-surface-muted italic text-xs rounded-xl">
+                No se encontraron planes configurados.
+              </div>
+            )}
           </div>
         </div>
       )}

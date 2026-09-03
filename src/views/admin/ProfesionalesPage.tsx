@@ -1252,7 +1252,8 @@ export function ProfesionalesPage() {
       const [reviewProfessional, setReviewProfessional] = useState<Professional | null>(null)
 
   const handleRowClick = (p: Professional) => {
-    if (p.accesoNivel === 'Sin acceso' && !p.estado?.includes('Suspendido')) {
+    const isPending = p.accesoNivel === 'Sin acceso' && p.estado !== 'Activo' && p.estado !== 'activo' && !p.estado?.includes('Suspendido');
+    if (isPending) {
       // Pending specialist review triggers the dedicated Modal de revisión
       setReviewProfessional(p)
       setIsReviewOpen(true)

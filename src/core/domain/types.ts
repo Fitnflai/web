@@ -58,6 +58,7 @@ export interface Comida {
   proteina: number;
   grasas: number;
   etiquetas: string[];
+  comentario_seguimiento?: string;
 }
 
 export interface DailyNutritionHydrationLog {

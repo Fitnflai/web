@@ -89,6 +89,150 @@ export interface CreateAppointmentPayload {
   time_zone: string; // "America/Managua"
 }
 
+export interface CreateSpecialistAppointmentPayload {
+  tipo_cita: string;
+  id_usuario: string;
+  id_seguimiento: number;
+  fecha: string;
+  hora_inicio: string;
+  duracion_minutos: number;
+  estado: string;
+  motivo: string;
+  notas_adicionales: string;
+  link_videollamada: string;
+  time_zone: string;
+}
+
+export interface ModifyWorkoutPayload {
+  tipo_entrenamiento: string;
+  zona_esfuerzo: string;
+  fecha_programada: string;
+  calorias_objetivo: number;
+  descripcion: string;
+  estado: string;
+}
+
+export interface ModifyWorkoutCommentPayload {
+  texto: string;
+}
+
+export interface BaseExerciseItem {
+  id_ejercicio: string;
+  nombre: string;
+  tipo: string;
+}
+
+export interface DetailedExerciseInfo {
+  id_ejercicio: string;
+  nombre: string;
+  tipo: string;
+  descripcion: string;
+  multimedia_url: string;
+  instrucciones: {
+    objetivo: string;
+    ejecucion: string;
+    errores_comunes: string;
+    posicion_inicial: string;
+    consejos_tecnicos: string[];
+  };
+  necesita_mapa: boolean;
+}
+
+export interface AddExerciseToWorkoutPayload {
+  id_ejercicio: string;
+  orden: number;
+  series: number;
+  descanso_segundos: number;
+  repeticiones: number;
+  peso_objetivo: number;
+  duracion_segundos: number;
+  comentario: string;
+  estado: string;
+}
+
+export interface EditWorkoutExercisePayload {
+  orden: number;
+  series: number;
+  descanso_segundos: number;
+  repeticiones: number;
+  peso_objetivo: number;
+  duracion_segundos: number;
+  comentario: string;
+  estado: string;
+}
+
+export interface CreateMealPayload {
+  entrenamiento_id: string;
+  tipo: string;
+  descripcion: string;
+  instrucciones: string;
+  kcal: number;
+  etiquetas: string[];
+  ch: number;
+  proteina: number;
+  grasas: number;
+}
+
+export interface EditMealCommentPayload {
+  comentario_seguimiento: string;
+}
+
+export interface EditHydrationPayload {
+  meta_ml: number;
+  justificacion_ajuste_profesional: string;
+}
+
+export interface SpecialistNotificationStats {
+  enviados_hoy: number;
+  apertura_promedio: number;
+  clic_promedio: number;
+  total_campanias: number;
+}
+
+export interface SpecialistRecentCampaign {
+  id_campania: number;
+  titulo: string;
+  destinatarios_filtro: string;
+  estado: string;
+  fecha_programada: string;
+  tiempo_transcurrido: string;
+  porcentaje_apertura: number;
+}
+
+export interface SpecialistRecipientCounts {
+  todos_los_usuarios: number;
+  solo_pacientes: number;
+  inactivos_mas_de_7_dias: number;
+  sin_checkin_hoy: number;
+  onboarding_incompleto: number;
+}
+
+export interface SendSpecialistNotificationPayload {
+  titulo: string;
+  mensaje: string;
+  destinatarios_filtro: string;
+  fecha_programada: string | null;
+}
+
+export interface SendPatientNotificationPayload {
+  id_usuario: string;
+  titulo: string;
+  tipo: string;
+  mensaje: string;
+}
+
+export interface SpecialistReceivedNotification {
+  id_notificacion: string;
+  id_campania: number;
+  id_usuario: string;
+  tipo: string;
+  mensaje: string;
+  enviada: boolean;
+  leido: boolean;
+  created_at: string;
+  tiempo_transcurrido: string;
+}
+
 export const specialistsService = {
   getPatients: async (filtro: string): Promise<SpecialistPatientsResponse> => {
     const { data } = await apiClient.get<SpecialistPatientsResponse>('/specialist/specialist/pacientes', {
@@ -200,6 +344,19 @@ export const specialistsService = {
     return data;
   },
 
+  createSpecialistAppointment: async (payload: CreateSpecialistAppointmentPayload): Promise<string> => {
+    if (USE_MOCK) {
+      return new Promise((resolve) => {
+        console.log('MOCK: Creating specialist appointment with payload:', payload);
+        setTimeout(() => resolve('Specialist appointment created successfully (MOCK)'), 500);
+      });
+    } else {
+      const { data } = await apiClient.post<string>('/specialist/specialist/agenda-global/crear-cita', payload);
+      return data;
+    }
+  },
+
+
   getSpecialistProfile: async (): Promise<SpecialistProfile> => {
     if (USE_MOCK) {
       return new Promise((resolve) => {
@@ -301,5 +458,268 @@ export const specialistsService = {
       return data;
     }
   },
-}
 
+  modifyWorkout: async (id_entrenamiento: string, payload: ModifyWorkoutPayload): Promise<string> => {
+    if (USE_MOCK) {
+      return new Promise((resolve) => {
+        console.log(`MOCK: Modifying workout ${id_entrenamiento} with payload:`, payload);
+        setTimeout(() => resolve('Workout modified successfully (MOCK)'), 500);
+      });
+    } else {
+      const { data } = await apiClient.put<string>(`/specialist/specialist/pacientes/modificar-entrenamiento/${id_entrenamiento}`, payload);
+      return data;
+    }
+  },
+
+  modifyWorkoutComment: async (id_entrenamiento: string, payload: ModifyWorkoutCommentPayload): Promise<string> => {
+    if (USE_MOCK) {
+      return new Promise((resolve) => {
+        console.log(`MOCK: Modifying workout comment ${id_entrenamiento} with payload:`, payload);
+        setTimeout(() => resolve('Workout comment modified successfully (MOCK)'), 500);
+      });
+    } else {
+      const { data } = await apiClient.put<string>(`/specialist/specialist/pacientes/modificar-comentario/${id_entrenamiento}`, payload);
+      return data;
+    }
+  },
+
+  deleteWorkoutExercise: async (id_entrenamiento_ejercicio: string): Promise<any> => {
+    if (USE_MOCK) {
+      return new Promise((resolve) => {
+        console.log(`MOCK: Deleting workout exercise ${id_entrenamiento_ejercicio}`);
+        setTimeout(() => resolve({ message: 'Workout exercise deleted successfully (MOCK)' }), 500);
+      });
+    } else {
+      const { data } = await apiClient.delete<any>(`/specialist/specialist/pacientes/eliminar-ejercicio-de-entrenamiento/${id_entrenamiento_ejercicio}`);
+      return data;
+    }
+  },
+
+  getExerciseTypes: async (): Promise<string[]> => {
+    if (USE_MOCK) {
+      return new Promise((resolve) => {
+        console.log('MOCK: Getting exercise types');
+        setTimeout(() => resolve(['Cardio', 'Fuerza', 'Flexibilidad', 'Equilibrio', 'Resistencia']), 500);
+      });
+    } else {
+      const { data } = await apiClient.get<string[]>('/specialist/specialist/pacientes/agregar-ejercicio-de-entrenamiento/tipos-ejercicios');
+      return data;
+    }
+  },
+
+  getExercisesByType: async (tipo?: string | null, nombre?: string | null): Promise<BaseExerciseItem[]> => {
+    if (USE_MOCK) {
+      return new Promise((resolve) => {
+        console.log(`MOCK: Getting exercises by type ${tipo || ''} and name ${nombre || ''}`);
+        const mockExercises: BaseExerciseItem[] = [
+          { id_ejercicio: 'ej-1', nombre: 'Sentadillas', tipo: 'Fuerza' },
+          { id_ejercicio: 'ej-2', nombre: 'Flexiones', tipo: 'Fuerza' },
+          { id_ejercicio: 'ej-3', nombre: 'Correr', tipo: 'Cardio' },
+          { id_ejercicio: 'ej-4', nombre: 'Estiramiento de isquiotibiales', tipo: 'Flexibilidad' },
+        ];
+        let filtered = mockExercises;
+        if (tipo) {
+          filtered = filtered.filter(e => e.tipo === tipo);
+        }
+        if (nombre) {
+          filtered = filtered.filter(e => e.nombre.toLowerCase().includes(nombre.toLowerCase()));
+        }
+        setTimeout(() => resolve(filtered), 500);
+      });
+    } else {
+      const { data } = await apiClient.get<BaseExerciseItem[]>('/specialist/specialist/pacientes/agregar-ejercicio-de-entrenamiento/ejercicios-segun-tipo', {
+        params: { tipo, nombre }
+      });
+      return data;
+    }
+  },
+
+  getExerciseDetailById: async (id_ejercicio: string): Promise<DetailedExerciseInfo> => {
+    if (USE_MOCK) {
+      return new Promise((resolve, reject) => {
+        console.log(`MOCK: Getting exercise detail for ID: ${id_ejercicio}`);
+        const mockDetails: DetailedExerciseInfo = {
+          id_ejercicio: id_ejercicio,
+          nombre: 'Sentadillas',
+          tipo: 'Fuerza',
+          descripcion: 'Ejercicio compuesto para fortalecer piernas y glúteos.',
+          multimedia_url: 'https://www.youtube.com/watch?v=some_video_id',
+          instrucciones: {
+            objetivo: 'Desarrollar fuerza en las piernas y glúteos.',
+            ejecucion: 'De pie, con los pies al ancho de los hombros, baja la cadera como si fueras a sentarte en una silla. Mantén la espalda recta y el core activado.',
+            errores_comunes: 'Arquear la espalda baja, rodillas hacia adentro, no bajar lo suficiente.',
+            posicion_inicial: 'De pie, pies al ancho de hombros, puntas ligeramente hacia afuera.',
+            consejos_tecnicos: ['Mantén el peso en los talones', 'Mira al frente', 'Controla el descenso'],
+          },
+          necesita_mapa: false,
+        };
+        if (id_ejercicio === 'ej-1') {
+          setTimeout(() => resolve(mockDetails), 500);
+        } else {
+          setTimeout(() => reject(new Error('Exercise not found (MOCK)')), 500);
+        }
+      });
+    } else {
+      const { data } = await apiClient.get<DetailedExerciseInfo>(`/specialist/specialist/pacientes/agregar-ejercicio-de-entrenamiento/datos-ejercicio-seleccionado/${id_ejercicio}`);
+      return data;
+    }
+  },
+
+  addExerciseToWorkout: async (id_entrenamiento: string, payload: AddExerciseToWorkoutPayload): Promise<any> => {
+    if (USE_MOCK) {
+      return new Promise((resolve) => {
+        console.log(`MOCK: Adding exercise to workout ${id_entrenamiento} with payload:`, payload);
+        setTimeout(() => resolve({ message: 'Exercise added to workout successfully (MOCK)' }), 500);
+      });
+    } else {
+      const { data } = await apiClient.post<any>(`/specialist/specialist/pacientes/agregar-ejercicio-de-entrenamiento/agregar/${id_entrenamiento}`, payload);
+      return data;
+    }
+  },
+
+  editWorkoutExercise: async (id_entrenamiento_ejercicio: string, payload: EditWorkoutExercisePayload): Promise<string> => {
+    if (USE_MOCK) {
+      return new Promise((resolve) => {
+        console.log(`MOCK: Editing workout exercise ${id_entrenamiento_ejercicio} with payload:`, payload);
+        setTimeout(() => resolve('Workout exercise updated successfully (MOCK)'), 500);
+      });
+    } else {
+      const { data } = await apiClient.put<string>(`/specialist/specialist/pacientes/editar-ejercicio-de-entrenamiento/editar/${id_entrenamiento_ejercicio}`, payload);
+      return data;
+    }
+  },
+
+  deleteMeal: async (id_comida: number): Promise<any> => {
+    if (USE_MOCK) {
+      return new Promise((resolve) => {
+        console.log(`MOCK: Deleting meal with ID: ${id_comida}`);
+        setTimeout(() => resolve({ message: 'Meal deleted successfully (MOCK)' }), 500);
+      });
+    } else {
+      const { data } = await apiClient.delete<any>(`/specialist/specialist/pacientes/nutricion/eliminar-comida/${id_comida}`);
+      return data;
+    }
+  },
+
+  createMeal: async (payload: CreateMealPayload): Promise<any> => {
+    if (USE_MOCK) {
+      return new Promise((resolve) => {
+        console.log('MOCK: Creating meal with payload:', payload);
+        setTimeout(() => resolve({ message: 'Meal created successfully (MOCK)' }), 500);
+      });
+    } else {
+      const { data } = await apiClient.post<any>('/specialist/specialist/pacientes/nutricion/crear-comida', payload);
+      return data;
+    }
+  },
+
+  editMealComment: async (id_comida: number, payload: EditMealCommentPayload): Promise<any> => {
+    if (USE_MOCK) {
+      return new Promise((resolve) => {
+        console.log(`MOCK: Editing meal comment for ID: ${id_comida} with payload:`, payload);
+        setTimeout(() => resolve({ message: 'Meal comment updated successfully (MOCK)' }), 500);
+      });
+    } else {
+      const { data } = await apiClient.patch<any>(`/specialist/specialist/pacientes/nutricion/editar-comentario-seguimiento/${id_comida}`, payload);
+      return data;
+    }
+  },
+
+  editHydration: async (id_comida: string, payload: EditHydrationPayload): Promise<any> => {
+    if (USE_MOCK) {
+      return new Promise((resolve) => {
+        console.log(`MOCK: Editing hydration for meal ID: ${id_comida} with payload:`, payload);
+        setTimeout(() => resolve({ message: 'Hydration updated successfully (MOCK)' }), 500);
+      });
+    } else {
+      const { data } = await apiClient.put<any>(`/specialist/specialist/pacientes/nutricion/hidratacion-editar/${id_comida}`, payload);
+      return data;
+    }
+  },
+
+  getSpecialistNotificationStats: async (): Promise<SpecialistNotificationStats> => {
+    if (USE_MOCK) {
+      return new Promise((resolve) => {
+        setTimeout(() => resolve({
+          enviados_hoy: 15,
+          apertura_promedio: 0.75,
+          clic_promedio: 0.30,
+          total_campanias: 120,
+        }), 500);
+      });
+    } else {
+      const { data } = await apiClient.get<SpecialistNotificationStats>('/specialist/specialist/notifications/estadisticas-campania-notificaciones');
+      return data;
+    }
+  },
+
+  getSpecialistRecentNotifications: async (): Promise<SpecialistRecentCampaign[]> => {
+    if (USE_MOCK) {
+      return new Promise((resolve) => {
+        setTimeout(() => resolve([
+          { id_campania: 1, titulo: 'Campaña de Bienvenida', destinatarios_filtro: 'todos_los_usuarios', estado: 'Enviada', fecha_programada: '2026-06-01T10:00:00Z', tiempo_transcurrido: '3 días', porcentaje_apertura: 0.80 },
+          { id_campania: 2, titulo: 'Recordatorio de Consulta', destinatarios_filtro: 'solo_pacientes', estado: 'Programada', fecha_programada: '2026-06-05T14:30:00Z', tiempo_transcurrido: '1 día restante', porcentaje_apertura: 0.0 },
+        ]), 500);
+      });
+    } else {
+      const { data } = await apiClient.get<SpecialistRecentCampaign[]>('/specialist/specialist/notifications/enviadas-recientes');
+      return data;
+    }
+  },
+
+  sendSpecialistNotifications: async (payload: SendSpecialistNotificationPayload): Promise<string> => {
+    if (USE_MOCK) {
+      return new Promise((resolve) => {
+        console.log('MOCK: Sending specialist notifications with payload:', payload);
+        setTimeout(() => resolve('Notifications sent successfully (MOCK)'), 500);
+      });
+    } else {
+      const { data } = await apiClient.post<string>('/specialist/specialist/notifications/enviar-notificaciones', payload);
+      return data;
+    }
+  },
+
+  getSpecialistRecipientCounts: async (): Promise<SpecialistRecipientCounts> => {
+    if (USE_MOCK) {
+      return new Promise((resolve) => {
+        setTimeout(() => resolve({
+          todos_los_usuarios: 1000,
+          solo_pacientes: 750,
+          inactivos_mas_de_7_dias: 100,
+          sin_checkin_hoy: 50,
+          onboarding_incompleto: 200,
+        }), 500);
+      });
+    } else {
+      const { data } = await apiClient.get<SpecialistRecipientCounts>('/specialist/specialist/notifications/conteo-tipos-destinatarios');
+      return data;
+    }
+  },
+
+  getSpecialistReceivedNotifications: async (): Promise<SpecialistReceivedNotification[]> => {
+    if (USE_MOCK) {
+      return new Promise((resolve) => {
+        setTimeout(() => resolve([
+          { id_notificacion: 'notif-1', id_campania: 1, id_usuario: 'user-1', tipo: 'info', mensaje: '¡Bienvenido a Fitnflai!', enviada: true, leido: false, created_at: '2026-06-01T10:00:00Z', tiempo_transcurrido: '3 días' },
+          { id_notificacion: 'notif-2', id_campania: 2, id_usuario: 'user-2', tipo: 'warning', mensaje: 'Tu consulta está programada para mañana.', enviada: true, leido: true, created_at: '2026-06-04T14:00:00Z', tiempo_transcurrido: '1 día' },
+        ]), 500);
+      });
+    } else {
+      const { data } = await apiClient.get<SpecialistReceivedNotification[]>('/specialist/specialist/notifications/notificaciones-recibidas-especialista');
+      return data;
+    }
+  },
+
+  sendPatientNotification: async (payload: SendPatientNotificationPayload): Promise<string> => {
+    if (USE_MOCK) {
+      return new Promise((resolve) => {
+        console.log('MOCK: Sending patient notification with payload:', payload);
+        setTimeout(() => resolve('Patient notification sent successfully (MOCK)'), 500);
+      });
+    } else {
+      const { data } = await apiClient.post<string>('/specialist/specialist/pacientes/enviar-notificacion', payload);
+      return data;
+    }
+  },
+
+}

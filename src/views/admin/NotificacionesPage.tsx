@@ -5,8 +5,9 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { useAppStore } from '@/store/useAppStore'
 import { notificationsService } from '@/services/endpoints/notifications'
+import { specialistsService } from '@/services/endpoints/specialists'
 
-const RECIPIENT_LABELS: Record<string, string> = {
+const ADMIN_RECIPIENT_LABELS: Record<string, string> = {
   todos_los_usuarios: 'Todos los usuarios',
   solo_pacientes: 'Solo pacientes',
   pro_elite: 'Pro + Elite',
@@ -15,39 +16,51 @@ const RECIPIENT_LABELS: Record<string, string> = {
   onboarding_incompleto: 'Onboarding incompleto',
 }
 
+const SPECIALIST_RECIPIENT_LABELS: Record<string, string> = {
+  todos_los_usuarios: 'Todos los usuarios',
+  solo_pacientes: 'Solo pacientes',
+  inactivos_mas_de_7_dias: 'Inactivos +7 días',
+  sin_checkin_hoy: 'Sin check-in hoy',
+  onboarding_incompleto: 'Onboarding incompleto',
+}
+
 export function NotificacionesPage() {
-  const { showToast } = useAppStore()
+  const { showToast, userRole } = useAppStore()
   const queryClient = useQueryClient()
   const [titulo, setTitulo] = useState('')
   const [mensaje, setMensaje] = useState('')
   const [dest, setDest] = useState('todos_los_usuarios')
 
+  const currentRecipientLabels = userRole === 'admin' ? ADMIN_RECIPIENT_LABELS : SPECIALIST_RECIPIENT_LABELS
+
   const staleTime = 5 * 60 * 1000 // 5 minutes
 
-  const { data: stats, isLoading: isLoadingStats, isError: isErrorStats, error: errorStats } = useQuery({
-    queryKey: ['adminNotificationStats'],
-    queryFn: notificationsService.getStats,
+  const { data: stats, isLoading: isLoadingStats, isError: isErrorStats, error: errorStats } = useQuery<any>({
+    queryKey: [userRole, 'notificationStats'],
+    queryFn: userRole === 'admin' ? notificationsService.getStats : specialistsService.getSpecialistNotificationStats,
     staleTime,
   })
 
-  const { data: recipientCounts, isLoading: isLoadingCounts, isError: isErrorCounts } = useQuery({
-    queryKey: ['adminRecipientCounts'],
-    queryFn: notificationsService.getCounts,
+  const { data: recipientCounts, isLoading: isLoadingCounts, isError: isErrorCounts } = useQuery<any>({
+    queryKey: [userRole, 'recipientCounts'],
+    queryFn: userRole === 'admin' ? notificationsService.getCounts : specialistsService.getSpecialistRecipientCounts,
     staleTime,
   })
 
-  const { data: recentCampaigns, isLoading: isLoadingRecent, isError: isErrorRecent, error: errorRecent } = useQuery({
-    queryKey: ['adminRecentCampaigns'],
-    queryFn: notificationsService.getRecent,
+  const { data: recentCampaigns, isLoading: isLoadingRecent, isError: isErrorRecent, error: errorRecent } = useQuery<any[]>({
+    queryKey: [userRole, 'recentCampaigns'],
+    queryFn: userRole === 'admin' ? notificationsService.getRecent : specialistsService.getSpecialistRecentNotifications,
     staleTime,
   })
 
-  const sendNotificationMutation = useMutation({
-    mutationFn: notificationsService.send,
+  const sendNotificationMutation = useMutation<any, any, any>({
+    mutationFn: userRole === 'admin' 
+      ? (notificationsService.send as any) 
+      : (specialistsService.sendSpecialistNotifications as any),
     onSuccess: () => {
       // Invalidate stats and recent campaigns to trigger automatic UI refreshes
-      queryClient.invalidateQueries({ queryKey: ['adminRecentCampaigns'] });
-      queryClient.invalidateQueries({ queryKey: ['adminNotificationStats'] });
+      queryClient.invalidateQueries({ queryKey: [userRole, 'recentCampaigns'] });
+      queryClient.invalidateQueries({ queryKey: [userRole, 'notificationStats'] });
       
       // Clear form fields
       setTitulo('');
@@ -77,7 +90,7 @@ export function NotificacionesPage() {
               {isLoadingCounts && <option value="">Cargando destinatarios...</option>}
               {!isLoadingCounts && !isErrorCounts && recipientCounts && (
                 <>{Object.keys(recipientCounts).map(key => (
-                  <option key={key} value={key}>{`${RECIPIENT_LABELS[key] || key} (${(recipientCounts as any)[key]?.toLocaleString() ?? '0'})`}</option>
+                  <option key={key} value={key}>{`${currentRecipientLabels[key] || key} (${(recipientCounts as any)[key]?.toLocaleString() ?? '0'})`}</option>
                 ))}</>
               )}
             </select>
@@ -125,10 +138,10 @@ export function NotificacionesPage() {
 
             {!isLoadingStats && !isErrorStats && stats && (
               <>
-                <div className="bg-surface-card2 rounded-xl p-3 text-center"><div className="text-[20px] font-bold" style={{ color: '#E8622A' }}>{stats.enviadas_hoy?.toLocaleString() ?? '0'}</div><div className="text-[10px] text-surface-muted mt-0.5">Enviados hoy</div></div>
-                <div className="bg-surface-card2 rounded-xl p-3 text-center"><div className="text-[20px] font-bold" style={{ color: '#4CAF82' }}>{(stats.apertura_promedio ?? 0) + '%'}</div><div className="text-[10px] text-surface-muted mt-0.5">Apertura</div></div>
-                <div className="bg-surface-card2 rounded-xl p-3 text-center"><div className="text-[20px] font-bold" style={{ color: '#4A7CC7' }}>{stats.total_promedio?.toLocaleString() ?? '0'}</div><div className="text-[10px] text-surface-muted mt-0.5">Total promedio</div></div>
-                <div className="bg-surface-card2 rounded-xl p-3 text-center"><div className="text-[20px] font-bold">{stats.mas_popular || '—'}</div><div className="text-[10px] text-surface-muted mt-0.5">Más popular</div></div>
+                <div className="bg-surface-card2 rounded-xl p-3 text-center"><div className="text-[20px] font-bold" style={{ color: '#E8622A' }}>{stats.enviados_hoy?.toLocaleString() ?? '0'}</div><div className="text-[10px] text-surface-muted mt-0.5">Enviados hoy</div></div>
+                <div className="bg-surface-card2 rounded-xl p-3 text-center"><div className="text-[20px] font-bold" style={{ color: '#4CAF82' }}>{((stats as any).apertura_promedio ?? 0) + '%'}</div><div className="text-[10px] text-surface-muted mt-0.5">Apertura</div></div>
+                <div className="bg-surface-card2 rounded-xl p-3 text-center"><div className="text-[20px] font-bold" style={{ color: '#4A7CC7' }}>{((stats as any).clic_promedio ?? 0) + '%'}</div><div className="text-[10px] text-surface-muted mt-0.5">Clic promedio</div></div>
+                <div className="bg-surface-card2 rounded-xl p-3 text-center"><div className="text-[20px] font-bold">{stats.total_campanias?.toLocaleString() ?? '0'}</div><div className="text-[10px] text-surface-muted mt-0.5">Total campañas</div></div>
               </>
             )}
           </div>
@@ -157,7 +170,7 @@ export function NotificacionesPage() {
           const badgeVariant = isSent ? 'green' : 'blue'
           const badgeText = isSent ? 'Enviada' : 'Programada'
 
-          const subtitleText = `${RECIPIENT_LABELS[r.destinatarios_filtro] || r.destinatarios_filtro} · ${r.tiempo_transcurrido || r.fecha_programada || ''} ${r.porcentaje_apertura !== undefined ? `· ${r.porcentaje_apertura}% apertura` : ''}`
+          const subtitleText = `${currentRecipientLabels[r.destinatarios_filtro] || r.destinatarios_filtro} · ${r.tiempo_transcurrido || r.fecha_programada || ''} ${r.porcentaje_apertura !== undefined ? `· ${r.porcentaje_apertura}% apertura` : ''}`
 
           return (
             <div key={i} className="flex items-start gap-3 p-3 rounded-xl border border-surface-border bg-surface-card mb-2.5">

@@ -229,8 +229,8 @@ export function TransaccionesPage() {
                 </tr>
               ) : fetchedTransactions.length > 0 ? (
                 // Dynamic List Mapping
-                fetchedTransactions.map((tx) => (
-                  <tr key={tx.id_transaccion} className="hover:bg-white/[0.015] border-b border-surface-border last:border-b-0">
+                fetchedTransactions.map((tx, idx) => (
+                  <tr key={tx.id_transaccion || `tx-${idx}`} className="hover:bg-white/[0.015] border-b border-surface-border last:border-b-0">
                     <td className="p-2.5 font-medium text-surface-muted">{tx.fecha}</td>
                     <td className="p-2.5 font-mono text-[11px] text-white">{tx.id_transaccion}</td>
                     <td className="p-2.5 font-semibold text-white">{tx.cliente}</td>

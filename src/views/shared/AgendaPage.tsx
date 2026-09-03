@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from '@/components/ui/Toast'
-import { specialistsService, SpecialistAppointment, SpecialistAgendaSummary, AdminWeeklyAgendaSummary, CreateAppointmentPayload } from '@/services/endpoints/specialists'
+import { specialistsService, SpecialistAppointment, SpecialistAgendaSummary, AdminWeeklyAgendaSummary, CreateAppointmentPayload, CreateSpecialistAppointmentPayload } from '@/services/endpoints/specialists'
 import { MOCK_USERS } from '@/services/mocks/users.mock'
 import {
   ChevronLeft, ChevronRight, Plus, Video, Clock,
@@ -535,7 +535,8 @@ type AgendaTab = 'calendario' | 'lista' | 'disponibilidad'
 
 // ─── New Appointment Modal ────────────────────────────────────────
 function NewAppointmentModal() {
-  const { openModal, setOpenModal, showToast } = useAppStore()
+  const { openModal, setOpenModal, showToast, userRole } = useAppStore()
+  const queryClient = useQueryClient()
 
   const [tipoCita, setTipoCita] = useState<'consulta' | 'seguimiento' | 'evaluacion' | 'emergencia'>('consulta')
   const [profId, setProfId] = useState('pro-001')
@@ -549,23 +550,26 @@ function NewAppointmentModal() {
   const [linkVideo, setLinkVideo] = useState('https://meet.fitnflai.com/new-apt')
 
   const createMutation = useMutation({
-    mutationFn: specialistsService.createAppointment,
+    mutationFn: (payload: CreateAppointmentPayload | CreateSpecialistAppointmentPayload) => {
+      if (userRole === 'specialist') {
+        return specialistsService.createSpecialistAppointment(payload as CreateSpecialistAppointmentPayload)
+      }
+      return specialistsService.createAppointment(payload as CreateAppointmentPayload)
+    },
     onSuccess: () => {
       setOpenModal(null)
       toast.show('Cita creada exitosamente', 'success')
-      // TODO: Invalidate queries to refetch appointment lists
+      queryClient.invalidateQueries({ queryKey: ['agendaAppointments'] })
+      queryClient.invalidateQueries({ queryKey: ['agendaSummary'] })
     },
-    onError: (err) => {
+    onError: (err: any) => {
       toast.show(`Error al crear cita: ${err.message}`, 'error')
     },
   })
 
   const handleSubmit = () => {
-    const parsedProfId = parseInt(profId.replace('pro-', ''), 10) // Extract numeric ID from 'pro-001'
-    
-    const payload: CreateAppointmentPayload = {
+    const commonPayload = {
       tipo_cita: tipoCita,
-      id_especialista: parsedProfId,
       id_usuario: pacienteId,
       id_seguimiento: 1, // Default as per instructions
       fecha: fecha,
@@ -577,7 +581,18 @@ function NewAppointmentModal() {
       link_videollamada: linkVideo,
       time_zone: 'America/Managua', // Default for now
     }
-    createMutation.mutate(payload)
+
+    if (userRole === 'specialist') {
+      const payload: CreateSpecialistAppointmentPayload = commonPayload
+      createMutation.mutate(payload)
+    } else {
+      const parsedProfId = parseInt(profId.replace('pro-', ''), 10) // Extract numeric ID from 'pro-001'
+      const payload: CreateAppointmentPayload = {
+        ...commonPayload,
+        id_especialista: parsedProfId,
+      }
+      createMutation.mutate(payload)
+    }
   }
 
   return (

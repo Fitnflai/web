@@ -44,6 +44,10 @@ function DisciplineAutocomplete({
   const [disciplineOptions, setDisciplineOptions] = useState<any[]>([]);
   const [showDisciplineOptions, setShowDisciplineOptions] = useState(false);
 
+  useEffect(() => {
+    setDisciplineQuery(value || '');
+  }, [value]);
+
   const debouncedSearch = useMemo(
     () =>
       debounce(async (query: string) => {

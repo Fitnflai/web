@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { MockBiometricRepository } from '../../core/repositories/mocks/MockBiometricRepository';
 import { WeeklyProgressData } from '../../core/domain/types';
@@ -15,6 +15,33 @@ import WeeklyInsightsGrid from './cards/WeeklyInsightsGrid';
 import AIFeedbackCard from './cards/AIFeedbackCard';
 
 import { toast } from '@/components/ui/Toast';
+
+const formatDateISO = (d: Date): string => {
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const getWeekDates = (offsetWeeks: number): Date[] => {
+  const current = new Date()
+  const day = current.getDay()
+  const diff = current.getDate() - day + (day === 0 ? -6 : 1) // Start on Monday
+  const monday = new Date(current.setDate(diff))
+  monday.setDate(monday.getDate() + offsetWeeks * 7)
+
+  const dates: Date[] = []
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday)
+    d.setDate(monday.getDate() + i)
+    dates.push(d)
+  }
+  return dates
+}
+
+const formatDateFriendly = (d: Date): string => {
+  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+}
 
 const createFallbackProgressData = (weekIndex: number): WeeklyProgressData => {
   const currentWeight = 75 - (weekIndex * 0.5); // Simulate weight loss
@@ -153,7 +180,10 @@ const biometricRepository = new MockBiometricRepository();
 
 
 export const ProgressTab: React.FC<ProgressTabProps> = ({ patientId, isSpecialist = false, readOnly = false }) => {
-  const [activeWeekIndex, setActiveWeekIndex] = useState<number>(0); // 0 for current week, up to 4 for oldest
+  const [weekOffset, setWeekOffset] = useState<number>(0);
+  const weekDates = useMemo(() => getWeekDates(weekOffset), [weekOffset]);
+  const startDate = useMemo(() => formatDateISO(weekDates[0]), [weekDates]);
+  const endDate = useMemo(() => formatDateISO(weekDates[6]), [weekDates]);
   const [selectedFactorId, setSelectedFactorId] = useState<'sleep' | 'stress' | 'nutrition' | 'energy'>('sleep');
   const [weeklyProgressData, setWeeklyProgressData] = useState<WeeklyProgressData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -168,8 +198,8 @@ export const ProgressTab: React.FC<ProgressTabProps> = ({ patientId, isSpecialis
     isError: isApiError,
     error: apiError,
   } = useQuery({
-    queryKey: ['patientProgress', patientId, activeWeekIndex],
-    queryFn: () => usersService.getUserTabDetalle(patientId, 'progreso'),
+    queryKey: ['patientProgress', patientId, weekOffset],
+    queryFn: () => usersService.getUserTabDetalle(patientId, 'progreso', startDate, endDate),
     enabled: !isMockPatient && !!patientId,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
@@ -182,7 +212,7 @@ export const ProgressTab: React.FC<ProgressTabProps> = ({ patientId, isSpecialis
 
       if (isMockPatient) {
         try {
-          const data = createFallbackProgressData(activeWeekIndex);
+          const data = createFallbackProgressData(Math.abs(weekOffset));
           setWeeklyProgressData(data);
         } catch (err) {
           setError('Failed to fetch progress data.');
@@ -196,26 +226,34 @@ export const ProgressTab: React.FC<ProgressTabProps> = ({ patientId, isSpecialis
         if (isApiError) {
           setError(apiError?.message || 'Failed to fetch progress data from API.');
         } else if (apiProgressData) {
-          setWeeklyProgressData(adaptApiProgress(apiProgressData, activeWeekIndex));
+          setWeeklyProgressData(adaptApiProgress(apiProgressData, Math.abs(weekOffset)));
         }
       }
     };
 
     fetchProgress();
-  }, [patientId, activeWeekIndex, isMockPatient, isApiLoading, isApiError, apiError, apiProgressData]);
+  }, [patientId, weekOffset, isMockPatient, isApiLoading, isApiError, apiError, apiProgressData]);
 
   const handleGenerateReport = () => {
     showToast('Generando y enviando informe PDF...');
     setLastReportSent(new Date());
   };
 
-  const currentWeekLabel = weeklyProgressData?.label || `Semana ${activeWeekIndex + 1}`;
+  const currentWeekLabel = weeklyProgressData?.label || (
+    weekOffset === 0 
+      ? 'Semana Actual' 
+      : weekOffset > 0 ? `Semana +${weekOffset}` : `Semana ${weekOffset}`
+  );
 
-  const isPrevDisabled = activeWeekIndex >= 4; // Assuming 5 weeks total (0-4)
-  const isNextDisabled = activeWeekIndex <= 0;
+
 
   const displayLoading = isMockPatient ? loading : isApiLoading;
   const displayError = isMockPatient ? error : (isApiError ? apiError?.message || 'Failed to fetch progress data from API.' : null);
+
+  const is404Error = !isMockPatient && isApiError && (
+    (apiError as any)?.response?.status === 404 || 
+    apiError?.message?.includes('404')
+  );
 
 
   return (
@@ -228,19 +266,22 @@ export const ProgressTab: React.FC<ProgressTabProps> = ({ patientId, isSpecialis
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setActiveWeekIndex(prev => prev + 1)}
-            disabled={isPrevDisabled}
-            className="w-7 h-7 bg-surface-card2 border border-surface-border rounded-lg flex items-center justify-center text-surface-muted hover:border-brand-orange hover:text-white cursor-pointer transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            onClick={() => setWeekOffset(w => w - 1)}
+            className="w-7 h-7 bg-surface-card2 border border-surface-border rounded-lg flex items-center justify-center text-surface-muted hover:border-brand-orange hover:text-white cursor-pointer transition-all"
           >
             <ChevronLeft size={13} />
           </button>
-          <span className="text-[11px] font-medium text-surface-muted uppercase tracking-wider min-w-[80px] text-center">
-            {currentWeekLabel}
-          </span>
+          <div className="flex flex-col items-center min-w-[120px] text-center">
+            <span className="text-[11px] font-bold text-white uppercase tracking-wider">
+              {currentWeekLabel}
+            </span>
+            <span className="text-[9px] text-surface-muted mt-0.5">
+              {formatDateFriendly(weekDates[0])} - {formatDateFriendly(weekDates[6])}
+            </span>
+          </div>
           <button
-            onClick={() => setActiveWeekIndex(prev => prev - 1)}
-            disabled={isNextDisabled}
-            className="w-7 h-7 bg-surface-card2 border border-surface-border rounded-lg flex items-center justify-center text-surface-muted hover:border-brand-orange hover:text-white cursor-pointer transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            onClick={() => setWeekOffset(w => w + 1)}
+            className="w-7 h-7 bg-surface-card2 border border-surface-border rounded-lg flex items-center justify-center text-surface-muted hover:border-brand-orange hover:text-white cursor-pointer transition-all"
           >
             <ChevronRight size={13} />
           </button>
@@ -249,11 +290,17 @@ export const ProgressTab: React.FC<ProgressTabProps> = ({ patientId, isSpecialis
 
       {/* Conditional Content Area */}
       {displayLoading ? (
-        <div className="p-4 text-center text-surface-muted">Cargando progreso del paciente...</div>
+        <div className="p-4 text-center text-surface-muted animate-pulse font-medium text-xs">Cargando progreso del paciente...</div>
+      ) : is404Error ? (
+        <div className="card-base p-10 text-center text-surface-muted italic bg-surface-card border border-surface-border rounded-xl">
+          Esta semana no se han generado reportes
+        </div>
       ) : displayError ? (
         <div className="p-4 text-center text-brand-red">Error: {displayError}</div>
       ) : !weeklyProgressData ? (
-        <div className="p-4 text-center text-surface-muted">No hay datos de progreso disponibles.</div>
+        <div className="card-base p-10 text-center text-surface-muted italic bg-surface-card border border-surface-border rounded-xl">
+          Esta semana no se han generado reportes
+        </div>
       ) : (
         <>
           {lastReportSent && (
