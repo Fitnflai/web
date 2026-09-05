@@ -486,6 +486,9 @@ function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = fal
   const repos = useRepositories()
   const [localExercise, setLocalExercise] = useState<WorkoutExercise | null>(null)
   
+  const [types, setTypes] = useState<string[]>([])
+  const [exercisesList, setExercisesList] = useState<{ id_ejercicio: string, nombre: string }[]>([])
+
   // Local exercise comments state
   const [comments, setComments] = useState<Comment[]>([])
   const [newCommentText, setNewCommentText] = useState('')
@@ -499,12 +502,83 @@ function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = fal
     }
   }, [isOpen, exercise])
 
+  useEffect(() => {
+    if (isOpen) {
+      specialistsService.getExerciseTypes()
+        .then(setTypes)
+        .catch(err => {
+          console.error('Failed to load exercise types:', err)
+          setTypes(['Fuerza', 'Resistencia', 'Cardio', 'Flexibilidad', 'Recuperación', 'Coordinación'])
+        })
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    if (isOpen && localExercise?.ejercicio?.tipo) {
+      specialistsService.getExercisesByType(localExercise.ejercicio.tipo)
+        .then(setExercisesList)
+        .catch(err => {
+          console.error('Failed to load exercises for type:', localExercise.ejercicio.tipo, err)
+        })
+    }
+  }, [isOpen, localExercise?.ejercicio?.tipo])
+
+
   // Fetch comments specific to this exercise
   useEffect(() => {
     if (isOpen && exercise) {
       repos.comments.getComments('exercise', exercise.id_entrenamiento_ejercicio).then(setComments)
     }
   }, [isOpen, exercise, updateTick])
+
+
+
+  const handleExerciseSelect = async (idEjercicio: string) => {
+    try {
+      const detail = await specialistsService.getExerciseDetail(idEjercicio)
+      if (detail) {
+        setLocalExercise(prev => {
+          if (!prev) return null
+          return {
+            ...prev,
+            ejercicio: {
+              id_ejercicio: detail.id_ejercicio,
+              nombre: detail.nombre,
+              tipo: detail.tipo,
+              descripcion: detail.descripcion || '',
+              multimedia_url: detail.multimedia_url || '',
+              necesita_mapa: detail.necesita_mapa || false,
+              instrucciones: {
+                posicion_inicial: detail.instrucciones?.posicion_inicial || '',
+                ejecucion: detail.instrucciones?.ejecucion || '',
+                consejos_tecnicos: detail.instrucciones?.consejos_tecnicos || [],
+                errores_comunes: detail.instrucciones?.errores_comunes || ''
+              }
+            }
+          }
+        })
+        toast.show(`Ficha de "${detail.nombre}" cargada!`, 'success')
+      }
+    } catch (error) {
+      console.error('Failed to fetch exercise details:', idEjercicio, error)
+      toast.show('Error al cargar la ficha técnica del ejercicio.', 'error')
+    }
+  }
+
+  const selectOptions = useMemo(() => {
+    const list = exercisesList.map(ex => ({
+      value: ex.id_ejercicio,
+      label: ex.nombre
+    }))
+    const hasCurrent = list.some(opt => opt.value === localExercise?.ejercicio?.id_ejercicio)
+    if (!hasCurrent && localExercise?.ejercicio?.id_ejercicio && localExercise?.ejercicio?.nombre) {
+      list.push({
+        value: localExercise.ejercicio.id_ejercicio,
+        label: localExercise.ejercicio.nombre
+      })
+    }
+    return list
+  }, [exercisesList, localExercise?.ejercicio?.id_ejercicio, localExercise?.ejercicio?.nombre])
 
   if (!localExercise) return null
 
@@ -583,12 +657,12 @@ function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = fal
               <div className="flex flex-col gap-1 w-full text-left">
                 <span className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Tipo de Ejercicio</span>
                 <select
-                  value={localExercise.ejercicio.tipo || 'Fuerza'}
+                  value={localExercise.ejercicio.tipo || types[0]}
                   onChange={(e) => handleUpdateLocalField('tipo', undefined, e.target.value)}
                   className="form-input text-[12px] py-2 bg-surface-card2 border border-surface-border uppercase font-semibold text-white outline-none focus:border-brand-orange transition-colors"
                   disabled={readOnly}
                 >
-                  {['Fuerza', 'Resistencia', 'Cardio', 'Flexibilidad', 'Recuperación', 'Coordinación'].map(s => (
+                  {types.map(s => (
                     <option key={s} value={s}>{s}</option>
                   ))}
                 </select>
@@ -599,22 +673,9 @@ function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = fal
                 <Select
                   label="Nombre del Ejercicio"
                   placeholder="Busca o selecciona un ejercicio..."
-                  options={[
-                    { value: 'Sentadillas', label: 'Sentadillas' },
-                    { value: 'Peso Muerto', label: 'Peso Muerto' },
-                    { value: 'Press de Banca', label: 'Press de Banca' },
-                    { value: 'Zancadas Búlgaras', label: 'Zancadas Búlgaras' },
-                    { value: 'Dominadas', label: 'Dominadas' },
-                    { value: 'Remo con Barra', label: 'Remo con Barra' },
-                    { value: 'Plancha Abdominal', label: 'Plancha Abdominal' },
-                    { value: 'Flexiones de Brazo', label: 'Flexiones de Brazo' },
-                    { value: 'Elevaciones Laterales', label: 'Elevaciones Laterales' },
-                    { value: 'Carrera Continua', label: 'Carrera Continua' },
-                    { value: 'Intervalos HIIT', label: 'Intervalos HIIT' },
-                    { value: 'Estiramientos', label: 'Estiramientos Activos' },
-                  ]}
-                  value={localExercise.ejercicio.nombre}
-                  onChange={(val) => handleUpdateLocalField('nombre', undefined, val)}
+                  options={selectOptions}
+                  value={localExercise.ejercicio.id_ejercicio}
+                  onChange={handleExerciseSelect}
                   disabled={readOnly}
                 />
               </div>
@@ -894,7 +955,7 @@ export function SpecialistPlanTab({ userId, readOnly = false }: { userId: string
     } else {
       repos.workouts.getPlanForUser(userId).then(setPlanItems)
     }
-  }, [planData, userId, repos.workouts, updateTick])
+  }, [planData, userId, repos.workouts])
 
   // Get active Workout or Rest Day for the selected date
   const activeWorkout = useMemo(() => {
@@ -1017,17 +1078,48 @@ export function SpecialistPlanTab({ userId, readOnly = false }: { userId: string
         }
       }
     }
-    activeWorkout.ejercicios_asociados.push(newWorkoutExercise)
+    // Immutable update
+    const updatedPlanItems = planItems.map(item => {
+      if ('id_entrenamiento' in item && item.id_entrenamiento === activeWorkout.id_entrenamiento) {
+        return {
+          ...item,
+          ejercicios_asociados: [...(item.ejercicios_asociados || []), newWorkoutExercise]
+        }
+      }
+      return item
+    })
+    
+    setPlanItems(updatedPlanItems)
     setUpdateTick(t => t + 1)
     toast.show('Nuevo ejercicio añadido', 'success')
   }
 
   // Remove Exercise from active Workout
-  const handleRemoveExercise = (weId: string) => {
+  const handleRemoveExercise = async (weId: string) => {
     if (!activeWorkout) return
-    activeWorkout.ejercicios_asociados = activeWorkout.ejercicios_asociados.filter(we => we.id_entrenamiento_ejercicio !== weId)
-    // Re-index orden values to keep them sequential
-    activeWorkout.ejercicios_asociados = activeWorkout.ejercicios_asociados.map((we, idx) => ({ ...we, orden: idx + 1 }))
+    
+    try {
+      if (!weId.startsWith('we-')) {
+        await specialistsService.deleteExerciseFromWorkout(weId)
+      }
+    } catch (apiErr) {
+      console.error('Failed to delete exercise on backend:', apiErr)
+    }
+
+    // Immutable update
+    const updatedPlanItems = planItems.map(item => {
+      if ('id_entrenamiento' in item && item.id_entrenamiento === activeWorkout.id_entrenamiento) {
+        const filtered = (item.ejercicios_asociados || []).filter(we => we.id_entrenamiento_ejercicio !== weId)
+        const reindexed = filtered.map((we, idx) => ({ ...we, orden: idx + 1 }))
+        return {
+          ...item,
+          ejercicios_asociados: reindexed
+        }
+      }
+      return item
+    })
+
+    setPlanItems(updatedPlanItems)
     setUpdateTick(t => t + 1)
     toast.show('Ejercicio removido', 'error')
   }
@@ -1458,12 +1550,60 @@ export function SpecialistPlanTab({ userId, readOnly = false }: { userId: string
           exercise={selectedExercise}
           onSave={async (updated) => {
             if (activeWorkout) {
-              activeWorkout.ejercicios_asociados = activeWorkout.ejercicios_asociados.map(we =>
-                we.id_entrenamiento_ejercicio === updated.id_entrenamiento_ejercicio ? updated : we
-              )
-              await repos.workouts.saveWorkout(activeWorkout)
-              setSelectedExercise(null)
-              setUpdateTick(t => t + 1)
+              try {
+                const isNew = updated.id_entrenamiento_ejercicio.startsWith('we-');
+                    
+                if (isNew) {
+                  const payload = {
+                    id_ejercicio: updated.ejercicio.id_ejercicio,
+                    orden: updated.orden || 1,
+                    series: updated.series || 4,
+                    descanso_segundos: updated.descanso_segundos || 60,
+                    repeticiones: parseInt(String(updated.repeticiones)) || 0,
+                    peso_objetivo: updated.peso_objetivo || 0,
+                    duracion_segundos: updated.duracion_segundos || 0,
+                    comentario: updated.ejercicio.descripcion || '',
+                    estado: updated.estado || 'Pendiente'
+                  };
+                  const response = await specialistsService.addExerciseToWorkout(activeWorkout.id_entrenamiento, payload);
+                  // If the backend returns a new UUID (or object with ID), update it dynamically!
+                  if (response && (typeof response === 'string' || response.id_entrenamiento_ejercicio)) {
+                    updated.id_entrenamiento_ejercicio = typeof response === 'string' ? response : response.id_entrenamiento_ejercicio;
+                  }
+                } else {
+                  const payload = {
+                    orden: updated.orden || 1,
+                    series: updated.series || 4,
+                    descanso_segundos: updated.descanso_segundos || 60,
+                    repeticiones: parseInt(String(updated.repeticiones)) || 0,
+                    peso_objetivo: updated.peso_objetivo || 0,
+                    duracion_segundos: updated.duracion_segundos || 0,
+                    comentario: updated.ejercicio.descripcion || '',
+                    estado: updated.estado || 'Pendiente'
+                  };
+                  await specialistsService.updateExerciseInWorkout(updated.id_entrenamiento_ejercicio, payload);
+                }
+              } catch (apiErr) {
+                console.error('Failed to save exercise on backend:', apiErr);
+              }
+                  
+               // Immutable update
+               const updatedPlanItems = planItems.map(item => {
+                 if ('id_entrenamiento' in item && item.id_entrenamiento === activeWorkout.id_entrenamiento) {
+                   return {
+                     ...item,
+                     ejercicios_asociados: (item.ejercicios_asociados || []).map(we =>
+                       we.id_entrenamiento_ejercicio === updated.id_entrenamiento_ejercicio ? updated : we
+                     )
+                   }
+                 }
+                 return item
+               })
+
+               setPlanItems(updatedPlanItems)
+               await repos.workouts.saveWorkout(activeWorkout)
+               setSelectedExercise(null)
+               setUpdateTick(t => t + 1)
               toast.show('Cambios de ejercicio guardados con éxito', 'success')
             }
           }}

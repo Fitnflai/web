@@ -110,6 +110,42 @@ export interface CreateSpecialistAppointmentPayload {
   time_zone: string;
 }
 
+export interface ExerciseListItem {
+  id_ejercicio: string;
+  nombre: string;
+  tipo: string;
+}
+
+export interface ExerciseInstructions {
+  objetivo: string;
+  posicion_inicial: string;
+  ejecucion: string;
+  errores_comunes: string;
+  consejos_tecnicos: string[];
+}
+
+export interface ExerciseDetailResponse {
+  id_ejercicio: string;
+  nombre: string;
+  tipo: string;
+  descripcion: string;
+  multimedia_url: string;
+  instrucciones: ExerciseInstructions;
+  necesita_mapa: boolean;
+}
+
+export interface AddExerciseToWorkoutPayload {
+  id_ejercicio: string;
+  orden: number;
+  series: number;
+  descanso_segundos: number;
+  repeticiones: number;
+  peso_objetivo: number;
+  duracion_segundos: number;
+  comentario: string;
+  estado: string;
+}
+
 export interface ModifyWorkoutPayload {
   tipo_entrenamiento: string;
   zona_esfuerzo: string;
@@ -145,19 +181,7 @@ export interface DetailedExerciseInfo {
   necesita_mapa: boolean;
 }
 
-export interface AddExerciseToWorkoutPayload {
-  id_ejercicio: string;
-  orden: number;
-  series: number;
-  descanso_segundos: number;
-  repeticiones: number;
-  peso_objetivo: number;
-  duracion_segundos: number;
-  comentario: string;
-  estado: string;
-}
-
-export interface EditWorkoutExercisePayload {
+export interface UpdateExerciseInWorkoutPayload {
   orden: number;
   series: number;
   descanso_segundos: number;
@@ -502,98 +526,24 @@ export const specialistsService = {
     }
   },
 
-  getExerciseTypes: async (): Promise<string[]> => {
+
+
+  updateExerciseInWorkout: async (id_entrenamiento_ejercicio: string, payload: UpdateExerciseInWorkoutPayload): Promise<string> => {
     if (USE_MOCK) {
-      return new Promise((resolve) => {
-        console.log('MOCK: Getting exercise types');
-        setTimeout(() => resolve(['Cardio', 'Fuerza', 'Flexibilidad', 'Equilibrio', 'Resistencia']), 500);
-      });
-    } else {
-      const { data } = await apiClient.get<string[]>('/specialist/specialist/pacientes/agregar-ejercicio-de-entrenamiento/tipos-ejercicios');
-      return data;
+      console.log('MOCK: Updating exercise in workout:', id_entrenamiento_ejercicio, payload);
+      return id_entrenamiento_ejercicio;
     }
+    const { data } = await apiClient.put<string>(`/specialist/specialist/pacientes/editar-ejercicio-en-entrenamiento/editar/${id_entrenamiento_ejercicio}`, payload);
+    return data;
   },
 
-  getExercisesByType: async (tipo?: string | null, nombre?: string | null): Promise<BaseExerciseItem[]> => {
+  deleteExerciseFromWorkout: async (id_entrenamiento_ejercicio: string): Promise<any> => {
     if (USE_MOCK) {
-      return new Promise((resolve) => {
-        console.log(`MOCK: Getting exercises by type ${tipo || ''} and name ${nombre || ''}`);
-        const mockExercises: BaseExerciseItem[] = [
-          { id_ejercicio: 'ej-1', nombre: 'Sentadillas', tipo: 'Fuerza' },
-          { id_ejercicio: 'ej-2', nombre: 'Flexiones', tipo: 'Fuerza' },
-          { id_ejercicio: 'ej-3', nombre: 'Correr', tipo: 'Cardio' },
-          { id_ejercicio: 'ej-4', nombre: 'Estiramiento de isquiotibiales', tipo: 'Flexibilidad' },
-        ];
-        let filtered = mockExercises;
-        if (tipo) {
-          filtered = filtered.filter(e => e.tipo === tipo);
-        }
-        if (nombre) {
-          filtered = filtered.filter(e => e.nombre.toLowerCase().includes(nombre.toLowerCase()));
-        }
-        setTimeout(() => resolve(filtered), 500);
-      });
-    } else {
-      const { data } = await apiClient.get<BaseExerciseItem[]>('/specialist/specialist/pacientes/agregar-ejercicio-de-entrenamiento/ejercicios-segun-tipo', {
-        params: { tipo, nombre }
-      });
-      return data;
+      console.log('MOCK: Deleting exercise from workout:', id_entrenamiento_ejercicio);
+      return { success: true };
     }
-  },
-
-  getExerciseDetailById: async (id_ejercicio: string): Promise<DetailedExerciseInfo> => {
-    if (USE_MOCK) {
-      return new Promise((resolve, reject) => {
-        console.log(`MOCK: Getting exercise detail for ID: ${id_ejercicio}`);
-        const mockDetails: DetailedExerciseInfo = {
-          id_ejercicio: id_ejercicio,
-          nombre: 'Sentadillas',
-          tipo: 'Fuerza',
-          descripcion: 'Ejercicio compuesto para fortalecer piernas y glúteos.',
-          multimedia_url: 'https://www.youtube.com/watch?v=some_video_id',
-          instrucciones: {
-            objetivo: 'Desarrollar fuerza en las piernas y glúteos.',
-            ejecucion: 'De pie, con los pies al ancho de los hombros, baja la cadera como si fueras a sentarte en una silla. Mantén la espalda recta y el core activado.',
-            errores_comunes: 'Arquear la espalda baja, rodillas hacia adentro, no bajar lo suficiente.',
-            posicion_inicial: 'De pie, pies al ancho de hombros, puntas ligeramente hacia afuera.',
-            consejos_tecnicos: ['Mantén el peso en los talones', 'Mira al frente', 'Controla el descenso'],
-          },
-          necesita_mapa: false,
-        };
-        if (id_ejercicio === 'ej-1') {
-          setTimeout(() => resolve(mockDetails), 500);
-        } else {
-          setTimeout(() => reject(new Error('Exercise not found (MOCK)')), 500);
-        }
-      });
-    } else {
-      const { data } = await apiClient.get<DetailedExerciseInfo>(`/specialist/specialist/pacientes/agregar-ejercicio-de-entrenamiento/datos-ejercicio-seleccionado/${id_ejercicio}`);
-      return data;
-    }
-  },
-
-  addExerciseToWorkout: async (id_entrenamiento: string, payload: AddExerciseToWorkoutPayload): Promise<any> => {
-    if (USE_MOCK) {
-      return new Promise((resolve) => {
-        console.log(`MOCK: Adding exercise to workout ${id_entrenamiento} with payload:`, payload);
-        setTimeout(() => resolve({ message: 'Exercise added to workout successfully (MOCK)' }), 500);
-      });
-    } else {
-      const { data } = await apiClient.post<any>(`/specialist/specialist/pacientes/agregar-ejercicio-de-entrenamiento/agregar/${id_entrenamiento}`, payload);
-      return data;
-    }
-  },
-
-  editWorkoutExercise: async (id_entrenamiento_ejercicio: string, payload: EditWorkoutExercisePayload): Promise<string> => {
-    if (USE_MOCK) {
-      return new Promise((resolve) => {
-        console.log(`MOCK: Editing workout exercise ${id_entrenamiento_ejercicio} with payload:`, payload);
-        setTimeout(() => resolve('Workout exercise updated successfully (MOCK)'), 500);
-      });
-    } else {
-      const { data } = await apiClient.put<string>(`/specialist/specialist/pacientes/editar-ejercicio-de-entrenamiento/editar/${id_entrenamiento_ejercicio}`, payload);
-      return data;
-    }
+    const { data } = await apiClient.delete(`/specialist/specialist/pacientes/eliminar-ejercicio-de-entrenamiento/${id_entrenamiento_ejercicio}`);
+    return data;
   },
 
   deleteMeal: async (id_comida: number): Promise<any> => {
@@ -727,6 +677,69 @@ export const specialistsService = {
       const { data } = await apiClient.post<string>('/specialist/specialist/pacientes/enviar-notificacion', payload);
       return data;
     }
+  },
+
+  getExerciseTypes: async (): Promise<string[]> => {
+    if (USE_MOCK) {
+      return ["Activación", "Movilidad", "Fuerza", "Cardio", "Ciclismo", "Global", "Running", "Básico", "Estiramiento", "Respiración", "HIIT", "Evaluación", "Flexibilidad", "Core", "Bici"];
+    }
+    const { data } = await apiClient.get<string[]>('/specialist/specialist/pacientes/agregar-ejercicio-en-entrenamiento/tipos-ejercicios');
+    return data;
+  },
+
+  getExercisesByType: async (tipo?: string | null, nombre?: string | null): Promise<ExerciseListItem[]> => {
+    if (USE_MOCK) {
+      const mockList: ExerciseListItem[] = [
+        { id_ejercicio: 'ex-001', nombre: 'Sentadillas', tipo: 'Fuerza' },
+        { id_ejercicio: 'ex-002', nombre: 'Peso Muerto', tipo: 'Fuerza' },
+        { id_ejercicio: 'ex-003', nombre: 'Press de Banca', tipo: 'Fuerza' },
+        { id_ejercicio: 'ex-004', nombre: 'Carrera Continua', tipo: 'Cardio' },
+        { id_ejercicio: 'ex-005', nombre: 'Estiramientos Activos', tipo: 'Estiramiento' },
+      ];
+      return mockList.filter(item => {
+        if (tipo && item.tipo.toLowerCase() !== tipo.toLowerCase()) return false;
+        if (nombre && !item.nombre.toLowerCase().includes(nombre.toLowerCase())) return false;
+        return true;
+      });
+    }
+    const params: { tipo?: string; nombre?: string } = {};
+    if (tipo) params.tipo = tipo;
+    if (nombre) params.nombre = nombre;
+    const { data } = await apiClient.get<ExerciseListItem[]>('/specialist/specialist/pacientes/agregar-ejercicio-en-entrenamiento/ejercicios-segun-tipo', {
+      params
+    });
+    return data;
+  },
+
+  getExerciseDetail: async (id_ejercicio: string): Promise<ExerciseDetailResponse> => {
+    if (USE_MOCK) {
+      return {
+        id_ejercicio,
+        nombre: 'Sentadillas',
+        tipo: 'Fuerza',
+        descripcion: 'Ejercicio multiarticular de fuerza inferior.',
+        multimedia_url: '',
+        instrucciones: {
+          objetivo: 'Desarrollar fuerza en cuádriceps y glúteos.',
+          posicion_inicial: 'De pie con pies a ancho de hombros.',
+          ejecucion: 'Bajar flexionando caderas y rodillas manteniendo la espalda recta.',
+          errores_comunes: 'Flexionar la columna lumbar o levantar talones.',
+          consejos_tecnicos: ['Mantén el peso en el medio del pie', 'Empuja el piso con fuerza']
+        },
+        necesita_mapa: false
+      };
+    }
+    const { data } = await apiClient.get<ExerciseDetailResponse>(`/specialist/specialist/pacientes/agregar-ejercicio-en-entrenamiento/datos-ejercicio-seleccionado/${id_ejercicio}`);
+    return data;
+  },
+
+  addExerciseToWorkout: async (id_entrenamiento: string, payload: AddExerciseToWorkoutPayload): Promise<any> => {
+    if (USE_MOCK) {
+      console.log('MOCK: Adding exercise to workout:', id_entrenamiento, payload);
+      return { success: true };
+    }
+    const { data } = await apiClient.post(`/specialist/specialist/pacientes/agregar-ejercicio-en-entrenamiento/agregar/${id_entrenamiento}`, payload);
+    return data;
   },
 
 }
