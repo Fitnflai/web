@@ -20,6 +20,13 @@ export interface SpecialistAppointment {
   id_usuario: string;
   motivo: string;
   tipo_cita: string;
+  nombre_especialista?: string;
+  disciplinas_especialista?: string[];
+  nombre_paciente?: string;
+  disciplinas_paciente?: string[];
+  descripcion_cita?: string | null;
+  notas_cita?: string | null;
+  notas_adicionales?: string | null;
 }
 
 export interface AdminWeeklyAgendaSummary {

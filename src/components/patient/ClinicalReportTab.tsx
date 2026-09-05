@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Save, CheckCircle2, FileText, Share2, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Save, CheckCircle2, FileText, Share2, AlertCircle, Edit2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { usersService } from '@/services/endpoints/users';
 // Assuming User is exported now, or defining locally if not. Let's try defining locally to avoid external type issues for now.
@@ -362,6 +362,7 @@ export const ClinicalReportTab: React.FC<ClinicalReportTabProps> = ({ patientId,
   const [activeWeekOffset, setActiveWeekOffset] = useState<number>(0);
   const [activeSubTab, setActiveSubTab] = useState<'composition' | 'pain' | 'evolution'>('composition');
   const [reportDraft, setReportDraft] = useState<EnrichedWeeklyClinicalReport | null>(null);
+  const [isEditing, setIsEditing] = useState<boolean>(false);
 
   const generalObsRef = useRef<HTMLTextAreaElement>(null);
 
@@ -372,9 +373,14 @@ export const ClinicalReportTab: React.FC<ClinicalReportTabProps> = ({ patientId,
     }
   }, [reportDraft?.generalObservations]);
 
-  const selectedPatient = useAppStore(state => state.selectedPatient);
+  useEffect(() => {
+    setIsEditing(false);
+  }, [activeWeekOffset]);
 
-  const patient = useMemo(() => selectedPatient || {
+  const selectedPatient = useAppStore(state => state.selectedPatient);
+  const selectedUser = useAppStore(state => state.selectedUser);
+
+  const patient = useMemo(() => selectedPatient || selectedUser || {
     id: 'pat-carlos-mendoza',
     nombre: 'Carlos Mendoza',
     email: 'carlos.mendoza@mail.com',
@@ -396,7 +402,18 @@ export const ClinicalReportTab: React.FC<ClinicalReportTabProps> = ({ patientId,
     nivel_motor_actual: 'avanzado',
     clasificacion_visible_actual: 'competitivo',
     alimentacion: 'flexible'
-  } as any, [selectedPatient]);
+  } as any, [selectedPatient, selectedUser]);
+
+  const handleGenerateReport = () => {
+    try {
+      const generatedReport = createFallbackClinicalReport(Math.abs(activeWeekOffset), patient);
+      setReportDraft(generatedReport);
+      setIsEditing(true);
+    } catch (error) {
+      console.error('Failed to generate fallback report:', error);
+      toast.show('Error al generar el informe clínico.', 'error');
+    }
+  };
 
   const isMockPatient = !patientId || patientId.startsWith('uid-') || patientId.startsWith('pro-') || patientId.startsWith('esp-') || patientId.length < 10 || patientId.startsWith('uid-mock-');
 
@@ -414,6 +431,11 @@ export const ClinicalReportTab: React.FC<ClinicalReportTabProps> = ({ patientId,
     (apiError as any)?.response?.status === 404 || 
     apiError?.message?.includes('404')
   );
+
+  useEffect(() => {
+    setReportDraft(null);
+    setIsEditing(false);
+  }, [activeWeekOffset, patientId]);
 
   useEffect(() => {
     const fetchAndEnrichReport = async () => {
@@ -457,10 +479,8 @@ export const ClinicalReportTab: React.FC<ClinicalReportTabProps> = ({ patientId,
         fetchAndEnrichReport();
     } else if (!isMockPatient && !patientId) {
         setReportDraft(null);
-    } else if (!isMockPatient && apiError) {
-        setReportDraft(null);
     }
-  }, [patient, activeWeekOffset, isMockPatient, apiClinicalData, isApiLoading, apiError, isApiError, is404Error, patientId, startDate, endDate]);
+  }, [patient, isMockPatient, apiClinicalData, isApiLoading, apiError, isApiError, is404Error]);
 
   const updateReportField = (f: keyof EnrichedWeeklyClinicalReport, v: any) =>
     setReportDraft(p => p ? { ...p, [f]: v } : null);
@@ -521,6 +541,7 @@ export const ClinicalReportTab: React.FC<ClinicalReportTabProps> = ({ patientId,
 
         await biometricRepository.saveClinicalReport(patientId, reportToSave);
         toast.show('Cambios guardados exitosamente!', 'success');
+        setIsEditing(false);
       } catch (error) {
         console.error('Failed to save clinical report:', error);
         toast.show('Error al guardar los cambios.', 'error');
@@ -765,18 +786,33 @@ export const ClinicalReportTab: React.FC<ClinicalReportTabProps> = ({ patientId,
           </div>
 
           {/* Action Buttons */}
-          {isCurrentWeek && !readOnly && (
+          {!readOnly && !!reportDraft && (
             <div className="flex items-center gap-2 mt-3 md:mt-0">
-              <Button variant="ghost" onClick={handleSave} className="gap-2 text-surface-muted border border-surface-border hover:bg-surface-card2">
-                <Save size={14} /> Guardar Cambios
-              </Button>
-              <Button
-                variant="primary"
-                onClick={() => toast.show('Informe aprobado/generado!', 'success')}
-                className="bg-brand-orange hover:bg-brand-orange/90 gap-2 text-white font-semibold"
-              >
-                <CheckCircle2 size={16} /> {(reportDraft?.status || 'PENDIENTE') === 'ADELANTE' ? 'APROBAR INFORME' : 'GENERAR INFORME'}
-              </Button>
+              {isEditing ? (
+                <>
+                  <Button variant="ghost" onClick={handleSave} className="gap-2 text-surface-muted border border-surface-border hover:bg-surface-card2">
+                    <Save size={14} /> Guardar Cambios
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      setIsEditing(false);
+                      toast.show('Informe aprobado/generado!', 'success');
+                    }}
+                    className="bg-brand-orange hover:bg-brand-orange/90 gap-2 text-white font-semibold"
+                  >
+                    <CheckCircle2 size={16} /> {(reportDraft?.status || 'PENDIENTE') === 'ADELANTE' ? 'APROBAR INFORME' : 'GENERAR INFORME'}
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="primary"
+                  onClick={() => setIsEditing(true)}
+                  className="bg-brand-orange hover:bg-brand-orange/90 gap-2 text-white font-semibold"
+                >
+                  <Edit2 size={16} /> EDITAR INFORME
+                </Button>
+              )}
             </div>
           )}
         </div>
@@ -784,20 +820,32 @@ export const ClinicalReportTab: React.FC<ClinicalReportTabProps> = ({ patientId,
 
       {isApiLoading ? (
         <div className="text-white p-4 text-center animate-pulse">Cargando informe clínico...</div>
-      ) : is404Error ? (
-        <div className="card-base p-10 text-center text-surface-muted italic bg-surface-card border border-surface-border rounded-xl">
-          Esta semana no se han generado reportes
-        </div>
-      ) : apiError ? (
-        <div className="text-red-400 p-4 text-center font-mono">Error al cargar el informe clínico: {(apiError as any)?.message || 'Error'}</div>
       ) : !reportDraft ? (
-        <div className="card-base p-10 text-center text-surface-muted italic bg-surface-card border border-surface-border rounded-xl">
-          Esta semana no se han generado reportes
+        <div className="card-base p-10 bg-surface-card border border-surface-border rounded-xl text-center flex flex-col items-center justify-center min-h-[280px]">
+          <span className="text-4xl mb-3">📋</span>
+          <div className="text-[14px] font-bold text-white uppercase tracking-wide">Semana sin informe clínico</div>
+          <p className="text-[12px] text-surface-muted max-w-[340px] mt-1.5 mb-5 leading-relaxed">
+            No hay un informe clínico generado para la semana del <span className="font-bold text-white">{formatDateFriendly(weekDates[0])}</span> al <span className="font-bold text-white">{formatDateFriendly(weekDates[6])}</span>.
+            {apiError && !is404Error && (
+              <span className="block mt-2 font-mono text-[10px] text-red-400">
+                Detalle técnico: {(apiError as any)?.message || 'Network Error'}
+              </span>
+            )}
+          </p>
+          {!readOnly && (
+            <Button
+              variant="primary"
+              onClick={handleGenerateReport}
+              className="gap-1.5 py-2 px-5 bg-brand-orange hover:bg-brand-orange/90 text-white font-semibold"
+            >
+              ➕ Generar Informe
+            </Button>
+          )}
         </div>
       ) : (
         <>
           {/* Alerta de Dolor Activa Section */}
-      {reportDraft.painAlertActive && isCurrentWeek && (
+      {reportDraft.painAlertActive && (
         <div className="border border-brand-red p-4 rounded-xl bg-brand-red/10 flex items-start gap-4">
           <div className="w-6 h-6 bg-brand-red rounded-full flex-shrink-0 flex items-center justify-center mt-1">
             <AlertCircle size={16} className="text-white" />
@@ -809,7 +857,7 @@ export const ClinicalReportTab: React.FC<ClinicalReportTabProps> = ({ patientId,
               value={reportDraft.painAlert} // Using reportDraft.painAlert
               onChange={(e) => updateReportField('painAlert', e.target.value)}
               className="bg-surface-card2 border border-surface-border text-white text-xs px-3 py-2 rounded-xl focus:border-brand-orange outline-none w-full resize-y"
-              disabled={readOnly || !isCurrentWeek}
+              disabled={readOnly || !isEditing}
             />
             <p className="text-brand-red text-xs mt-2">{reportDraft.painAlertFooter}</p>
           </div>
@@ -824,7 +872,7 @@ export const ClinicalReportTab: React.FC<ClinicalReportTabProps> = ({ patientId,
           value={reportDraft.painAlert}
           onChange={(e) => updateReportField('painAlert', e.target.value)}
           className="bg-transparent border-none text-white text-sm px-0 py-0 focus:outline-none w-full resize-y"
-          disabled={!isCurrentWeek}
+          disabled={!isEditing}
         />
       </div>
 
@@ -933,7 +981,7 @@ export const ClinicalReportTab: React.FC<ClinicalReportTabProps> = ({ patientId,
                       <td className="py-2 px-3">{row.S_1}</td>
                       <td className="py-2 px-3">{row.S_4}</td>
                       <td className="py-2 px-3">
-                        {isCurrentWeek ? (
+                        {isEditing ? (
                           <input
                             type="text"
                             value={row.actual}
@@ -954,7 +1002,7 @@ export const ClinicalReportTab: React.FC<ClinicalReportTabProps> = ({ patientId,
                 className="w-full bg-surface-card2 border border-surface-border text-white text-xs px-3 py-2 rounded-xl focus:border-brand-orange outline-none resize-none"
                 value={reportDraft.compositionActivity.comment}
                 onChange={(e) => updateCompositionActivityComment(e.target.value)}
-                disabled={readOnly || !isCurrentWeek}
+                disabled={readOnly || !isEditing}
               />
             </div>
           )}
@@ -974,7 +1022,7 @@ export const ClinicalReportTab: React.FC<ClinicalReportTabProps> = ({ patientId,
                     <tr key={entry.id} className="border-t border-surface-border text-white text-sm">
                       <td className="py-2 px-3">{entry.id}</td>
                       <td className="py-2 px-3">
-                        {isCurrentWeek ? (
+                        {isEditing ? (
                           <input
                             type="text"
                             value={entry.zone}
@@ -986,7 +1034,7 @@ export const ClinicalReportTab: React.FC<ClinicalReportTabProps> = ({ patientId,
                         )}
                       </td>
                       <td className="py-2 px-3">
-                        {isCurrentWeek ? (
+                        {isEditing ? (
                           <select
                             value={entry.intensity}
                             onChange={(e) => updatePainLogEntry(entry.id, 'intensity', e.target.value)}
@@ -1012,7 +1060,7 @@ export const ClinicalReportTab: React.FC<ClinicalReportTabProps> = ({ patientId,
                 className="bg-surface-card2 border border-surface-border text-white text-xs px-3 py-2 rounded-xl focus:border-brand-orange outline-none w-full resize-y h-20"
                 value={reportDraft.painLog.comment}
                 onChange={(e) => updatePainLogComment(e.target.value)}
-                disabled={readOnly || !isCurrentWeek}
+                disabled={readOnly || !isEditing}
               />
             </div>
           )}
@@ -1037,7 +1085,7 @@ export const ClinicalReportTab: React.FC<ClinicalReportTabProps> = ({ patientId,
                       <td className="py-2 px-3">{row.musclePct}</td>
                       <td className="py-2 px-3">{row.fatPct}</td>
                       <td className="py-2 px-3">
-                        {row.weekLabel === 'S12' && isCurrentWeek ? (
+                        {(row.weekLabel === 'S12' || index === 7) && isEditing ? (
                           <input
                             type="text"
                             value={row.note}
@@ -1057,7 +1105,7 @@ export const ClinicalReportTab: React.FC<ClinicalReportTabProps> = ({ patientId,
                 className="bg-surface-card2 border border-surface-border text-white text-xs px-3 py-2 rounded-xl focus:border-brand-orange outline-none w-full resize-y h-20"
                 value={reportDraft.evolution8Weeks.comment}
                 onChange={(e) => updateEvolution8WeeksComment(e.target.value)}
-                disabled={readOnly || !isCurrentWeek}
+                disabled={readOnly || !isEditing}
               />
             </div>
           )}
@@ -1075,7 +1123,7 @@ export const ClinicalReportTab: React.FC<ClinicalReportTabProps> = ({ patientId,
             className="w-full bg-surface-card2 border border-surface-border text-white text-xs px-3 py-2 rounded-xl focus:border-brand-orange outline-none resize-none overflow-hidden"
             value={reportDraft.generalObservations}
             onChange={(e) => updateGeneralObservations(e.target.value)}
-            disabled={!isCurrentWeek}
+            disabled={!isEditing}
           />
         </div>
       </div>

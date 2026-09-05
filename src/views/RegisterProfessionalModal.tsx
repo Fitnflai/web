@@ -24,6 +24,7 @@ import {
 interface RegisterProfessionalModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
 export interface TrajectoryItem {
@@ -89,12 +90,11 @@ const initialState: RegistrationState = {
 
 
 const DEFAULT_SPECIALTY_OPTIONS: SelectOption[] = [
-  { label: 'Coach', value: '1' },
-  { label: 'Deportologo', value: '2' },
-  { label: 'Fisioterapeuta', value: '3' },
+  { label: 'Deportólogo', value: '5f739a08-2659-4677-b250-3b3ef26389fe' },
+  { label: 'Entrenador', value: 'd5020114-9a18-40d4-892f-a2f16e8678a3' },
 ];
 
-export function RegisterProfessionalModal({ isOpen, onClose }: RegisterProfessionalModalProps) {
+export function RegisterProfessionalModal({ isOpen, onClose, onSuccess }: RegisterProfessionalModalProps) {
   const { t } = useTranslation();
 
   const { data: specialityTypes, isLoading: isLoadingSpecialityTypes } = useQuery<SpecialityTypeResponse[]>({
@@ -161,10 +161,21 @@ export function RegisterProfessionalModal({ isOpen, onClose }: RegisterProfessio
 
       toast.show(t('registerCoach.modal.successTitle'), 'success');
       setSubmissionSuccess(true);
+      onSuccess?.();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Error registering professional', error);
-      toast.show("Error al registrar profesional: " + error.message, 'error');
+      const detailMsg = error.response?.data?.detail;
+      let parsedError = error.message;
+      if (Array.isArray(detailMsg)) {
+        parsedError = detailMsg.map(err => {
+          const field = err.loc ? err.loc.join('.') : '';
+          return `${field ? `[${field}] ` : ''}${err.msg}`;
+        }).join(' | ');
+      } else if (typeof detailMsg === 'string') {
+        parsedError = detailMsg;
+      }
+      toast.show("Error al registrar profesional: " + parsedError, 'error');
     },
   });
 

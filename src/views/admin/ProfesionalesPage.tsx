@@ -16,6 +16,7 @@ import { MOCK_USERS } from '@/services/mocks/users.mock'
 import { toast } from '@/components/ui/Toast'
 import { cn } from '@/utils'
 import type { Professional } from '@/types'
+import { RegisterProfessionalModal } from '@/views/RegisterProfessionalModal';
 
 type ProfTab = 'perfil' | 'pacientes' | 'agenda'
 
@@ -222,7 +223,7 @@ function ProfDetail({ onUpdate }: { onUpdate: () => void }) {
     return {
       ini: firstChar + secondChar,
       nombre: nombre,
-      disc: apiPat.disciplina || apiPat.nombre_disciplina || 'Trailrunning',
+      disc: apiPat.disciplinas?.[0] || apiPat.disciplina || apiPat.nombre_disciplina || 'Trailrunning',
       nivel: apiPat.nivel || apiPat.clasificacion_visible_actual || 'Avanzado',
       adh: apiPat.adherencia || apiPat.adh || '85%',
       ultimo: apiPat.ultimo_acceso || apiPat.ultimo || 'Hoy',
@@ -1014,7 +1015,7 @@ function ProfDetail({ onUpdate }: { onUpdate: () => void }) {
 
 
       {/* Agenda */}
-      {tab === 'agenda' && <div className="card-base"><AgendaPage /></div>}
+      {tab === 'agenda' && p?.id && <div className="card-base"><AgendaPage id_especialista={p.id} /></div>}
 
       {/* Pacientes */}
       {tab === 'pacientes' && (
@@ -1225,6 +1226,8 @@ export function ProfesionalesPage() {
       const [updateTick, setUpdateTick] = useState(0)
       const triggerUpdate = () => setUpdateTick(t => t + 1)
 
+      const [isRegisterOpen, setIsRegisterOpen] = useState(false)
+
       // Filtering and search state
       const [filter, setFilter] = useState<'Todos' | 'Activos' | 'Pendientes'>('Todos')
       const [search, setSearch] = useState('')
@@ -1232,7 +1235,7 @@ export function ProfesionalesPage() {
       const pageSize = 10
 
       const { data: professionalsData, isLoading } = useQuery({
-        queryKey: ['adminProfessionals', filter, search, page],
+        queryKey: ['adminProfessionals', filter, search, page, updateTick],
         queryFn: () => usersService.getAdminProfessionals(page, pageSize, filter, search),
       })
 
@@ -1304,7 +1307,7 @@ export function ProfesionalesPage() {
         </div>
         <div className="flex gap-2">
           <Button variant="ghost" className="gap-1.5"><Download size={13}/> Exportar</Button>
-          <Button variant="primary" className="gap-1.5" onClick={() => toast.show('Formulario externo para alta de profesionales listo', 'info')}><Plus size={13}/> Nuevo profesional</Button>
+          <Button variant="primary" className="gap-1.5" onClick={() => setIsRegisterOpen(true)}><Plus size={13}/> Nuevo profesional</Button>
         </div>
       </div>
 
@@ -1461,6 +1464,12 @@ export function ProfesionalesPage() {
           </div>
         </Modal>
       )}
+
+      <RegisterProfessionalModal 
+        isOpen={isRegisterOpen} 
+        onClose={() => setIsRegisterOpen(false)} 
+        onSuccess={triggerUpdate} 
+      />
     </div>
   )
 }

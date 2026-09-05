@@ -488,7 +488,7 @@ export interface SpecialistPatientCabeceraResponse {
   ciudad: string
   membresia: string
   disciplina: string
-  nivel_motor: number
+  nivel_motor: string | number
   // computed frontend fields for legacy UI:
   initials?: string
   color?: string

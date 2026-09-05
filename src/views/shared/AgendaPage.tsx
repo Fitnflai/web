@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from '@/components/ui/Toast'
 import { specialistsService, SpecialistAppointment, SpecialistAgendaSummary, AdminWeeklyAgendaSummary, CreateAppointmentPayload, CreateSpecialistAppointmentPayload } from '@/services/endpoints/specialists'
+import { usersService } from '@/services/endpoints/users'
 import { MOCK_USERS } from '@/services/mocks/users.mock'
 import {
   ChevronLeft, ChevronRight, Plus, Video, Clock,
@@ -470,11 +471,18 @@ function AvailabilityManager() {
 
 // ─── Main Page ────────────────────────────────────────────────────
 function mapBackendAppointmentsToAppointments(list: SpecialistAppointment[]): Appointment[] {
-  return list.map(sa => {
-    const [fecha, time] = sa.fecha_hora.split('T')
-    const [hora_inicio] = time.split(':')
+  if (!list || !Array.isArray(list)) return [];
+  
+  return list
+    .filter(sa => sa && sa.fecha_hora)
+    .map(sa => {
+    const [fecha, timePart] = sa.fecha_hora.split('T');
+    const time = timePart || '00:00:00';
+    const timeParts = time.split(':');
+    const hora_inicio = timeParts[0] && timeParts[1] ? `${timeParts[0]}:${timeParts[1]}` : '00:00';
+
     
-    const foundProfessional = MOCK_PROFESSIONALS.find(p => p.id === sa.id_especialista)
+    const foundProfessional = MOCK_PROFESSIONALS.find(p => p.id === (sa.id_especialista || ''))
     const professional = foundProfessional ? {
       id: foundProfessional.id,
       nombre: foundProfessional.nombre,
@@ -482,14 +490,14 @@ function mapBackendAppointmentsToAppointments(list: SpecialistAppointment[]): Ap
       initials: foundProfessional.initials,
       color: foundProfessional.color,
     } : {
-      id: sa.id_especialista,
-      nombre: `Prof. ${sa.id_especialista.substring(0, 4)}`,
-      especialidad: 'Desconocida',
-      initials: '??',
+      id: sa.id_especialista || '',
+      nombre: sa.nombre_especialista || `Prof. ${(sa.id_especialista || 'unk').substring(0, 4)}`,
+      especialidad: sa.disciplinas_especialista?.[0] || 'Desconocida',
+      initials: sa.nombre_especialista ? sa.nombre_especialista.split(' ').filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2) : '??',
       color: '#000000',
     }
 
-    const foundPatient = MOCK_USERS.find(u => u.id_usuario === sa.id_usuario)
+    const foundPatient = MOCK_USERS.find(u => u.id_usuario === (sa.id_usuario || ''))
     const patient = foundPatient ? {
       id: foundPatient.id_usuario,
       nombre: foundPatient.nombre,
@@ -498,19 +506,21 @@ function mapBackendAppointmentsToAppointments(list: SpecialistAppointment[]): Ap
       color: foundPatient.color,
       disciplina: foundPatient.nombre_disciplina,
     } : {
-      id: sa.id_usuario,
-      nombre: `Paciente ${sa.id_usuario.substring(0, 4)}`,
-      apodo: `P. ${sa.id_usuario.substring(0, 4)}`,
-      initials: '??',
+      id: sa.id_usuario || '',
+      nombre: sa.nombre_paciente || `Paciente ${(sa.id_usuario || 'unk').substring(0, 4)}`,
+      apodo: sa.nombre_paciente || `Paciente ${(sa.id_usuario || 'unk').substring(0, 4)}`,
+      initials: sa.nombre_paciente ? sa.nombre_paciente.split(' ').filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2) : '??',
       color: '#000000',
-      disciplina: 'Desconocida',
+      disciplina: sa.disciplinas_paciente?.[0] || 'Desconocida',
     }
 
     // Default duration to 1 hour if not specified, or 30 min if type is consulta
     const durationMinutes = sa.tipo_cita === 'consulta' ? 30 : 60;
     const [startHour, startMinute] = hora_inicio.split(':').map(Number);
-    const endMinute = startMinute + durationMinutes;
-    const endHour = startHour + Math.floor(endMinute / 60);
+    const validStartHour = isNaN(startHour) ? 0 : startHour;
+    const validStartMinute = isNaN(startMinute) ? 0 : startMinute;
+    const endMinute = validStartMinute + durationMinutes;
+    const endHour = validStartHour + Math.floor(endMinute / 60);
     const finalEndMinute = endMinute % 60;
     const hora_fin = `${String(endHour).padStart(2, '0')}:${String(finalEndMinute).padStart(2, '0')}`;
 
@@ -526,7 +536,7 @@ function mapBackendAppointmentsToAppointments(list: SpecialistAppointment[]): Ap
       link_videollamada: `https://meet.fitnflai.com/${sa.id_cita_agenda_especialista}`, // Placeholder
       profesional: professional,
       paciente: patient,
-      notas: '', // No notes from backend yet
+      notas: sa.notas_cita || sa.descripcion_cita || '', // Use new notes fields
     }
   })
 }
@@ -670,23 +680,26 @@ function NewAppointmentModal() {
 }
 
 function parseProfId(profIdString: string): number {
+  if (!profIdString) return 0;
   const match = profIdString.match(/pro-(\d+)/);
-  return match ? parseInt(match[1], 10) : 0; // Default to 0 or throw error if format is unexpected
+  if (match) return parseInt(match[1], 10);
+  const num = parseInt(profIdString, 10);
+  return isNaN(num) ? 0 : num;
 }
 
-export function AgendaPage() {
+export function AgendaPage({ id_especialista }: { id_especialista?: string } = {}) {
   const [tab, setTab] = useState<AgendaTab>('calendario')
   const [weekOffset, setWeekOffset] = useState(0)
   const [selectedApt, setSelectedApt] = useState<Appointment | null>(null)
   const [appointments, setAppointments] = useState(MOCK_APPOINTMENTS)
-  const [filterProf, setFilterProf] = useState('todos')
+  const [filterProf, setFilterProf] = useState(id_especialista || 'todos')
   const [filterStatus, setFilterStatus] = useState<'todos' | AppointmentStatus>('todos')
   const { setOpenModal, userRole, showToast } = useAppStore()
   const weekDates = useMemo(() => getWeekDates(weekOffset), [weekOffset])
 
   // --- API Summary Query ---
   const { data: apiSummary, error: summaryError } = useQuery<SpecialistAgendaSummary | AdminWeeklyAgendaSummary>({
-    queryKey: ['agendaSummary', userRole, toISODate(weekDates[0]), toISODate(weekDates[6]), filterProf],
+    queryKey: ['agendaSummary', userRole, toISODate(weekDates[0]), toISODate(weekDates[6]), filterProf, id_especialista],
     queryFn: () => {
       const fecha_inicio = toISODate(weekDates[0])
       const fecha_fin = toISODate(weekDates[6])
@@ -701,24 +714,26 @@ export function AgendaPage() {
         }
       }
     },
-    enabled: userRole === 'specialist' || (userRole === 'admin'),
+    enabled: (userRole === 'specialist' || userRole === 'admin') && !id_especialista,
   })
 
   // --- API Appointments Query ---
   const { data: apiAppointments, error: appointmentsError } = useQuery<SpecialistAppointment[]>({
-    queryKey: ['agendaAppointments', userRole, toISODate(weekDates[0]), toISODate(weekDates[6]), filterProf, filterStatus],
+    queryKey: ['agendaAppointments', userRole, toISODate(weekDates[0]), toISODate(weekDates[6]), filterProf, filterStatus, id_especialista],
     queryFn: () => {
       const fecha_inicio = toISODate(weekDates[0])
       const fecha_fin = toISODate(weekDates[6])
       const estado = filterStatus === 'todos' ? null : filterStatus
 
-      if (userRole === 'specialist') {
+      if (id_especialista) {
+        return usersService.getProfessionalTabDetalle(id_especialista, 'agenda', fecha_inicio, fecha_fin, estado)
+      } else if (userRole === 'specialist') {
         return specialistsService.getSpecialistAppointments(fecha_inicio, fecha_fin, estado || undefined)
       } else { // userRole === 'admin'
         return specialistsService.getAdminSpecialistAppointments(parseProfId(filterProf), fecha_inicio, fecha_fin, estado)
       }
     },
-    enabled: userRole === 'specialist' || (userRole === 'admin' && filterProf !== 'todos'),
+    enabled: userRole === 'specialist' || (userRole === 'admin' && filterProf !== 'todos') || !!id_especialista,
   })
 
   useEffect(() => {
@@ -751,6 +766,19 @@ export function AgendaPage() {
 
   // Stats for current week
   const stats = useMemo(() => {
+    if (id_especialista && apiAppointments) {
+      const confirmed = apiAppointments.filter(apt => apt.estado_cita?.toLowerCase() === 'confirmada').length;
+      const pending = apiAppointments.filter(apt => apt.estado_cita?.toLowerCase() === 'pendiente').length;
+      const canceled = apiAppointments.filter(apt => apt.estado_cita?.toLowerCase() === 'cancelada').length;
+      const scheduled = apiAppointments.length;
+      return {
+        total: scheduled,
+        confirmada: confirmed,
+        pendiente: pending,
+        cancelada: canceled,
+        programadas: scheduled,
+      };
+    }
     if (apiSummary) { // Use API summary if available for any role
       return {
         total: apiSummary.citas_esta_semana,
@@ -769,7 +797,7 @@ export function AgendaPage() {
       cancelada:  weekApts.filter(a => a.estado === 'cancelada').length,
       programadas: weekApts.length,
     }
-  }, [appointments, weekDates, apiSummary, userRole])
+  }, [appointments, weekDates, apiSummary, userRole, id_especialista, apiAppointments])
 
   const tabs: { id: AgendaTab; label: string }[] = [
     { id: 'calendario',    label: '📅 Calendario' },
@@ -835,7 +863,7 @@ export function AgendaPage() {
               </button>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              {userRole === 'admin' && (
+              {!id_especialista && userRole === 'admin' && (
                 <select value={filterProf} onChange={e => setFilterProf(e.target.value)} className="form-input w-auto text-[11px] py-1.5">
                   <option value="todos">Todos los profesionales</option>
                   {MOCK_PROFESSIONALS.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}

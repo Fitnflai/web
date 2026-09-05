@@ -1,11 +1,13 @@
 import { apiClient } from '@/services/api/client'
-import type { User, Professional, AdminProfessionalStats, AssignedPatient, SpecialistPatientCabeceraResponse, ProfRole } from '@/types'
+import type { User, Professional, AdminProfessionalStats, AssignedPatient, SpecialistPatientCabeceraResponse, ProfRole, Appointment } from '@/types'
 import { useAppStore } from '@/store/useAppStore'
 import { MOCK_USERS } from '@/services/mocks/users.mock'
 import { MOCK_PLAN } from '@/services/mocks/plan.mock'
 import { MOCK_PROFESSIONALS } from '@/services/mocks/professionals.mock'
+import { MOCK_APPOINTMENTS } from '@/services/mocks/agenda.mock'
 import { parseISO, format, addDays, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { SpecialistAppointment } from '@/services/endpoints/specialists'
 
 // New endpoint functions added to usersService:
 export interface InjuryPayload {
@@ -453,6 +455,9 @@ export const usersService = {
     const { data } = await apiClient.get(url, {
       params
     });
+    if ((tab === 'plan' || tab === 'nutricion') && Array.isArray(data)) {
+      return data[0];
+    }
     return data;
   },
   getUserHeaderDetalle: async (id_usuario: string): Promise<any> => {
@@ -759,7 +764,13 @@ export const usersService = {
     return data;
   },
 
-  getProfessionalTabDetalle: async (id: string, tab: string): Promise<any> => {
+  getProfessionalTabDetalle: async (
+    id: string,
+    tab: string,
+    fecha_inicio_citas?: string | null,
+    fecha_fin_citas?: string | null,
+    estado_citas?: string | null
+  ): Promise<any> => {
     if (USE_MOCK || isMockProfessionalId(id)) {
       const professional = MOCK_PROFESSIONALS.find(p => p.id === id);
       if (!professional) return undefined;
@@ -769,13 +780,61 @@ export const usersService = {
           return professional; // Return the whole professional object for ficha tab
         case 'pacientes':
           return professional.pacAsi || []; // Return assigned patients for pacientes tab
-        case 'agenda': // Example of unsupported tab, returns mock
-          return { message: 'Mock data for agenda tab' };
+        case 'agenda':
+          const filteredAppointments = MOCK_APPOINTMENTS
+            .filter((apt: Appointment) => {
+              const aptDate = new Date(apt.fecha);
+              const startDate = fecha_inicio_citas ? new Date(fecha_inicio_citas) : null;
+              const endDate = fecha_fin_citas ? new Date(fecha_fin_citas) : null;
+              const statusMatch = !estado_citas || apt.estado === estado_citas;
+
+              let dateMatch = true;
+              if (startDate && endDate) {
+                dateMatch = aptDate >= startDate && aptDate <= endDate;
+              } else if (startDate) {
+                dateMatch = aptDate >= startDate;
+              } else if (endDate) {
+                dateMatch = aptDate <= endDate;
+              }
+
+              const specialistMatch = apt.profesional.id === id;
+
+              return specialistMatch && dateMatch && statusMatch;
+            })
+            .map((apt: Appointment) => ({
+              estado_cita: apt.estado,
+              fecha_hora: `${apt.fecha}T${apt.hora_inicio}:00`,
+              id_cita_agenda_especialista: apt.id,
+              id_especialista: apt.profesional.id,
+              id_usuario: apt.paciente.id,
+              motivo: apt.motivo,
+              tipo_cita: apt.tipo,
+              nombre_especialista: apt.profesional.nombre,
+              disciplinas_especialista: apt.profesional.especialidad ? [apt.profesional.especialidad] : [],
+              nombre_paciente: apt.paciente.nombre,
+              disciplinas_paciente: apt.paciente.disciplina ? [apt.paciente.disciplina] : [],
+              descripcion_cita: apt.motivo,
+              notas_cita: apt.notas,
+              notas_adicionales: null,
+            })) as SpecialistAppointment[];
+          return filteredAppointments;
         default:
           return undefined;
       }
     }
-    const { data } = await apiClient.get(`/admin/${id}/detalle-especialista-contenido?tab=${tab}`);
+    const params: {
+      tab: string;
+      fecha_inicio_citas?: string | null;
+      fecha_fin_citas?: string | null;
+      estado_citas?: string | null;
+    } = { tab };
+    if (fecha_inicio_citas) params.fecha_inicio_citas = fecha_inicio_citas;
+    if (fecha_fin_citas) params.fecha_fin_citas = fecha_fin_citas;
+    if (estado_citas) params.estado_citas = estado_citas;
+
+    const { data } = await apiClient.get(`/admin/${id}/detalle-especialista-contenido`, {
+      params,
+    });
     return data;
   },
 
@@ -819,13 +878,13 @@ export const usersService = {
   getSpecialityTypes: async (): Promise<SpecialityTypeResponse[]> => {
     if (USE_MOCK) {
       return [
-        { id_tipo_especialista: '1', nombre: 'Coach', codigo: 'COACH', descripcion: 'Entrenador deportivo' },
-        { id_tipo_especialista: '2', nombre: 'Deportologo', codigo: 'DEP', descripcion: 'Especialista en medicina deportiva' },
-        { id_tipo_especialista: '3', nombre: 'Fisioterapeuta', codigo: 'FISIO', descripcion: 'Especialista en rehabilitación' },
+        { id_tipo_especialista: '5f739a08-2659-4677-b250-3b3ef26389fe', nombre: 'Deportólogo', codigo: 'DEPORTOLOGO', descripcion: 'Especialista en medicina del deporte y salud física.' },
+        { id_tipo_especialista: 'd5020114-9a18-40d4-892f-a2f16e8678a3', nombre: 'Entrenador', codigo: 'ENTRENADOR', descripcion: 'Especialista en rendimiento físico, fuerza y acondicionamiento.' },
       ];
     }
     const { data } = await apiClient.get('/admin/obtener-tipos-especialista');
     return data;
+
   },
   registerProfessional: async (payload: RegisterProfessionalPayload): Promise<RegisterProfessionalResponse> => {
     if (USE_MOCK) {

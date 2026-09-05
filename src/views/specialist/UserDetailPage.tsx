@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { usersService } from '@/services/endpoints/users'
 import { ChevronLeft, ChevronRight, Calendar, MessageSquare, Save, X, Edit2, Play, Eye, ClipboardList, Plus, Coffee, Trash2 } from 'lucide-react'
@@ -814,6 +814,10 @@ const isUUID = (id: string) => {
 export function SpecialistPlanTab({ userId, readOnly = false }: { userId: string; readOnly?: boolean }) {
   const repos = useRepositories()
   const [weekOffset, setWeekOffset] = useState(0)
+
+  const queryWeekDates = useMemo(() => getWeekDates(weekOffset), [weekOffset])
+  const startDate = useMemo(() => formatDateISO(queryWeekDates[0]), [queryWeekDates])
+  const endDate = useMemo(() => formatDateISO(queryWeekDates[6]), [queryWeekDates])
   const [planItems, setPlanItems] = useState<PlanItem[]>([])
   const [selectedDateStr, setSelectedDateStr] = useState(formatDateISO(new Date()))
   const [updateTick, setUpdateTick] = useState(0)
@@ -826,27 +830,13 @@ export function SpecialistPlanTab({ userId, readOnly = false }: { userId: string
   const [newCommentText, setNewCommentText] = useState('')
 
   const { data: planData, isLoading: isPlanLoading } = useQuery({
-    queryKey: ['userPlanTab', userId],
-    queryFn: () => usersService.getUserTabDetalle(userId, 'plan'),
+    queryKey: ['userPlanTab', userId, startDate, endDate],
+    queryFn: () => usersService.getUserTabDetalle(userId, 'plan', startDate, endDate),
     enabled: !!userId,
   })
 
-  // Set weekDates dynamically to align with the returned semana_rango if available
-  const weekDates = useMemo(() => {
-    if (planData?.semana_rango?.inicio) {
-      const parts = planData.semana_rango.inicio.split('-')
-      const baseDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
-      baseDate.setDate(baseDate.getDate() + weekOffset * 7)
-      const dates: Date[] = []
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(baseDate)
-        d.setDate(baseDate.getDate() + i)
-        dates.push(d)
-      }
-      return dates
-    }
-    return getWeekDates(weekOffset)
-  }, [planData, weekOffset])
+  // Set weekDates dynamically from the active weekOffset, matching the Admin panel and preventing double offsets
+  const weekDates = useMemo(() => getWeekDates(weekOffset), [weekOffset])
 
   // Select initial date from returned semana_rango or today, prioritizing days with scheduled items
   useEffect(() => {
@@ -1639,7 +1629,14 @@ function MealDetailModal({ isOpen, onClose, meal, onSave, readOnly = false, onDe
 export function SpecialistNutritionTab({ userId, readOnly = false }: { userId: string; readOnly?: boolean }) {
   const repos = useRepositories()
   const [weekOffset, setWeekOffset] = useState(0)
+  const [generatedNutrition, setGeneratedNutrition] = useState<any>(null)
+
+  const formatDateFriendly = (d: Date): string => {
+    return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
+  }
+
   const todayStr = useMemo(() => formatDateISO(new Date()), [])
+  const lastProcessedWeek = useRef('')
   const [selectedDateStr, setSelectedDateStr] = useState(() => {
     const initialWeekDates = getWeekDates(0)
     const initialStart = formatDateISO(initialWeekDates[0])
@@ -1671,7 +1668,7 @@ export function SpecialistNutritionTab({ userId, readOnly = false }: { userId: s
   const startDate = useMemo(() => formatDateISO(weekDates[0]), [weekDates])
   const endDate = useMemo(() => formatDateISO(weekDates[6]), [weekDates])
 
-  const { data: rawNutritionData, error: nutritionError } = useQuery({
+  const { data: rawNutritionData, error: nutritionError, isLoading: isNutritionLoading } = useQuery({
     queryKey: ['userNutritionTab', userId, startDate, endDate],
     queryFn: () => usersService.getUserTabDetalle(userId, 'nutricion', startDate, endDate),
     enabled: !!userId && !!startDate && !!endDate,
@@ -1684,19 +1681,20 @@ export function SpecialistNutritionTab({ userId, readOnly = false }: { userId: s
   }, [nutritionError])
 
   const nutritionData = useMemo(() => {
-    if (rawNutritionData) {
-      if (Array.isArray(rawNutritionData)) {
-        const matchingWeek = rawNutritionData.find(week => {
+    const dataToProcess = generatedNutrition || rawNutritionData
+    if (dataToProcess) {
+      if (Array.isArray(dataToProcess)) {
+        const matchingWeek = dataToProcess.find(week => {
           const inicio = (week?.semana_rango?.inicio || week?.semana_rango?.fecha_inicio || week?.fecha_inicio || week?.fecha_inicio_plan)?.substring(0, 10)
           const fin = (week?.semana_rango?.fin || week?.semana_rango?.fecha_fin || week?.fecha_fin || week?.fecha_fin_plan)?.substring(0, 10)
           return inicio && fin && selectedDateStr >= inicio && selectedDateStr <= fin
         })
-        return matchingWeek || rawNutritionData[0]
+        return matchingWeek || dataToProcess[0]
       }
-      return rawNutritionData
+      return dataToProcess
     }
     return undefined;
-  }, [rawNutritionData, selectedDateStr])
+  }, [rawNutritionData, generatedNutrition, selectedDateStr])
 
 
   // Sync selectedDateStr to today (if in range) or startDate (if not) when week changes
@@ -1709,21 +1707,28 @@ export function SpecialistNutritionTab({ userId, readOnly = false }: { userId: s
   }, [startDate, endDate, todayStr])
 
   // Auto-select first day with meals if the current selection is empty
+  // Auto-select first day with meals ONLY when a new week is loaded
   useEffect(() => {
-    if (nutritionData?.detalle_diario) {
-      const selectedHasData = nutritionData.detalle_diario[selectedDateStr]?.pauta_alimentacion?.comidas?.length > 0
-      if (!selectedHasData) {
-        const weekDatesStr = weekDates.map(d => formatDateISO(d))
-        const firstWithData = weekDatesStr.find(dateStr => {
-          const dayData = nutritionData.detalle_diario[dateStr]
-          return dayData?.pauta_alimentacion?.comidas?.length > 0 || (dayData?.pauta_alimentacion?.real?.hidratacion_ml || 0) > 0 || (dayData?.analitica_hidratacion?.volumen_consumido_ml || 0) > 0
-        })
-        if (firstWithData) {
-          setSelectedDateStr(firstWithData)
-        }
+    if (nutritionData?.detalle_diario && startDate !== lastProcessedWeek.current) {
+      lastProcessedWeek.current = startDate;
+      
+      const weekDatesStr = weekDates.map(d => formatDateISO(d))
+      const firstWithData = weekDatesStr.find(dateStr => {
+        const dayData = nutritionData.detalle_diario[dateStr]
+        return dayData?.pauta_alimentacion?.comidas?.length > 0 || 
+               (dayData?.pauta_alimentacion?.real?.hidratacion_ml || 0) > 0 || 
+               (dayData?.analitica_hidratacion?.volumen_consumido_ml || 0) > 0
+      })
+      
+      if (firstWithData) {
+        setSelectedDateStr(firstWithData)
       }
     }
-  }, [nutritionData, weekDates, selectedDateStr])
+  }, [nutritionData, weekDates, startDate])
+
+  useEffect(() => {
+    setGeneratedNutrition(null)
+  }, [weekOffset])
 
   // Dynamic log fetching based on selected calendar date and API response
   useEffect(() => {
@@ -1890,6 +1895,86 @@ export function SpecialistNutritionTab({ userId, readOnly = false }: { userId: s
     setUpdateTick(t => t + 1)
   }
 
+  const handleGenerateNutritionPlan = () => {
+    try {
+      const dateStr = selectedDateStr;
+      const defaultDailyPlan = {
+        pauta_alimentacion: {
+          objetivo: {
+            kcal: 2200,
+            proteina: 130,
+            ch: 220,
+            grasas: 70,
+            hidratacion_ml_objetivo: 3000
+          },
+          real: {
+            kcal: 0,
+            proteina: 0,
+            ch: 0,
+            grasas: 0,
+            hidratacion_ml: 0
+          },
+          comidas: [
+            {
+              id_comida: `m1-${dateStr}`,
+              tipo: 'Desayuno',
+              descripcion: 'Licuado energético de avena, plátano y almendras.',
+              instrucciones: 'Licuar 1 taza de leche vegetal, 1 plátano, 40g de avena y un puñado de almendras.',
+              kcal: 450,
+              ch: 60,
+              proteina: 15,
+              grasas: 12,
+              etiquetas: ['Fácil digestión', 'Desayuno rápido']
+            },
+            {
+              id_comida: `m2-${dateStr}`,
+              tipo: 'Almuerzo',
+              descripcion: 'Arroz con pollo grillado y vegetales de estación.',
+              instrucciones: 'Cocinar 150g de pollo a la plancha. Acompañar con arroz integral al vapor y vegetales salteados.',
+              kcal: 650,
+              ch: 70,
+              proteina: 40,
+              grasas: 10,
+              etiquetas: ['Post-entreno', 'Balanceado']
+            }
+          ]
+        },
+        analitica_hidratacion: {
+          volumen_consumido_ml: 0,
+          objetivo_ml: 3000,
+          deshidratacion_estimada: 0,
+          justificacion_ajuste: ''
+        }
+      }
+
+      // If we already have week nutrition data, we update the selected day's plan in it
+      const currentWeekData = nutritionData || {
+        semana_numero: weekOffset === 0 ? 1 : Math.abs(weekOffset) + 1,
+        semana_rango: {
+          inicio: startDate,
+          fin: endDate
+        },
+        detalle_diario: {}
+      }
+
+      const updatedDetalleDiario = {
+        ...(currentWeekData.detalle_diario || {}),
+        [dateStr]: defaultDailyPlan
+      }
+
+      const updatedWeekPlan = {
+        ...currentWeekData,
+        detalle_diario: updatedDetalleDiario
+      }
+
+      setGeneratedNutrition(updatedWeekPlan)
+      toast.show('Plan nutricional generado para el día!', 'success')
+    } catch (error) {
+      console.error('Failed to generate daily nutrition plan:', error)
+      toast.show('Error al generar el plan nutricional.', 'error')
+    }
+  }
+
   if (!log) return <div className="text-[12px] text-surface-muted">Cargando bitácora de nutrición...</div>
 
   return (
@@ -1914,6 +1999,8 @@ export function SpecialistNutritionTab({ userId, readOnly = false }: { userId: s
           const dateStr = formatDateISO(date)
           const isSelected = dateStr === selectedDateStr
           const isToday = dateStr === formatDateISO(new Date())
+          const dayData = nutritionData?.detalle_diario?.[dateStr]
+          const hasPlan = dayData?.pauta_alimentacion?.comidas && dayData.pauta_alimentacion.comidas.length > 0
 
           return (
             <button
@@ -1926,153 +2013,177 @@ export function SpecialistNutritionTab({ userId, readOnly = false }: { userId: s
             >
               <div className="text-[9px] text-surface-muted uppercase">{date.toLocaleDateString('es-ES', { weekday: 'short' })}</div>
               <div className="text-[14px] font-bold text-white mt-0.5">{date.getDate()}</div>
-              {isToday && <span className="inline-block mt-1 w-1 h-1 rounded-full bg-brand-orange" />}
+              {hasPlan && <span className="inline-block mt-1 w-1 h-1 rounded-full bg-brand-orange" />}
             </button>
           )
         })}
       </div>
 
-      {/* Main layout: left side diet builder, right side hydration overrides */}
-      <div className="grid grid-cols-2 gap-4">
-        {/* Diet Builder List */}
-        <div className="card-base flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[13px] font-semibold flex items-center gap-1.5 text-white">
-                <Coffee size={14} className="text-brand-orange" />
-                <span>Pauta de Alimentación</span>
-              </h3>
-              {!readOnly && (
-                <Button variant="primary" size="sm" onClick={handleAddMeal} className="gap-1">
-                  <Plus size={12} /> Comida
-                </Button>
-              )}
-            </div>
+{/* Main layout: left side diet builder, right side hydration overrides */}
+{isNutritionLoading ? (
+          <div className="text-white p-20 text-center animate-pulse flex flex-col items-center justify-center min-h-[280px] bg-surface-card border border-surface-border rounded-xl">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-orange mb-3"></div>
+            <div className="text-[12px] text-surface-muted font-medium">Cargando planificación nutricional...</div>
+          </div>
+        ) : (!log || !log.comidas || log.comidas.length === 0) ? (
+          <div className="card-base p-10 bg-surface-card border border-surface-border rounded-xl text-center flex flex-col items-center justify-center min-h-[280px]">
+            <span className="text-4xl mb-3">🍏</span>
+            <div className="text-[14px] font-bold text-white uppercase tracking-wide">Día sin plan nutricional</div>
+            <p className="text-[12px] text-surface-muted max-w-[340px] mt-1.5 mb-5 leading-relaxed">
+              No hay un plan de nutrición generado para el día <span className="font-bold text-white">{formatDateFriendly(new Date(selectedDateStr + 'T12:00:00'))}</span>.
+            </p>
+            {!readOnly && (
+              <Button
+                variant="primary"
+                onClick={handleGenerateNutritionPlan}
+                className="gap-1.5 py-2 px-5 bg-brand-orange hover:bg-brand-orange/90 text-white font-semibold"
+              >
+                ➕ Generar Plan Nutricional
+              </Button>
+            )}
+          </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-4">
+          {/* Diet Builder List */}
+          <div className="card-base flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[13px] font-semibold flex items-center gap-1.5 text-white">
+                  <Coffee size={14} className="text-brand-orange" />
+                  <span>Pauta de Alimentación</span>
+                </h3>
+                {!readOnly && (
+                  <Button variant="primary" size="sm" onClick={handleAddMeal} className="gap-1">
+                    <Plus size={12} /> Comida
+                  </Button>
+                )}
+              </div>
 
-            <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-0.5">
-              {(log.comidas || []).map((meal) => (
-                <button
-                  key={meal.id_comida}
-                  onClick={() => handleOpenMealEdit(meal)}
-                  className="w-full p-3 flex justify-between items-start bg-surface-card border border-surface-border rounded-xl hover:border-brand-orange transition-all text-white text-left cursor-pointer"
-                >
-                  <div className="min-w-0 flex-1 pr-4">
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <Badge variant="orange">{meal.tipo}</Badge>
-                      <span className="text-[12px] font-bold text-white truncate">{meal.descripcion}</span>
-                    </div>
-                    {/* Tags List */}
-                    {meal.etiquetas && meal.etiquetas.length > 0 && (
-                      <div className="flex gap-1.5 flex-wrap">
-                        {meal.etiquetas.map((t, idx) => (
-                          <span key={idx} className="text-[9px] bg-surface-card2 border border-surface-border text-surface-muted px-2 py-0.5 rounded-full">{t}</span>
-                        ))}
+              <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-0.5">
+                {(log.comidas || []).map((meal) => (
+                  <button
+                    key={meal.id_comida}
+                    onClick={() => handleOpenMealEdit(meal)}
+                    className="w-full p-3 flex justify-between items-start bg-surface-card border border-surface-border rounded-xl hover:border-brand-orange transition-all text-white text-left cursor-pointer"
+                  >
+                    <div className="min-w-0 flex-1 pr-4">
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <Badge variant="orange">{meal.tipo}</Badge>
+                        <span className="text-[12px] font-bold text-white truncate">{meal.descripcion}</span>
                       </div>
-                    )}
-                  </div>
-                  <div className="text-right shrink-0">
-                    <span className="text-[12px] font-extrabold text-brand-orange block">{meal.kcal} kcal</span>
-                    <span className="text-[9px] text-surface-muted mt-1 block font-medium">P: {meal.proteina}g · C: {meal.ch}g · G: {meal.grasas}g</span>
-                  </div>
-                </button>
-              ))}
+                      {/* Tags List */}
+                      {meal.etiquetas && meal.etiquetas.length > 0 && (
+                        <div className="flex gap-1.5 flex-wrap">
+                          {meal.etiquetas.map((t, idx) => (
+                            <span key={idx} className="text-[9px] bg-surface-card2 border border-surface-border text-surface-muted px-2 py-0.5 rounded-full">{t}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="text-[12px] font-extrabold text-brand-orange block">{meal.kcal} kcal</span>
+                      <span className="text-[9px] text-surface-muted mt-1 block font-medium">P: {meal.proteina}g · C: {meal.ch}g · G: {meal.grasas}g</span>
+                    </div>
+                  </button>
+                ))}
 
-              {(log.comidas || []).length === 0 && (
-                <div className="text-center py-10 text-surface-muted text-[11px] leading-relaxed">
-                  No hay comidas planificadas para este día.<br />Agrega platos o colaciones recomendadas.
+                {(log.comidas || []).length === 0 && (
+                  <div className="text-center py-10 text-surface-muted text-[11px] leading-relaxed">
+                    No hay comidas planificadas para este día.<br />Agrega platos o colaciones recomendadas.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Macro Progress Suggested Indicators */}
+            <div className="mt-5 border-t border-surface-border pt-4">
+              <h3 className="text-[12px] font-bold text-white mb-3">Balance de Macronutrientes</h3>
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between text-[11px] mb-1">
+                    <span className="text-surface-muted">Energía Total (kcal)</span>
+                    <span className="text-white font-bold">{log.actualKcal} / {log.targetKcal} kcal</span>
+                  </div>
+                  <div className="h-2 bg-surface-border rounded-full overflow-hidden">
+                    <div className="h-full bg-brand-orange rounded-full" style={{ width: `${Math.min((log.actualKcal / log.targetKcal) * 100, 100)}%` }} />
+                  </div>
                 </div>
-              )}
+
+                <div className="grid grid-cols-3 gap-3 pt-1">
+                  <div>
+                    <div className="text-[10px] text-surface-muted mb-0.5">Proteína (g)</div>
+                    <div className="text-[12px] font-extrabold text-white">{log.actualProteins} / {log.targetProteins}g</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-surface-muted mb-0.5">Carbohidratos (g)</div>
+                    <div className="text-[12px] font-extrabold text-white">{log.actualCarbs} / {log.targetCarbs}g</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-surface-muted mb-0.5">Grasas (g)</div>
+                    <div className="text-[12px] font-extrabold text-white">{log.actualFats} / {log.targetFats}g</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Macro Progress Suggested Indicators */}
-          <div className="mt-5 border-t border-surface-border pt-4">
-            <h3 className="text-[12px] font-bold text-white mb-3">Balance de Macronutrientes</h3>
-            <div className="space-y-3">
-              <div>
-                <div className="flex justify-between text-[11px] mb-1">
-                  <span className="text-surface-muted">Energía Total (kcal)</span>
-                  <span className="text-white font-bold">{log.actualKcal} / {log.targetKcal} kcal</span>
+          {/* Hydration / Dehydration Overrides Panel */}
+          <div className="card-base flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-[13px] font-semibold">Bitácora de Hidratación & Control</h3>
+                {log.overriddenBySpecialist && <Badge variant="orange">Sobreescrito por Pro</Badge>}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="bg-surface-card2 rounded-lg p-2.5 border border-surface-border text-center">
+                  <div className="text-[16px] font-extrabold text-brand-blue">{log.liquidVolumeMl} ml</div>
+                  <div className="text-[10px] text-surface-muted">Volumen Consumido</div>
                 </div>
-                <div className="h-2 bg-surface-border rounded-full overflow-hidden">
-                  <div className="h-full bg-brand-orange rounded-full" style={{ width: `${Math.min((log.actualKcal / log.targetKcal) * 100, 100)}%` }} />
+                <div className="bg-surface-card2 rounded-lg p-2.5 border border-surface-border text-center">
+                  <div className="text-[16px] font-extrabold text-brand-red">+{log.calculatedDehydrationLiters || 0.0} L</div>
+                  <div className="text-[10px] text-surface-muted">Deshidratación Estimada</div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3 pt-1">
-                <div>
-                  <div className="text-[10px] text-surface-muted mb-0.5">Proteína (g)</div>
-                  <div className="text-[12px] font-extrabold text-white">{log.actualProteins} / {log.targetProteins}g</div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-surface-muted mb-0.5">Carbohidratos (g)</div>
-                  <div className="text-[12px] font-extrabold text-white">{log.actualCarbs} / {log.targetCarbs}g</div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-surface-muted mb-0.5">Grasas (g)</div>
-                  <div className="text-[12px] font-extrabold text-white">{log.actualFats} / {log.targetFats}g</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Hydration / Dehydration Overrides Panel */}
-        <div className="card-base flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[13px] font-semibold">Bitácora de Hidratación & Control</h3>
-              {log.overriddenBySpecialist && <Badge variant="orange">Sobreescrito por Pro</Badge>}
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className="bg-surface-card2 rounded-lg p-2.5 border border-surface-border text-center">
-                <div className="text-[16px] font-extrabold text-brand-blue">{log.liquidVolumeMl} ml</div>
-                <div className="text-[10px] text-surface-muted">Volumen Consumido</div>
-              </div>
-              <div className="bg-surface-card2 rounded-lg p-2.5 border border-surface-border text-center">
-                <div className="text-[16px] font-extrabold text-brand-red">+{log.calculatedDehydrationLiters || 0.0} L</div>
-                <div className="text-[10px] text-surface-muted">Deshidratación Estimada</div>
-              </div>
-            </div>
-
-            <div className="space-y-3.5 border-t border-surface-border pt-3.5">
-              <Input
-                label="Modificar Objetivo Diario (ml)"
-                type="number"
-                value={newVolumeMl}
-                onChange={(e) => setNewVolumeMl(Number(e.target.value))}
-                placeholder="e.g. 3500"
-                disabled={readOnly}
-              />
-              <div className="flex flex-col gap-1 w-full">
-                <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">
-                  Justificación del Ajuste Profesional
-                </label>
-                <textarea
-                  value={justification}
-                  onChange={(e) => setJustification(e.target.value)}
-                  rows={2}
-                  placeholder="Indica el criterio clínico o deportivo..."
-                  className="bg-surface-card border border-surface-border rounded-lg p-2.5 text-[11px] text-white outline-none focus:border-brand-orange placeholder:text-surface-muted resize-none"
+              <div className="space-y-3.5 border-t border-surface-border pt-3.5">
+                <Input
+                  label="Modificar Objetivo Diario (ml)"
+                  type="number"
+                  value={newVolumeMl}
+                  onChange={(e) => setNewVolumeMl(Number(e.target.value))}
+                  placeholder="e.g. 3500"
                   disabled={readOnly}
                 />
+                <div className="flex flex-col gap-1 w-full">
+                  <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">
+                    Justificación del Ajuste Profesional
+                  </label>
+                  <textarea
+                    value={justification}
+                    onChange={(e) => setJustification(e.target.value)}
+                    rows={2}
+                    placeholder="Indica el criterio clínico o deportivo..."
+                    className="bg-surface-card border border-surface-border rounded-lg p-2.5 text-[11px] text-white outline-none focus:border-brand-orange placeholder:text-surface-muted resize-none"
+                    disabled={readOnly}
+                  />
+                </div>
               </div>
             </div>
-          </div>
 
-          {!readOnly && (
-            <Button
-              variant="primary"
-              isLoading={isSaving}
-              onClick={handleSaveOverride}
-              className="w-full mt-5 gap-1.5"
-            >
-              <Save size={13} /> Guardar Ajuste Hidratación
-            </Button>
-          )}
+            {!readOnly && (
+              <Button
+                variant="primary"
+                isLoading={isSaving}
+                onClick={handleSaveOverride}
+                className="w-full mt-5 gap-1.5"
+              >
+                <Save size={13} /> Guardar Ajuste Hidratación
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Daily Diet Discussion Comments */}
       <div className="card-base p-5 bg-surface-card border border-surface-border rounded-xl mt-4">
@@ -2459,6 +2570,13 @@ export function UserDetailPage() {
     enabled: !!u.id_usuario,
   })
 
+  // Fetch live profile details for the specialist's view of the patient
+  const { data: profileData, isLoading: isLoadingProfile } = useQuery({
+    queryKey: ['specialistUserProfile', u.id_usuario],
+    queryFn: () => usersService.getUserTabDetalle(u.id_usuario, 'perfil'),
+    enabled: !!u.id_usuario && tab === 'perfil',
+  })
+
   const tabs: { id: Tab; label: string }[] = [
     { id: 'perfil',       label: 'Perfil' },
     { id: 'plan',         label: 'Plan' },
@@ -2467,23 +2585,56 @@ export function UserDetailPage() {
     { id: 'notificaciones',  label: 'Notificaciones' },
   ]
 
-  // Merge loaded header details back into the local patient object to keep PerfilTab and others aligned
+  // Merge loaded header details and profile details back into the local patient object to keep PerfilTab and others aligned
   const mergedPatient = useMemo(() => {
-    if (!headerData) return u
-    return {
-      ...u,
-      nombre: headerData.nombre,
-      apodo: headerData.apodo,
-      ciudad: headerData.ciudad,
-      plan_idx: headerData.plan_idx ?? u.plan_idx,
-      nombre_plan_activo: headerData.nombre_plan_activo,
-      nombre_disciplina: headerData.nombre_disciplina,
-      registro_activo: headerData.registro_activo,
-      edad: headerData.edad ?? u.edad,
-      peso: headerData.peso ? parseFloat(headerData.peso) || u.peso : u.peso,
-      altura: headerData.altura ? parseFloat(headerData.altura) || u.altura : u.altura,
+    let merged = { ...u };
+
+    if (headerData) {
+      merged = {
+        ...merged,
+        nombre: headerData.nombre ?? merged.nombre,
+        apodo: headerData.apodo ?? merged.apodo,
+        ciudad: headerData.ciudad ?? merged.ciudad,
+        plan_idx: headerData.plan_idx ?? merged.plan_idx,
+        nombre_plan_activo: headerData.nombre_plan_activo ?? merged.nombre_plan_activo,
+        // The header data contains nombre_disciplina, which is what we need.
+        nombre_disciplina: headerData.nombre_disciplina ?? merged.nombre_disciplina,
+        registro_activo: headerData.registro_activo ?? merged.registro_activo,
+        edad: headerData.edad ?? merged.edad,
+        // Ensure peso and altura are parsed as numbers if they come as strings from headerData
+        peso: headerData.peso ? parseFloat(String(headerData.peso)) || merged.peso : merged.peso,
+        altura: headerData.altura ? parseFloat(String(headerData.altura)) || merged.altura : merged.altura,
+        // Map nivel_motor from headerData to clasificacion_visible_actual
+        clasificacion_visible_actual: String(headerData.nivel_motor) ?? merged.clasificacion_visible_actual,
+      };
     }
-  }, [u, headerData])
+
+    if (profileData) {
+      // Assuming profileData is an object that contains User-like properties
+      // Map properties from profileData defensively, with fallback to existing merged values
+      merged = {
+        ...merged,
+        genero: profileData.genero ?? merged.genero,
+        fecha_nacimiento: profileData.fecha_nacimiento ?? merged.fecha_nacimiento,
+        altitud: profileData.altitud ?? merged.altitud,
+        idioma: profileData.idioma ?? merged.idioma,
+        nivel_actividad: profileData.nivel_actividad ?? merged.nivel_actividad,
+        nivel_motor_actual: profileData.nivel_motor_actual ?? merged.nivel_motor_actual,
+        tiempo_sin_entrenar: profileData.tiempo_sin_entrenar ?? merged.tiempo_sin_entrenar,
+        dias_entrenamiento: profileData.dias_entrenamiento ?? merged.dias_entrenamiento,
+        equipo: profileData.equipo ?? merged.equipo,
+        historial_lesiones: profileData.historial_lesiones ?? merged.historial_lesiones,
+        // Map historial_deportivo from profileData to tray (TrajectoryItem[])
+        tray: profileData.historial_deportivo ?? merged.tray,
+        alimentacion: profileData.alimentacion ?? merged.alimentacion,
+        fecha_inicio_preferida: profileData.fecha_inicio_preferida ?? merged.fecha_inicio_preferida,
+        // Handle nested disciplina?.disciplina
+        nombre_disciplina: (profileData as any).disciplina?.disciplina ?? merged.nombre_disciplina,
+      };
+    }
+
+    return merged;
+  }, [u, headerData, profileData])
 
   return (
     <div>
@@ -2521,7 +2672,16 @@ export function UserDetailPage() {
         ))}
       </div>
 
-      {tab === 'perfil' && <PerfilTab u={mergedPatient} />}
+      {tab === 'perfil' && (
+        isLoadingProfile ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-orange mb-3"></div>
+            <div className="text-[12px] text-surface-muted font-medium">Cargando perfil...</div>
+          </div>
+        ) : (
+          <PerfilTab u={mergedPatient} />
+        )
+      )}
       {tab === 'plan' && <SpecialistPlanTab key={mergedPatient.id_usuario} userId={mergedPatient.id_usuario} />}
       {tab === 'nutricion' && <SpecialistNutritionTab key={mergedPatient.id_usuario} userId={mergedPatient.id_usuario} />}
       {tab === 'reporte-clinico' && <ClinicalReportTab patientId={mergedPatient.id_usuario} />}
