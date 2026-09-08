@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { usersService } from '@/services/endpoints/users'
 import { ChevronLeft, ChevronRight, Calendar, MessageSquare, Save, X, Edit2, Play, Eye, ClipboardList, Plus, Coffee, Trash2 } from 'lucide-react'
@@ -329,12 +329,16 @@ interface ExerciseModalProps {
   onSave: (updated: WorkoutExercise) => void;
   readOnly?: boolean;
   gender?: string;
+  idioma?: string;
+  specialistName?: string;
+  specialistSpecialty?: string;
 }
 
-function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = false, gender }: ExerciseModalProps) {
+function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = false, gender, idioma, specialistName = 'Especialista', specialistSpecialty = 'Pro' }: ExerciseModalProps) {
   const repos = useRepositories()
   const [localExercise, setLocalExercise] = useState<WorkoutExercise | null>(null)
   const isCreatingNewExercise = localExercise?.ejercicio?.id_ejercicio === 'otro';
+  const isEnglish = idioma?.toUpperCase() === 'EN' || idioma?.toUpperCase() === 'ENGLISH';
   
   const [types, setTypes] = useState<string[]>([])
   const [exercisesList, setExercisesList] = useState<{ id_ejercicio: string, nombre: string }[]>([])
@@ -590,7 +594,7 @@ function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = fal
                   disabled={readOnly || isCreatingNewExercise}
                 />
               </div>
-               {isCreatingNewExercise && (
+               {isCreatingNewExercise && !isEnglish && (
                  <Input
                    label="Nombre del Nuevo Ejercicio"
                    value={localExercise.ejercicio.nombre || ''}
@@ -598,34 +602,40 @@ function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = fal
                    disabled={readOnly}
                  />
                )}
+               {isCreatingNewExercise && isEnglish && (
                 <Input
                   label="Nombre (EN)"
                   value={localExercise.ejercicio.nombre_en || ''}
                   onChange={(e) => handleUpdateLocalField('nombre_en', undefined, e.target.value)}
-                  disabled={readOnly || !isCreatingNewExercise}
+                  disabled={readOnly}
                 />
-              <div className="flex flex-col gap-1 w-full text-left">
-                <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Descripción del Ejercicio</label>
-                <input
-                  type="text"
-                  value={localExercise.ejercicio.descripcion || ''}
-                  onChange={(e) => handleUpdateLocalField('descripcion', undefined, e.target.value)}
-                  className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none focus:border-brand-orange"
-                  placeholder="Ej. Fortalecimiento del tren inferior..."
-                  disabled={readOnly || !isCreatingNewExercise}
-                />
-              </div>
-              <div className="flex flex-col gap-1 w-full text-left">
-                <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Descripción del Ejercicio (EN)</label>
-                <input
-                  type="text"
-                  value={localExercise.ejercicio.descripcion_en || ''}
-                  onChange={(e) => handleUpdateLocalField('descripcion_en', undefined, e.target.value)}
-                  className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none focus:border-brand-orange"
-                  placeholder="Ej. Lower body strengthening..."
-                  disabled={readOnly || !isCreatingNewExercise}
-                />
-              </div>
+               )}
+              {!isEnglish && (
+                <div className="flex flex-col gap-1 w-full text-left">
+                  <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Descripción del Ejercicio</label>
+                  <input
+                    type="text"
+                    value={localExercise.ejercicio.descripcion || ''}
+                    onChange={(e) => handleUpdateLocalField('descripcion', undefined, e.target.value)}
+                    className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none focus:border-brand-orange"
+                    placeholder="Ej. Fortalecimiento del tren inferior..."
+                    disabled={readOnly || !isCreatingNewExercise}
+                  />
+                </div>
+              )}
+              {isEnglish && (
+                <div className="flex flex-col gap-1 w-full text-left">
+                  <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Descripción del Ejercicio (EN)</label>
+                  <input
+                    type="text"
+                    value={localExercise.ejercicio.descripcion_en || ''}
+                    onChange={(e) => handleUpdateLocalField('descripcion_en', undefined, e.target.value)}
+                    className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none focus:border-brand-orange"
+                    placeholder="Ej. Lower body strengthening..."
+                    disabled={readOnly || !isCreatingNewExercise}
+                  />
+                </div>
+              )}
 
               {/* Grid of secondary details */}
               <div className="grid grid-cols-2 gap-2 pt-2 border-t border-surface-border/30 mt-2">
@@ -753,72 +763,78 @@ disabled={readOnly}
             </div>
 
             <div className="text-[12px] font-bold text-brand-orange uppercase tracking-wider mb-2">Instrucciones de Ejecución</div>
-            <div className="flex flex-col gap-1 w-full">
-              <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Objetivo</label>
-              <textarea
-                value={localExercise.ejercicio.instrucciones?.objetivo || ''}
-                onChange={(e) => handleUpdateLocalField('instrucciones', 'objetivo', e.target.value)}
-                rows={2}
-                className="bg-surface-card2 border border-surface-border rounded-lg p-2.5 text-[11px] text-white outline-none focus:border-brand-orange placeholder:text-surface-muted"
-                placeholder="El objetivo específico de este ejercicio en el plan..."
-                disabled={readOnly || !isCreatingNewExercise}
-              />
-            </div>
-            <div className="flex flex-col gap-1 w-full">
-              <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Posición Inicial</label>
-              <textarea
-                value={localExercise.ejercicio.instrucciones?.posicion_inicial || ''}
-                onChange={(e) => handleUpdateLocalField('instrucciones', 'posicion_inicial', e.target.value)}
-                rows={2}
-                className="bg-surface-card2 border border-surface-border rounded-lg p-2.5 text-[11px] text-white outline-none focus:border-brand-orange placeholder:text-surface-muted"
-                placeholder="Posición correcta para comenzar..."
-                disabled={readOnly || !isCreatingNewExercise}
-              />
-            </div>
-            <div className="flex flex-col gap-1 w-full">
-              <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Ejecución Técnica</label>
-              <textarea
-                value={localExercise.ejercicio.instrucciones?.ejecucion || ''}
-                onChange={(e) => handleUpdateLocalField('instrucciones', 'ejecucion', e.target.value)}
-                rows={3}
-                className="bg-surface-card2 border border-surface-border rounded-lg p-2.5 text-[11px] text-white outline-none focus:border-brand-orange placeholder:text-surface-muted"
-                placeholder="Explicación detallada del movimiento..."
-                disabled={readOnly || !isCreatingNewExercise}
-              />
-            </div>
-            <div className="flex flex-col gap-1 w-full">
-              <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Consejos Técnicos (Separar por comas)</label>
-              <input
-                type="text"
-                value={localExercise.ejercicio.instrucciones?.consejos_tecnicos?.join(', ') || ''}
-                onChange={(e) => handleUpdateLocalField('instrucciones', 'consejos_tecnicos', e.target.value)}
-                className="bg-surface-card2 border border-surface-border rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-brand-orange placeholder:text-surface-muted"
-                placeholder="Ej. Mantener espalda recta, respirar al bajar..."
-                disabled={readOnly || !isCreatingNewExercise}
-              />
-            </div>
-            <div className="flex flex-col gap-1 w-full">
-              <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Errores Comunes</label>
-              <textarea
-                value={localExercise.ejercicio.instrucciones?.errores_comunes || ''}
-                onChange={(e) => handleUpdateLocalField('instrucciones', 'errores_comunes', e.target.value)}
-                rows={2}
-                className="bg-surface-card2 border border-surface-border rounded-lg p-2.5 text-[11px] text-white outline-none focus:border-brand-orange placeholder:text-surface-muted"
-                placeholder="Evitar arquear la columna, etc..."
-                disabled={readOnly || !isCreatingNewExercise}
-              />
-            </div>
-            <div className="flex flex-col gap-1 w-full">
-              <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Instrucciones en Inglés (EN)</label>
-              <textarea
-                value={localExercise.ejercicio.instrucciones_en || ''}
-                onChange={(e) => handleUpdateLocalField('instrucciones_en', undefined, e.target.value)}
-                rows={3}
-                className="bg-surface-card2 border border-surface-border rounded-lg p-2.5 text-[11px] text-white outline-none focus:border-brand-orange placeholder:text-surface-muted"
-                placeholder="Detailed instructions for the exercise in English..."
-                disabled={readOnly || !isCreatingNewExercise}
-              />
-            </div>
+            {!isEnglish && (
+              <>
+                <div className="flex flex-col gap-1 w-full">
+                  <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Objetivo</label>
+                  <textarea
+                    value={localExercise.ejercicio.instrucciones?.objetivo || ''}
+                    onChange={(e) => handleUpdateLocalField('instrucciones', 'objetivo', e.target.value)}
+                    rows={2}
+                    className="bg-surface-card2 border border-surface-border rounded-lg p-2.5 text-[11px] text-white outline-none focus:border-brand-orange placeholder:text-surface-muted"
+                    placeholder="El objetivo específico de este ejercicio en el plan..."
+                    disabled={readOnly || !isCreatingNewExercise}
+                  />
+                </div>
+                <div className="flex flex-col gap-1 w-full">
+                  <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Posición Inicial</label>
+                  <textarea
+                    value={localExercise.ejercicio.instrucciones?.posicion_inicial || ''}
+                    onChange={(e) => handleUpdateLocalField('instrucciones', 'posicion_inicial', e.target.value)}
+                    rows={2}
+                    className="bg-surface-card2 border border-surface-border rounded-lg p-2.5 text-[11px] text-white outline-none focus:border-brand-orange placeholder:text-surface-muted"
+                    placeholder="Posición correcta para comenzar..."
+                    disabled={readOnly || !isCreatingNewExercise}
+                  />
+                </div>
+                <div className="flex flex-col gap-1 w-full">
+                  <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Ejecución Técnica</label>
+                  <textarea
+                    value={localExercise.ejercicio.instrucciones?.ejecucion || ''}
+                    onChange={(e) => handleUpdateLocalField('instrucciones', 'ejecucion', e.target.value)}
+                    rows={3}
+                    className="bg-surface-card2 border border-surface-border rounded-lg p-2.5 text-[11px] text-white outline-none focus:border-brand-orange placeholder:text-surface-muted"
+                    placeholder="Explicación detallada del movimiento..."
+                    disabled={readOnly || !isCreatingNewExercise}
+                  />
+                </div>
+                <div className="flex flex-col gap-1 w-full">
+                  <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Consejos Técnicos (Separar por comas)</label>
+                  <input
+                    type="text"
+                    value={localExercise.ejercicio.instrucciones?.consejos_tecnicos?.join(', ') || ''}
+                    onChange={(e) => handleUpdateLocalField('instrucciones', 'consejos_tecnicos', e.target.value)}
+                    className="bg-surface-card2 border border-surface-border rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-brand-orange placeholder:text-surface-muted"
+                    placeholder="Ej. Mantener espalda recta, respirar al bajar..."
+                    disabled={readOnly || !isCreatingNewExercise}
+                  />
+                </div>
+                <div className="flex flex-col gap-1 w-full">
+                  <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Errores Comunes</label>
+                  <textarea
+                    value={localExercise.ejercicio.instrucciones?.errores_comunes || ''}
+                    onChange={(e) => handleUpdateLocalField('instrucciones', 'errores_comunes', e.target.value)}
+                    rows={2}
+                    className="bg-surface-card2 border border-surface-border rounded-lg p-2.5 text-[11px] text-white outline-none focus:border-brand-orange placeholder:text-surface-muted"
+                    placeholder="Evitar arquear la columna, etc..."
+                    disabled={readOnly || !isCreatingNewExercise}
+                  />
+                </div>
+              </>
+            )}
+            {isEnglish && (
+              <div className="flex flex-col gap-1 w-full">
+                <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Instrucciones en Inglés (EN)</label>
+                <textarea
+                  value={localExercise.ejercicio.instrucciones_en || ''}
+                  onChange={(e) => handleUpdateLocalField('instrucciones_en', undefined, e.target.value)}
+                  rows={10}
+                  className="bg-surface-card2 border border-surface-border rounded-lg p-2.5 text-[11px] text-white outline-none focus:border-brand-orange placeholder:text-surface-muted"
+                  placeholder="Detailed instructions for the exercise in English..."
+                  disabled={readOnly || !isCreatingNewExercise}
+                />
+              </div>
+            )}
           </div>
 
         </div>
@@ -833,10 +849,7 @@ disabled={readOnly}
           <div className="overflow-y-auto space-y-2.5 max-h-[160px] pr-0.5 mb-4">
             {comments.map((c) => (
               <div key={c.id} className={cn('p-2.5 rounded-lg border text-[11px] leading-relaxed', c.userRole === 'specialist' ? 'bg-brand-purple/5 border-brand-purple/20 text-left' : 'bg-brand-orange/5 border-brand-orange/20 text-left')}>
-                <div className="flex items-center justify-between mb-1 text-[9px] text-surface-muted font-bold">
-                  <span className={c.userRole === 'specialist' ? 'text-brand-purple' : 'text-brand-orange'}>{c.userName} ({c.userRole === 'specialist' ? 'Pro' : 'Alumno'})</span>
-                  <span>{new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
+
                 <p className="text-white">{c.content}</p>
               </div>
             ))}
@@ -879,7 +892,13 @@ const isUUID = (id: string) => {
 }
 
 // ─── Plan Tab (Continuous Calendar with Drag & Drop) ─────────────
-export function SpecialistPlanTab({ userId, readOnly = false, gender }: { userId: string; readOnly?: boolean; gender?: string }) {
+export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: { userId: string; readOnly?: boolean; gender?: string; idioma?: string }) {
+  const { data: specialistProfile } = useQuery<any>({
+    queryKey: ['specialistProfile'],
+    queryFn: specialistsService.getSpecialistProfile,
+  });
+  const specialistName = specialistProfile?.nombre || 'Especialista';
+  const specialistSpecialty = specialistProfile?.especialidad || 'Pro';
   const repos = useRepositories()
   const [weekOffset, setWeekOffset] = useState(0)
 
@@ -988,7 +1007,7 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender }: { userId
               id: `api-c-${activeWorkout.id_entrenamiento}`,
               parentId: null,
               userId: 'esp-1',
-              userName: 'Dr. Carlos Mendoza',
+              userName: specialistName,
               userRole: 'specialist' as const,
               content: apiCommentText,
               createdAt: activeWorkout.fecha_programada + 'T12:00:00Z',
@@ -1228,10 +1247,6 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender }: { userId
         <div className="overflow-y-auto space-y-2.5 max-h-[300px] pr-0.5">
           {comments.map((c) => (
             <div key={c.id} className={cn('p-2.5 rounded-lg border text-[11px] leading-relaxed', c.userRole === 'specialist' ? 'bg-brand-purple/5 border-brand-purple/20 text-left' : 'bg-brand-orange/5 border-brand-orange/20 text-left')}>
-              <div className="flex items-center justify-between mb-1 text-[9px] text-surface-muted font-bold">
-                <span className={c.userRole === 'specialist' ? 'text-brand-purple' : 'text-brand-orange'}>{c.userName} ({c.userRole === 'specialist' ? 'Pro' : 'Alumno'})</span>
-                <span>{new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-              </div>
               <p className="text-white">{c.content}</p>
             </div>
           ))}
@@ -1604,6 +1619,9 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender }: { userId
           }}
           exercise={selectedExercise}
           gender={gender}
+          idioma={idioma}
+          specialistName={specialistName}
+          specialistSpecialty={specialistSpecialty}
           onSave={async (updated) => {
             if (activeWorkout) {
               try {
@@ -1838,7 +1856,14 @@ function MealDetailModal({ isOpen, onClose, meal, onSave, readOnly = false, onDe
 
 // ─── Nutrition & Hydration Tab (Continuous Calendar + Rich Meals + Overrides) ───
 export function SpecialistNutritionTab({ userId, readOnly = false }: { userId: string; readOnly?: boolean }) {
+  const { data: specialistProfile } = useQuery<any>({
+    queryKey: ['specialistProfile'],
+    queryFn: specialistsService.getSpecialistProfile,
+  });
+  const specialistName = specialistProfile?.nombre || 'Especialista';
+  const specialistSpecialty = specialistProfile?.especialidad || 'Pro';
   const repos = useRepositories()
+  const queryClient = useQueryClient()
   const [weekOffset, setWeekOffset] = useState(0)
   const [generatedNutrition, setGeneratedNutrition] = useState<any>(null)
 
@@ -2007,7 +2032,7 @@ export function SpecialistNutritionTab({ userId, readOnly = false }: { userId: s
     const commentData = {
       parentId: null,
       userId: 'esp-1',
-      userName: 'Dr. Carlos Mendoza',
+      userName: specialistName,
       userRole: 'specialist' as const,
       content: newDietCommentText,
       contextType: 'plan' as const,
@@ -2027,25 +2052,43 @@ export function SpecialistNutritionTab({ userId, readOnly = false }: { userId: s
     }
   }, [log])
 
-  const handleSaveOverride = async () => {
-    if (!log) return
+  const handleSaveOverride = useCallback(async () => {
+    if (!log) return;
     if (!justification.trim()) {
-      toast.show('Debes ingresar una justificación profesional para sobreescribir el objetivo', 'error')
-      return
+      toast.show('Debes ingresar una justificación profesional para sobreescribir el objetivo', 'error');
+      return;
     }
-    setIsLoading(true)
+    setIsLoading(true);
+
+    try {
+      if (log.comidas && log.comidas.length > 0) {
+        const firstMealId = log.comidas[0].id_comida;
+        await specialistsService.editHydration(String(firstMealId), {
+          meta_ml: newVolumeMl,
+          justificacion_ajuste_profesional: justification
+        });
+      } else {
+        toast.show('Debes crear al menos una comida para poder ajustar la hidratación', 'error');
+        setIsLoading(false);
+        return;
+      }
+    } catch (apiErr) {
+      console.error('Failed to save hydration override on backend:', apiErr);
+      toast.show('Error al registrar hidratación en el servidor, aplicando de forma local', 'warning');
+    }
+
     const updatedLog: DailyNutritionHydrationLog = {
       ...log,
       targetLiquidVolumeMl: newVolumeMl,
       hydrationJustification: justification,
       overriddenBySpecialist: true
-    }
-    await repos.nutrition.saveLog(updatedLog)
-    setLog(updatedLog)
-    setIsLoading(false)
-    toast.show('Objetivo de hidratación modificado con éxito', 'success')
-    setUpdateTick(t => t + 1)
-  }
+    };
+    await repos.nutrition.saveLog(updatedLog);
+    setLog(updatedLog);
+    setIsLoading(false);
+    toast.show('Objetivo de hidratación modificado con éxito', 'success');
+    setUpdateTick(t => t + 1);
+  }, [log, justification, toast, setIsLoading, newVolumeMl, repos.nutrition, setLog, setUpdateTick]);
 
   // Add a new empty meal to the daily log and open the modal to edit it
   const handleAddMeal = () => {
@@ -2071,23 +2114,63 @@ export function SpecialistNutritionTab({ userId, readOnly = false }: { userId: s
   }
 
   // Recalculates and saves macro totals on save
-  const handleSaveMeal = async (updated: Comida) => {
-    if (!log) return
-    const mealsList = log.comidas || []
-    const idx = mealsList.findIndex(m => m.id_comida === updated.id_comida)
-    
-    let updatedMeals: Comida[] = []
+  const handleSaveMeal = useCallback(async (updated: Comida) => {
+    if (!log) return;
+    const mealsList = log.comidas || [];
+    const idx = mealsList.findIndex(m => m.id_comida === updated.id_comida);
+
+    const cachedPlan = queryClient.getQueryData<any>(['userPlanTab', userId, startDate, endDate]);
+    const activeWorkout = cachedPlan?.entrenamientos?.find((item: any) => item.fecha_programada === selectedDateStr);
+    const trainingId = activeWorkout?.id_entrenamiento || activeWorkout?.id || 'eb2f5a90-8ce3-4651-93a8-5c312854194c';
+
+    const isNew = updated.id_comida.startsWith('meal-') || updated.id_comida.startsWith('temp-');
+
+    if (isNew) {
+      try {
+        const payload = {
+          entrenamiento_id: trainingId,
+          tipo: updated.tipo,
+          descripcion: updated.descripcion || '',
+          instrucciones: updated.instrucciones || '',
+          kcal: Number(updated.kcal) || 0,
+          etiquetas: updated.etiquetas || [],
+          ch: Number(updated.ch) || 0,
+          proteina: Number(updated.proteina) || 0,
+          grasas: Number(updated.grasas) || 0
+        };
+        const response = await specialistsService.createMeal(payload);
+        if (response && response.id_comida) {
+          updated.id_comida = String(response.id_comida);
+        }
+      } catch (apiErr) {
+        console.error('Failed to create meal on backend:', apiErr);
+        toast.show('Error al registrar la comida en el servidor, guardando de forma local', 'warning');
+      }
+    }
+
+    // For both new and existing meals, update comment if present
+    if (updated.comentario_seguimiento) {
+      try {
+        await specialistsService.editMealComment(Number(updated.id_comida), {
+          comentario_seguimiento: updated.comentario_seguimiento || ''
+        });
+      } catch (apiErr) {
+        console.error('Failed to save meal comment on backend:', apiErr);
+      }
+    }
+
+    let updatedMeals: Comida[] = [];
     if (idx !== -1) {
-      updatedMeals = mealsList.map(m => m.id_comida === updated.id_comida ? updated : m)
+      updatedMeals = mealsList.map(m => m.id_comida === updated.id_comida ? updated : m);
     } else {
-      updatedMeals = [...mealsList, updated]
+      updatedMeals = [...mealsList, updated];
     }
 
     // Dynamic actual sums calculation
-    const actualKcal = updatedMeals.reduce((sum, m) => sum + m.kcal, 0)
-    const actualProteins = updatedMeals.reduce((sum, m) => sum + m.proteina, 0)
-    const actualCarbs = updatedMeals.reduce((sum, m) => sum + m.ch, 0)
-    const actualFats = updatedMeals.reduce((sum, m) => sum + m.grasas, 0)
+    const actualKcal = updatedMeals.reduce((sum, m) => sum + m.kcal, 0);
+    const actualProteins = updatedMeals.reduce((sum, m) => sum + m.proteina, 0);
+    const actualCarbs = updatedMeals.reduce((sum, m) => sum + m.ch, 0);
+    const actualFats = updatedMeals.reduce((sum, m) => sum + m.grasas, 0);
 
     const updatedLog: DailyNutritionHydrationLog = {
       ...log,
@@ -2096,95 +2179,19 @@ export function SpecialistNutritionTab({ userId, readOnly = false }: { userId: s
       actualProteins,
       actualCarbs,
       actualFats
-    }
+    };
 
-    await repos.nutrition.saveLog(updatedLog)
-    setLog(updatedLog)
-    setIsMealOpen(false)
-    setSelectedMeal(null)
-    toast.show('Pauta de alimentación actualizada', 'success')
-    setUpdateTick(t => t + 1)
-  }
+    await repos.nutrition.saveLog(updatedLog);
+    setLog(updatedLog);
+    setIsMealOpen(false);
+    setSelectedMeal(null);
+    toast.show('Pauta de alimentación actualizada', 'success');
+    setUpdateTick(t => t + 1);
+  }, [userId, startDate, endDate, selectedDateStr, log, repos.nutrition, setLog, setIsMealOpen, setSelectedMeal, toast, setUpdateTick]);
 
   const handleGenerateNutritionPlan = () => {
-    try {
-      const dateStr = selectedDateStr;
-      const defaultDailyPlan = {
-        pauta_alimentacion: {
-          objetivo: {
-            kcal: 2200,
-            proteina: 130,
-            ch: 220,
-            grasas: 70,
-            hidratacion_ml_objetivo: 3000
-          },
-          real: {
-            kcal: 0,
-            proteina: 0,
-            ch: 0,
-            grasas: 0,
-            hidratacion_ml: 0
-          },
-          comidas: [
-            {
-              id_comida: `m1-${dateStr}`,
-              tipo: 'Desayuno',
-              descripcion: 'Licuado energético de avena, plátano y almendras.',
-              instrucciones: 'Licuar 1 taza de leche vegetal, 1 plátano, 40g de avena y un puñado de almendras.',
-              kcal: 450,
-              ch: 60,
-              proteina: 15,
-              grasas: 12,
-              etiquetas: ['Fácil digestión', 'Desayuno rápido']
-            },
-            {
-              id_comida: `m2-${dateStr}`,
-              tipo: 'Almuerzo',
-              descripcion: 'Arroz con pollo grillado y vegetales de estación.',
-              instrucciones: 'Cocinar 150g de pollo a la plancha. Acompañar con arroz integral al vapor y vegetales salteados.',
-              kcal: 650,
-              ch: 70,
-              proteina: 40,
-              grasas: 10,
-              etiquetas: ['Post-entreno', 'Balanceado']
-            }
-          ]
-        },
-        analitica_hidratacion: {
-          volumen_consumido_ml: 0,
-          objetivo_ml: 3000,
-          deshidratacion_estimada: 0,
-          justificacion_ajuste: ''
-        }
-      }
-
-      // If we already have week nutrition data, we update the selected day's plan in it
-      const currentWeekData = nutritionData || {
-        semana_numero: weekOffset === 0 ? 1 : Math.abs(weekOffset) + 1,
-        semana_rango: {
-          inicio: startDate,
-          fin: endDate
-        },
-        detalle_diario: {}
-      }
-
-      const updatedDetalleDiario = {
-        ...(currentWeekData.detalle_diario || {}),
-        [dateStr]: defaultDailyPlan
-      }
-
-      const updatedWeekPlan = {
-        ...currentWeekData,
-        detalle_diario: updatedDetalleDiario
-      }
-
-      setGeneratedNutrition(updatedWeekPlan)
-      toast.show('Plan nutricional generado para el día!', 'success')
-    } catch (error) {
-      console.error('Failed to generate daily nutrition plan:', error)
-      toast.show('Error al generar el plan nutricional.', 'error')
-    }
-  }
+    handleAddMeal();
+  };
 
   if (!log) return <div className="text-[12px] text-surface-muted">Cargando bitácora de nutrición...</div>
 
@@ -2406,10 +2413,6 @@ export function SpecialistNutritionTab({ userId, readOnly = false }: { userId: s
         <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-0.5 mb-4">
           {dietComments.map((c) => (
             <div key={c.id} className={cn('p-2.5 rounded-lg border text-[11px] leading-relaxed', c.userRole === 'specialist' ? 'bg-brand-purple/5 border-brand-purple/20 text-left' : 'bg-brand-orange/5 border-brand-orange/20 text-left')}>
-              <div className="flex items-center justify-between mb-1 text-[9px] text-surface-muted font-bold">
-                <span className={c.userRole === 'specialist' ? 'text-brand-purple' : 'text-brand-orange'}>{c.userName} ({c.userRole === 'specialist' ? 'Pro' : 'Alumno'})</span>
-                <span>{new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-              </div>
               <p className="text-white">{c.content}</p>
             </div>
           ))}
@@ -2630,11 +2633,11 @@ function SpecialistProgressTab({ userId }: { userId: string }) {
 
 type Tab = 'perfil' | 'plan' | 'nutricion' | 'reporte-clinico' | 'notificaciones'
 
-const NotificacionesTab = ({ userId }: { userId: string }) => {
-  const [title, setTitle] = useState('');
+     const NotificacionesTab = ({ userId }: { userId: string }) => {
+       const queryClient = useQueryClient();
+       const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [category, setCategory] = useState<'Recordatorio' | 'Alerta de Salud' | 'Motivacional'>('Recordatorio');
-  const queryClient = useQueryClient();
 
   const { data: notificationsData, isLoading: isLoadingNotifications, isError: isErrorNotifications, error: errorNotifications } = useQuery({
     queryKey: ['specialistPatientNotifications', userId],
@@ -2893,7 +2896,7 @@ export function UserDetailPage() {
           <PerfilTab u={mergedPatient} />
         )
       )}
-      {tab === 'plan' && <SpecialistPlanTab key={mergedPatient.id_usuario} userId={mergedPatient.id_usuario} gender={mergedPatient.genero} />}
+      {tab === 'plan' && <SpecialistPlanTab key={mergedPatient.id_usuario} userId={mergedPatient.id_usuario} gender={mergedPatient.genero} idioma={mergedPatient.idioma} />}
       {tab === 'nutricion' && <SpecialistNutritionTab key={mergedPatient.id_usuario} userId={mergedPatient.id_usuario} />}
       {tab === 'reporte-clinico' && <ClinicalReportTab patientId={mergedPatient.id_usuario} />}
       {tab === 'notificaciones' && <NotificacionesTab userId={mergedPatient.id_usuario} />}

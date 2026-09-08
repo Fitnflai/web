@@ -55,6 +55,7 @@ export interface SpecialistCertificate {
 
 export interface SpecialistProfile {
   biografia: string;
+  nombre: string;
   email: string;
   especialidad: string;
   anios_experiencia: number | null;
@@ -411,6 +412,7 @@ export const specialistsService = {
         setTimeout(() => {
           resolve({
             biografia: 'Especialista en nutrición deportiva y bienestar integral con más de 10 años de experiencia. Ayudo a mis pacientes a alcanzar sus metas de salud y rendimiento a través de planes personalizados.',
+            nombre: 'Dr. Carlos Mendoza',
             email: 'especialista.mock@fitnflai.com',
             especialidad: 'Nutrición Deportiva',
             anios_experiencia: 12,
