@@ -22,7 +22,7 @@ import type { Appointment, AppointmentStatus, AvailabilitySlot, Professional, Us
 
 // ─── Constants ────────────────────────────────────────────────────
 const WEEK_DAYS = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'] as const
-const HOURS = ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00']
+const HOURS = ['06:00','07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00']
 const TYPE_META: Record<string, { label:string; color:string; bg:string }> = {
   consulta:    { label:'Consulta',    color:'#4A7CC7', bg:'rgba(74,124,199,.15)' },
   seguimiento: { label:'Seguimiento', color:'#4CAF82', bg:'rgba(76,175,130,.15)' },
@@ -331,7 +331,7 @@ function AvailabilityManager() {
     })
     return map
   })
-  const { showToast } = useAppStore()
+  const { showToast, userRole } = useAppStore()
 
   const prof = MOCK_PROFESSIONALS.find(p => p.id === selectedProf)
   const slots = MOCK_AVAILABILITY.find(a => a.profesional_id === selectedProf)?.slots ?? []
@@ -357,26 +357,30 @@ function AvailabilityManager() {
   }, [slots])
 
   const days = Object.keys(byDay)
-  const uniqueHours = [...new Set(slots.map(s => s.hora_inicio))].sort()
+  const uniqueHours = HOURS
 
   return (
     <div>
-      {/* Prof selector */}
-      <div className="flex items-center gap-3 mb-5 flex-wrap">
-        <span className="text-[12px] text-surface-muted">Profesional:</span>
-        <div className="flex gap-2 flex-wrap">
-          {MOCK_PROFESSIONALS.slice(0, 3).map(p => (
-            <button key={p.id} onClick={() => setSelectedProf(p.id)}
-              className={cn('flex items-center gap-2 px-3 py-1.5 rounded-xl text-[12px] border cursor-pointer transition-all', selectedProf === p.id ? 'border-brand-purple text-white' : 'border-surface-border text-surface-muted hover:border-surface-muted')}
-              style={selectedProf === p.id ? { background: 'rgba(155,89,182,.15)' } : { background: 'var(--surface-card)' }}>
-              <Avatar initials={p.initials} color={p.color} size="sm" />
-              {p.nombre}
-            </button>
-          ))}
-        </div>
-      </div>
+      {userRole !== 'specialist' && (
+        <>
+          {/* Prof selector */}
+          <div className="flex items-center gap-3 mb-5 flex-wrap">
+            <span className="text-[12px] text-surface-muted">Profesional:</span>
+            <div className="flex gap-2 flex-wrap">
+              {MOCK_PROFESSIONALS.slice(0, 3).map(p => (
+                <button key={p.id} onClick={() => setSelectedProf(p.id)}
+                  className={cn('flex items-center gap-2 px-3 py-1.5 rounded-xl text-[12px] border cursor-pointer transition-all', selectedProf === p.id ? 'border-brand-purple text-white' : 'border-surface-border text-surface-muted hover:border-surface-muted')}
+                  style={selectedProf === p.id ? { background: 'rgba(155,89,182,.15)' } : { background: 'var(--surface-card)' }}>
+                  <Avatar initials={p.initials} color={p.color} size="sm" />
+                  {p.nombre}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
-      {prof && (
+      {userRole !== 'specialist' && prof && (
         <div className="flex items-center gap-3 p-3 rounded-xl mb-5" style={{ background: 'rgba(155,89,182,.07)', border: '1px solid rgba(155,89,182,.2)' }}>
           <Avatar initials={prof.initials} color={prof.color} size="md" />
           <div>
@@ -412,9 +416,9 @@ function AvailabilityManager() {
                   <td className="p-2 border-b border-surface-border text-surface-muted font-medium">{hora}</td>
                   {days.map(dia => {
                     const slot = byDay[dia]?.find(s => s.hora_inicio === hora)
-                    if (!slot) return <td key={dia} className="p-2 border-b border-surface-border border-r border-surface-border" />
+
                     const key = `${dia}-${hora}`
-                    const isAvail = availability[selectedProf]?.[key] ?? slot.disponible
+                    const isAvail = availability[selectedProf]?.[key] ?? (slot ? slot.disponible : false)
                     // Check if has appointment
                     const hasApt = MOCK_APPOINTMENTS.some(a =>
                       a.profesional.id === selectedProf &&
