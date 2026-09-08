@@ -141,6 +141,7 @@ export interface Professional {
 
 // ─── Plan ─────────────────────────────────────────────────────────
 export interface ExerciseInstructions {
+  objetivo?: string | null
   posicion_inicial: string
   ejecucion: string
   consejos_tecnicos: string[]
@@ -155,6 +156,10 @@ export interface Exercise {
   tipo: string
   necesita_mapa?: boolean
   instrucciones?: ExerciseInstructions
+  nombre_en?: string | null
+  descripcion_en?: string | null
+  multimedia_url_femenino?: string | null
+  instrucciones_en?: string | null
 }
 
 export interface WorkoutExercise {
@@ -167,6 +172,10 @@ export interface WorkoutExercise {
   peso_objetivo: number
   estado: string
   ejercicio: Exercise
+  id_entrenamiento?: string
+  id_ejercicio?: string
+  comentario?: string | null
+  series_completadas?: number
 }
 
 export interface Workout {
@@ -182,6 +191,8 @@ export interface Workout {
   macros_objetivo_ch?: number
   macros_objetivo_proteina?: number
   macros_objetivo_grasas?: number
+  comentario?: string | null
+  tipo_entrenamiento?: string
 }
 
 export interface RestDay {

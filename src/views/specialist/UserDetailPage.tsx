@@ -84,100 +84,53 @@ const PerfilTab = ({ u }: { u: User }) => (
         {/* Middle: Objetivo Principal */}
         <div className="flex-1 w-full">
           <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">OBJETIVO PRINCIPAL</label>
-          <textarea
-            value={u.objetivo_principal || ''}
-            disabled
-            className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none min-h-[80px] resize-none opacity-80 cursor-not-allowed"
-          />
+          <div className="bg-brand-orange/5 border-l-4 border-brand-orange rounded-r-xl p-4 text-[13px] text-white leading-relaxed italic">
+            "{u.objetivo_principal || 'Sin objetivo principal registrado'}"
+          </div>
         </div>
       </div>
 
       {/* Grid of details */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 border-t border-surface-border pt-4">
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">NOMBRE COMPLETO</label>
-          <input
-            type="text"
-            value={u.nombre || ''}
-            disabled
-            className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-          />
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Nombre Completo</span>
+          <span className="text-[13px] font-medium text-white">{u.nombre || '—'}</span>
         </div>
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">EMAIL</label>
-          <input
-            type="email"
-            value={u.email || ''}
-            disabled
-            className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-          />
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">EMAIL</span>
+          <span className="text-[13px] font-medium text-white">{u.email || '—'}</span>
         </div>
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">APODO</label>
-          <input
-            type="text"
-            value={u.apodo || ''}
-            disabled
-            className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-          />
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">APODO</span>
+          <span className="text-[13px] font-medium text-white">{u.apodo || '—'}</span>
         </div>
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">GÉNERO</label>
-          <input
-            type="text"
-            value={u.genero || ''}
-            disabled
-            className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-          />
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">GÉNERO</span>
+          <span className="text-[13px] font-medium text-white">{u.genero || '—'}</span>
         </div>
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">FECHA DE NACIMIENTO</label>
-          <input
-            type="text"
-            value={u.fecha_nacimiento ? u.fecha_nacimiento.substring(0, 10) : '1990-01-01'}
-            disabled
-            className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-          />
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Fecha de Nacimiento</span>
+          <span className="text-[13px] font-medium text-white">{u.fecha_nacimiento ? u.fecha_nacimiento.substring(0, 10) : '—'}</span>
         </div>
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">EDAD</label>
-          <input
-            type="number"
-            value={u.edad || 0}
-            disabled
-            className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-          />
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Edad</span>
+          <span className="text-[13px] font-medium text-white">{u.edad || '—'}</span>
         </div>
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">CIUDAD</label>
-          <input
-            type="text"
-            value={u.ciudad || ''}
-            disabled
-            className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-          />
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Ciudad</span>
+          <span className="text-[13px] font-medium text-white">{u.ciudad || '—'}</span>
         </div>
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">ALTITUD (M)</label>
-          <input
-            type="number"
-            value={u.altitud || 0}
-            disabled
-            className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-          />
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Altitud (M)</span>
+          <span className="text-[13px] font-medium text-white">{u.altitud ? `${u.altitud} m` : '—'}</span>
         </div>
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">IDIOMA</label>
-          <input
-            type="text"
-            value={u.idioma || ''}
-            disabled
-            className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-          />
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Idioma</span>
+          <span className="text-[13px] font-medium text-white">{u.idioma || '—'}</span>
         </div>
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">ESTADO DE CUENTA</label>
-          <div className="flex items-center gap-2 h-[38px]">
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Estado de Cuenta</span>
+          <div className="flex items-center gap-2">
             <Badge variant={
               u.estado === 'Suspendido Temporalmente' ? 'orange' :
               u.estado === 'Suspendido Permanentemente' ? 'red' :
@@ -194,59 +147,29 @@ const PerfilTab = ({ u }: { u: User }) => (
     <div className="card-base p-5 bg-surface-card border border-surface-border rounded-xl text-left">
       <h3 className="text-sm font-bold text-white mb-4">Datos Físicos y Antropométricos</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">PESO ({u.unidad_peso || 'kg'})</label>
-          <input
-            type="number"
-            value={u.peso || 0}
-            disabled
-            className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-          />
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Peso</span>
+          <span className="text-[13px] font-medium text-white">{u.peso ? `${u.peso} ${u.unidad_peso || 'kg'}` : '—'}</span>
         </div>
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">ALTURA ({u.unidad_altura || 'cm'})</label>
-          <input
-            type="number"
-            value={u.altura || 0}
-            disabled
-            className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-          />
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Altura</span>
+          <span className="text-[13px] font-medium text-white">{u.altura ? `${u.altura} ${u.unidad_altura || 'cm'}` : '—'}</span>
         </div>
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">NIVEL DE ACTIVIDAD (1-5)</label>
-          <input
-            type="number"
-            value={u.nivel_actividad ?? 0}
-            disabled
-            className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-          />
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Nivel de Actividad (1-5)</span>
+          <span className="text-[13px] font-medium text-white">{u.nivel_actividad || '—'}</span>
         </div>
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">NIVEL MOTOR ACTUAL (1-5)</label>
-          <input
-            type="number"
-            value={u.nivel_motor_actual ?? 0}
-            disabled
-            className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-          />
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Nivel Motor Actual (1-5)</span>
+          <span className="text-[13px] font-medium text-white">{u.nivel_motor_actual || '—'}</span>
         </div>
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">CLASIFICACIÓN MOTOR</label>
-          <input
-            type="text"
-            value={u.clasificacion_visible_actual || ''}
-            disabled
-            className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-          />
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Clasificación Motor</span>
+          <span className="text-[13px] font-medium text-white">{u.clasificacion_visible_actual || '—'}</span>
         </div>
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">TIEMPO SIN ENTRENAR</label>
-          <input
-            type="text"
-            value={u.tiempo_sin_entrenar || ''}
-            disabled
-            className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-          />
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Tiempo Sin Entrenar</span>
+          <span className="text-[13px] font-medium text-white">{u.tiempo_sin_entrenar || '—'}</span>
         </div>
       </div>
     </div>
@@ -255,81 +178,41 @@ const PerfilTab = ({ u }: { u: User }) => (
     <div className="card-base p-5 bg-surface-card border border-surface-border rounded-xl text-left">
       <h3 className="text-sm font-bold text-white mb-4">Planificación, Objetivos y Suscripción</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">DISCIPLINA / DEPORTE</label>
-          <input
-            type="text"
-            value={u.nombre_disciplina || ''}
-            disabled
-            className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-          />
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Disciplina / Deporte</span>
+          <span className="text-[13px] font-medium text-white">{u.nombre_disciplina || '—'}</span>
         </div>
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">DURACIÓN OBJETIVO (SEMANAS)</label>
-          <input
-            type="number"
-            value={u.duracion_semanas_objetivo || 0}
-            disabled
-            className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-          />
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Duración Objetivo (Semanas)</span>
+          <span className="text-[13px] font-medium text-white">{u.duracion_semanas_objetivo || '—'}</span>
         </div>
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">FECHA INICIO PREFERIDA</label>
-          <input
-            type="text"
-            value={u.fecha_inicio_preferida || ''}
-            disabled
-            className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-          />
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Fecha Inicio Preferida</span>
+          <span className="text-[13px] font-medium text-white">{u.fecha_inicio_preferida || '—'}</span>
         </div>
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">PRÓXIMA COMPETENCIA</label>
-          <input
-            type="text"
-            value={u.proxima_competencia ? u.proxima_competencia.substring(0, 10) : '—'}
-            disabled
-            className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-          />
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Próxima Competencia</span>
+          <span className="text-[13px] font-medium text-white">{u.proxima_competencia ? u.proxima_competencia.substring(0, 10) : '—'}</span>
         </div>
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">ALIMENTACIÓN</label>
-          <input
-            type="text"
-            value={u.alimentacion || ''}
-            disabled
-            className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-          />
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Alimentación</span>
+          <span className="text-[13px] font-medium text-white">{u.alimentacion || '—'}</span>
         </div>
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">PLAN ACTIVO</label>
-          <input
-            type="text"
-            value={u.nombre_plan_activo || PLAN_NAMES[u.plan_idx] || 'Essential'}
-            disabled
-            className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-          />
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Plan Activo</span>
+          <span className="text-[13px] font-medium text-white">{u.nombre_plan_activo || PLAN_NAMES[u.plan_idx] || 'Essential'}</span>
         </div>
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">ESTADO SUSCRIPCIÓN</label>
-          <input
-            type="text"
-            value={u.estado_suscripcion || (u.tiene_plan_activo ? 'Activa' : 'Inactiva')}
-            disabled
-            className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-          />
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Estado Suscripción</span>
+          <span className="text-[13px] font-medium text-white">{u.estado_suscripcion || (u.tiene_plan_activo ? 'Activa' : 'Inactiva')}</span>
         </div>
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">FIN SUSCRIPCIÓN</label>
-          <input
-            type="text"
-            value={u.fecha_fin_suscripcion ? u.fecha_fin_suscripcion.substring(0, 10) : '—'}
-            disabled
-            className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-          />
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Fin Suscripción</span>
+          <span className="text-[13px] font-medium text-white">{u.fecha_fin_suscripcion ? u.fecha_fin_suscripcion.substring(0, 10) : '—'}</span>
         </div>
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">¿TIENE PLAN ACTIVO?</label>
-          <div className="flex items-center gap-2 h-[38px]">
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">¿Tiene Plan Activo?</span>
+          <div className="flex items-center gap-2">
             <Badge variant={u.tiene_plan_activo ?? u.plan_idx > 0 ? 'green' : 'muted'}>
               {u.tiene_plan_activo ?? u.plan_idx > 0 ? 'SÍ' : 'NO'}
             </Badge>
@@ -342,54 +225,29 @@ const PerfilTab = ({ u }: { u: User }) => (
     <div className="card-base p-5 bg-surface-card border border-surface-border rounded-xl text-left">
       <h3 className="text-sm font-bold text-white mb-4">Preferencias, Reportes y Notificaciones</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">ESTILO DE COMUNICACIÓN</label>
-          <input
-            type="text"
-            value={u.estilo_comunicacion || ''}
-            disabled
-            className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-          />
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Estilo de Comunicación</span>
+          <span className="text-[13px] font-medium text-white">{u.estilo_comunicacion || '—'}</span>
         </div>
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">INTENSIDAD NOTIFICACIONES</label>
-          <input
-            type="text"
-            value={u.intensidad_notificaciones || ''}
-            disabled
-            className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-          />
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Intensidad Notificaciones</span>
+          <span className="text-[13px] font-medium text-white">{u.intensidad_notificaciones || '—'}</span>
         </div>
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">DÍA DE REPORTE</label>
-          <input
-            type="text"
-            value={u.dia_reporte || ''}
-            disabled
-            className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-          />
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Día de Reporte</span>
+          <span className="text-[13px] font-medium text-white">{u.dia_reporte || '—'}</span>
         </div>
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">HORA DE REPORTE</label>
-          <input
-            type="text"
-            value={u.hora_reporte || ''}
-            disabled
-            className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-          />
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Hora de Reporte</span>
+          <span className="text-[13px] font-medium text-white">{u.hora_reporte || '—'}</span>
         </div>
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">HORA DE NOTIFICACIÓN</label>
-          <input
-            type="text"
-            value={u.notification_time || ''}
-            disabled
-            className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-          />
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Hora de Notificación</span>
+          <span className="text-[13px] font-medium text-white">{u.notification_time || '—'}</span>
         </div>
-        <div>
-          <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">ONBOARDING COMPLETO</label>
-          <div className="flex items-center gap-2 h-[38px]">
+        <div className="border-b border-surface-border/30 pb-2">
+          <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Onboarding Completo</span>
+          <div className="flex items-center gap-2">
             <Badge variant={u.onboarding_completo ? 'green' : 'orange'}>
               {u.onboarding_completo ? 'COMPLETADO' : 'PENDIENTE'}
             </Badge>
@@ -413,33 +271,15 @@ const PerfilTab = ({ u }: { u: User }) => (
       ) : (
         <div className="space-y-3">
           {u.tray.map((t, idx) => (
-            <div key={idx} className="flex flex-col md:flex-row gap-3 items-center w-full">
-              <div className="flex-1 w-full">
-                <input
-                  type="text"
-                  value={t.titulo || ''}
-                  disabled
-                  placeholder="Logro o Carrera"
-                  className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-                />
+            <div key={idx} className="flex items-start justify-between p-3 bg-surface-card2 rounded-lg border border-surface-border">
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-semibold text-[13px]">{t.titulo || 'Logro o Carrera'}</p>
+                <p className="text-[12px] text-surface-muted mt-0.5">{t.org || 'Organizador o Lugar'}</p>
               </div>
-              <div className="flex-1 w-full">
-                <input
-                  type="text"
-                  value={t.org || ''}
-                  disabled
-                  placeholder="Organizador o Lugar"
-                  className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-                />
-              </div>
-              <div className="w-full md:w-44">
-                <input
-                  type="text"
-                  value={(t.inicio && t.fin) ? `${t.inicio}-${t.fin}` : (t.inicio || '2025')}
-                  disabled
-                  placeholder="Año o período"
-                  className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] opacity-80 cursor-not-allowed"
-                />
+              <div className="shrink-0 ml-4">
+                <span className="inline-block px-2.5 py-1 text-[11px] font-bold text-brand-orange bg-brand-orange/10 border border-brand-orange/20 rounded-full">
+                  {(t.inicio && t.fin) ? `${t.inicio}-${t.fin}` : (t.inicio || '—')}
+                </span>
               </div>
             </div>
           ))}
@@ -473,6 +313,14 @@ const formatDateISO = (d: Date): string => {
   return `${year}-${month}-${day}`
 }
 
+const getFullMediaUrl = (url: string | null | undefined): string => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  const baseUrl = 'https://fitnflai-media-storage.s3.us-east-2.amazonaws.com/';
+  return `${baseUrl}${url.startsWith('/') ? url.substring(1) : url}`;
+};
 // ─── Nested Exercise Detail Modal (Option B - isolated copy edits & comments) ───
 interface ExerciseModalProps {
   isOpen: boolean;
@@ -480,11 +328,13 @@ interface ExerciseModalProps {
   exercise: WorkoutExercise;
   onSave: (updated: WorkoutExercise) => void;
   readOnly?: boolean;
+  gender?: string;
 }
 
-function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = false }: ExerciseModalProps) {
+function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = false, gender }: ExerciseModalProps) {
   const repos = useRepositories()
   const [localExercise, setLocalExercise] = useState<WorkoutExercise | null>(null)
+  const isCreatingNewExercise = localExercise?.ejercicio?.id_ejercicio === 'otro';
   
   const [types, setTypes] = useState<string[]>([])
   const [exercisesList, setExercisesList] = useState<{ id_ejercicio: string, nombre: string }[]>([])
@@ -493,11 +343,29 @@ function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = fal
   const [comments, setComments] = useState<Comment[]>([])
   const [newCommentText, setNewCommentText] = useState('')
   const [updateTick, setUpdateTick] = useState(0)
+  const [imageError, setImageError] = useState(false)
+
+  // Reset image error state when exercise or previewUrl changes
+  useEffect(() => {
+    setImageError(false)
+  }, [localExercise?.ejercicio?.id_ejercicio])
 
   // Copy on open to shield parent state
   useEffect(() => {
     if (isOpen && exercise) {
-      setLocalExercise(JSON.parse(JSON.stringify(exercise)))
+      const exerciseCopy = JSON.parse(JSON.stringify(exercise));
+      // Ensure instructions object and its required fields are present
+      if (!exerciseCopy.ejercicio.instrucciones) {
+        exerciseCopy.ejercicio.instrucciones = {};
+      }
+      exerciseCopy.ejercicio.instrucciones = {
+        objetivo: exerciseCopy.ejercicio.instrucciones.objetivo || null,
+        posicion_inicial: exerciseCopy.ejercicio.instrucciones.posicion_inicial || '',
+        ejecucion: exerciseCopy.ejercicio.instrucciones.ejecucion || '',
+        consejos_tecnicos: exerciseCopy.ejercicio.instrucciones.consejos_tecnicos || [],
+        errores_comunes: exerciseCopy.ejercicio.instrucciones.errores_comunes || '',
+      };
+      setLocalExercise(exerciseCopy);
       setUpdateTick(t => t + 1)
     }
   }, [isOpen, exercise])
@@ -534,6 +402,34 @@ function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = fal
 
 
   const handleExerciseSelect = async (idEjercicio: string) => {
+    if (idEjercicio === 'otro') {
+      setLocalExercise(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          ejercicio: {
+            id_ejercicio: 'otro',
+            nombre: '',
+            tipo: prev.ejercicio.tipo || 'Fuerza',
+            descripcion: '',
+            multimedia_url: '',
+            necesita_mapa: false,
+            nombre_en: '',
+            descripcion_en: '',
+            multimedia_url_femenino: '',
+            instrucciones_en: '',
+            instrucciones: {
+              objetivo: '',
+              posicion_inicial: '',
+              ejecucion: '',
+              consejos_tecnicos: [],
+              errores_comunes: ''
+            }
+          }
+        };
+      });
+      return;
+    }
     try {
       const detail = await specialistsService.getExerciseDetail(idEjercicio)
       if (detail) {
@@ -570,6 +466,7 @@ function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = fal
       value: ex.id_ejercicio,
       label: ex.nombre
     }))
+    list.unshift({ value: 'otro', label: '➕ Otro (Crear ejercicio nuevo)' });
     const hasCurrent = list.some(opt => opt.value === localExercise?.ejercicio?.id_ejercicio)
     if (!hasCurrent && localExercise?.ejercicio?.id_ejercicio && localExercise?.ejercicio?.nombre) {
       list.push({
@@ -582,17 +479,23 @@ function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = fal
 
   if (!localExercise) return null
 
-  const inst = localExercise.ejercicio.instrucciones || { posicion_inicial: '', ejecucion: '', consejos_tecnicos: [], errores_comunes: '' }
+  const isFemale = gender?.toLowerCase() === 'femenino' || gender?.toLowerCase() === 'f' || gender?.toLowerCase() === 'female';
+  const rawPreviewUrl = isFemale && localExercise.ejercicio.multimedia_url_femenino
+    ? localExercise.ejercicio.multimedia_url_femenino
+    : localExercise.ejercicio.multimedia_url;
+  const previewUrl = getFullMediaUrl(rawPreviewUrl);
 
-  const handleUpdateLocalField = (field: keyof WorkoutExercise | keyof Exercise | 'instrucciones', subfield: string | undefined, val: any) => {
+
+
+  const handleUpdateLocalField = (field: keyof WorkoutExercise | keyof Exercise | 'instrucciones' | 'ejercicio', subfield: string | undefined, val: any) => {
     if (!localExercise) return
     
     // WorkoutExercise fields
-    if (['series', 'repeticiones', 'orden', 'descanso_segundos', 'duracion_segundos', 'peso_objetivo', 'estado'].includes(field)) {
+    if (['series', 'repeticiones', 'orden', 'descanso_segundos', 'duracion_segundos', 'peso_objetivo', 'estado', 'comentario', 'series_completadas'].includes(field as string)) {
       setLocalExercise({ ...localExercise, [field]: val })
     }
     // Base Exercise fields
-    else if (['nombre', 'descripcion', 'multimedia_url', 'tipo', 'necesita_mapa'].includes(field)) {
+    else if (['nombre', 'descripcion', 'multimedia_url', 'tipo', 'necesita_mapa', 'nombre_en', 'descripcion_en', 'multimedia_url_femenino', 'instrucciones_en'].includes(field as string)) {
       setLocalExercise({
         ...localExercise,
         ejercicio: { ...localExercise.ejercicio, [field]: val }
@@ -600,12 +503,20 @@ function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = fal
     }
     // Base Exercise Instructions fields
     else if (field === 'instrucciones' && subfield) {
+      // Ensure instructions is always a complete object before spreading
+      const currentInstructions = localExercise.ejercicio.instrucciones || {
+        objetivo: null,
+        posicion_inicial: '',
+        ejecucion: '',
+        consejos_tecnicos: [],
+        errores_comunes: ''
+      };
       setLocalExercise({
         ...localExercise,
         ejercicio: {
           ...localExercise.ejercicio,
           instrucciones: {
-            ...inst,
+            ...currentInstructions, // Use the guaranteed complete object
             [subfield]: subfield === 'consejos_tecnicos' ? val.split(',').map((s: string) => s.trim()) : val
           }
         }
@@ -676,17 +587,23 @@ function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = fal
                   options={selectOptions}
                   value={localExercise.ejercicio.id_ejercicio}
                   onChange={handleExerciseSelect}
-                  disabled={readOnly}
+                  disabled={readOnly || isCreatingNewExercise}
                 />
               </div>
-
-              {/* 3. Multimedia URL & Description */}
-              <Input
-                label="URL del Video / Multimedia"
-                value={localExercise.ejercicio.multimedia_url || ''}
-                onChange={(e) => handleUpdateLocalField('multimedia_url', undefined, e.target.value)}
-                disabled={readOnly}
-              />
+               {isCreatingNewExercise && (
+                 <Input
+                   label="Nombre del Nuevo Ejercicio"
+                   value={localExercise.ejercicio.nombre || ''}
+                   onChange={(e) => handleUpdateLocalField('nombre', undefined, e.target.value)}
+                   disabled={readOnly}
+                 />
+               )}
+                <Input
+                  label="Nombre (EN)"
+                  value={localExercise.ejercicio.nombre_en || ''}
+                  onChange={(e) => handleUpdateLocalField('nombre_en', undefined, e.target.value)}
+                  disabled={readOnly || !isCreatingNewExercise}
+                />
               <div className="flex flex-col gap-1 w-full text-left">
                 <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Descripción del Ejercicio</label>
                 <input
@@ -695,7 +612,18 @@ function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = fal
                   onChange={(e) => handleUpdateLocalField('descripcion', undefined, e.target.value)}
                   className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none focus:border-brand-orange"
                   placeholder="Ej. Fortalecimiento del tren inferior..."
-                  disabled={readOnly}
+                  disabled={readOnly || !isCreatingNewExercise}
+                />
+              </div>
+              <div className="flex flex-col gap-1 w-full text-left">
+                <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Descripción del Ejercicio (EN)</label>
+                <input
+                  type="text"
+                  value={localExercise.ejercicio.descripcion_en || ''}
+                  onChange={(e) => handleUpdateLocalField('descripcion_en', undefined, e.target.value)}
+                  className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none focus:border-brand-orange"
+                  placeholder="Ej. Lower body strengthening..."
+                  disabled={readOnly || !isCreatingNewExercise}
                 />
               </div>
 
@@ -706,6 +634,13 @@ function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = fal
                   type="number"
                   value={localExercise.series}
                   onChange={(e) => handleUpdateLocalField('series', undefined, Number(e.target.value))}
+                  disabled={readOnly}
+                />
+                <Input
+                  label="Series Completadas"
+                  type="number"
+                  value={localExercise.series_completadas || 0}
+                  onChange={(e) => handleUpdateLocalField('series_completadas', undefined, Number(e.target.value))}
                   disabled={readOnly}
                 />
                 <Input
@@ -745,12 +680,14 @@ function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = fal
                 <div className="flex flex-col gap-1 w-full text-left">
                   <span className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Estado</span>
                   <select
-                    value={localExercise.estado}
+                    value={localExercise.estado?.toLowerCase() || 'pendiente'}
                     onChange={(e) => handleUpdateLocalField('estado', undefined, e.target.value)}
-                    className="form-input text-[11px] py-2 bg-surface-card2 border border-surface-border uppercase font-semibold text-white outline-none focus:border-brand-orange"
-                  disabled={readOnly}
+                    className="form-input text-[11px] py-2 bg-surface-card2 border border-surface-border font-semibold text-white outline-none focus:border-brand-orange"
+                    disabled={readOnly}
                   >
-                    {['Pendiente', 'Completado', 'En progreso'].map(s => <option key={s} value={s}>{s}</option>)}
+                    <option value="pendiente">Pendiente</option>
+                    <option value="en_progreso">En progreso</option>
+                    <option value="completado">Completado</option>
                   </select>
                 </div>
                 <div className="flex flex-col gap-1 w-full text-left justify-center">
@@ -758,58 +695,128 @@ function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = fal
                   <Toggle
                     checked={localExercise.ejercicio.necesita_mapa || false}
                     onChange={(val) => handleUpdateLocalField('necesita_mapa', undefined, val)}
-                    disabled={readOnly}
+disabled={readOnly}
                   />
                 </div>
               </div>
+            </div>
+            <div className="flex flex-col gap-1 w-full text-left">
+              <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Comentario de Asignación</label>
+              <textarea
+                value={localExercise.comentario || ''}
+                onChange={(e) => handleUpdateLocalField('comentario', undefined, e.target.value)}
+                rows={2}
+                className="bg-surface-card2 border border-surface-border rounded-lg p-2.5 text-[11px] text-white outline-none focus:border-brand-orange placeholder:text-surface-muted"
+                placeholder="Instrucciones de asignación específicas para este alumno..."
+                disabled={readOnly}
+              />
             </div>
           </div>
 
           {/* Right Column: Instrucciones de Ejecución */}
           <div className="bg-surface-card border border-surface-border rounded-xl p-5 space-y-3.5 text-left">
+            {/* Multimedia URL & Preview */}
+            <div className="space-y-3 pb-3 border-b border-surface-border/30 mb-2">
+              <div className="text-[12px] font-bold text-brand-orange uppercase tracking-wider">Multimedia del Ejercicio</div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <Input
+                  label="URL del Video / Multimedia"
+                  value={localExercise.ejercicio.multimedia_url || ''}
+                  onChange={(e) => handleUpdateLocalField('multimedia_url', undefined, e.target.value)}
+                  disabled={readOnly || !isCreatingNewExercise}
+                />
+                <Input
+                  label="Video Femenino (URL)"
+                  value={localExercise.ejercicio.multimedia_url_femenino || ''}
+                  onChange={(e) => handleUpdateLocalField('multimedia_url_femenino', undefined, e.target.value)}
+                  disabled={readOnly || !isCreatingNewExercise}
+                />
+              </div>
+
+              {/* Multimedia Preview / Fallback Card */}
+              <div className="relative w-full h-auto max-h-[160px] rounded-md overflow-hidden bg-surface-card2 border border-surface-border flex items-center justify-center">
+                {(previewUrl && !imageError) ? (
+                  <img
+                    src={previewUrl}
+                    alt="Vista previa de multimedia"
+                    className="max-h-[160px] object-contain rounded-md"
+                    onError={() => setImageError(true)}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center p-4 text-center text-surface-muted">
+                    <span className="text-3xl mb-2">⚠️</span>
+                    <span className="text-[12px]">Ejercicio sin multimedia (aún no se ha subido)</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="text-[12px] font-bold text-brand-orange uppercase tracking-wider mb-2">Instrucciones de Ejecución</div>
+            <div className="flex flex-col gap-1 w-full">
+              <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Objetivo</label>
+              <textarea
+                value={localExercise.ejercicio.instrucciones?.objetivo || ''}
+                onChange={(e) => handleUpdateLocalField('instrucciones', 'objetivo', e.target.value)}
+                rows={2}
+                className="bg-surface-card2 border border-surface-border rounded-lg p-2.5 text-[11px] text-white outline-none focus:border-brand-orange placeholder:text-surface-muted"
+                placeholder="El objetivo específico de este ejercicio en el plan..."
+                disabled={readOnly || !isCreatingNewExercise}
+              />
+            </div>
             <div className="flex flex-col gap-1 w-full">
               <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Posición Inicial</label>
               <textarea
-                value={inst.posicion_inicial}
+                value={localExercise.ejercicio.instrucciones?.posicion_inicial || ''}
                 onChange={(e) => handleUpdateLocalField('instrucciones', 'posicion_inicial', e.target.value)}
                 rows={2}
                 className="bg-surface-card2 border border-surface-border rounded-lg p-2.5 text-[11px] text-white outline-none focus:border-brand-orange placeholder:text-surface-muted"
                 placeholder="Posición correcta para comenzar..."
-                disabled={readOnly}
+                disabled={readOnly || !isCreatingNewExercise}
               />
             </div>
             <div className="flex flex-col gap-1 w-full">
               <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Ejecución Técnica</label>
               <textarea
-                value={inst.ejecucion}
+                value={localExercise.ejercicio.instrucciones?.ejecucion || ''}
                 onChange={(e) => handleUpdateLocalField('instrucciones', 'ejecucion', e.target.value)}
                 rows={3}
                 className="bg-surface-card2 border border-surface-border rounded-lg p-2.5 text-[11px] text-white outline-none focus:border-brand-orange placeholder:text-surface-muted"
                 placeholder="Explicación detallada del movimiento..."
-                disabled={readOnly}
+                disabled={readOnly || !isCreatingNewExercise}
               />
             </div>
             <div className="flex flex-col gap-1 w-full">
               <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Consejos Técnicos (Separar por comas)</label>
               <input
                 type="text"
-                value={inst.consejos_tecnicos.join(', ')}
+                value={localExercise.ejercicio.instrucciones?.consejos_tecnicos?.join(', ') || ''}
                 onChange={(e) => handleUpdateLocalField('instrucciones', 'consejos_tecnicos', e.target.value)}
                 className="bg-surface-card2 border border-surface-border rounded-lg px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-brand-orange placeholder:text-surface-muted"
                 placeholder="Ej. Mantener espalda recta, respirar al bajar..."
-                disabled={readOnly}
+                disabled={readOnly || !isCreatingNewExercise}
               />
             </div>
             <div className="flex flex-col gap-1 w-full">
               <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Errores Comunes</label>
               <textarea
-                value={inst.errores_comunes}
+                value={localExercise.ejercicio.instrucciones?.errores_comunes || ''}
                 onChange={(e) => handleUpdateLocalField('instrucciones', 'errores_comunes', e.target.value)}
                 rows={2}
                 className="bg-surface-card2 border border-surface-border rounded-lg p-2.5 text-[11px] text-white outline-none focus:border-brand-orange placeholder:text-surface-muted"
                 placeholder="Evitar arquear la columna, etc..."
-                disabled={readOnly}
+                disabled={readOnly || !isCreatingNewExercise}
+              />
+            </div>
+            <div className="flex flex-col gap-1 w-full">
+              <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Instrucciones en Inglés (EN)</label>
+              <textarea
+                value={localExercise.ejercicio.instrucciones_en || ''}
+                onChange={(e) => handleUpdateLocalField('instrucciones_en', undefined, e.target.value)}
+                rows={3}
+                className="bg-surface-card2 border border-surface-border rounded-lg p-2.5 text-[11px] text-white outline-none focus:border-brand-orange placeholder:text-surface-muted"
+                placeholder="Detailed instructions for the exercise in English..."
+                disabled={readOnly || !isCreatingNewExercise}
               />
             </div>
           </div>
@@ -872,7 +879,7 @@ const isUUID = (id: string) => {
 }
 
 // ─── Plan Tab (Continuous Calendar with Drag & Drop) ─────────────
-export function SpecialistPlanTab({ userId, readOnly = false }: { userId: string; readOnly?: boolean }) {
+export function SpecialistPlanTab({ userId, readOnly = false, gender }: { userId: string; readOnly?: boolean; gender?: string }) {
   const repos = useRepositories()
   const [weekOffset, setWeekOffset] = useState(0)
 
@@ -935,9 +942,12 @@ export function SpecialistPlanTab({ userId, readOnly = false }: { userId: string
   // Populate plan items from API (or fallback to repo)
   useEffect(() => {
     if (planData && planData.entrenamientos) {
-      const mapped: PlanItem[] = planData.entrenamientos.map((item: any) => ({
-        ...item,
-        titulo_entrenamiento: item.titulo_entrenamiento || item.tipo || 'Entrenamiento',
+          const mapped: PlanItem[] = planData.entrenamientos.map((item: any) => ({
+            ...item,
+            estado: (item.estado || 'pendiente').toLowerCase(),
+            tipo: item.tipo || item.tipo_entrenamiento || 'Fuerza',
+        macros_objetivo_kcal: item.macros_objetivo_kcal ?? item.calorias_objetivo ?? 0,
+        titulo_entrenamiento: item.titulo_entrenamiento || item.tipo || item.tipo_entrenamiento || 'Entrenamiento',
         ejercicios_asociados: (item.ejercicios_asociados || []).map((we: any) => ({
           ...we,
           ejercicio: {
@@ -969,17 +979,52 @@ export function SpecialistPlanTab({ userId, readOnly = false }: { userId: string
   // Fetch comments when active workout or rest day changes
   useEffect(() => {
     if (activeWorkout) {
-      repos.comments.getComments('workout', activeWorkout.id_entrenamiento).then(setComments)
+      repos.comments.getComments('workout', activeWorkout.id_entrenamiento).then((mockComments) => {
+        const apiCommentText = activeWorkout.comentario || (activeWorkout as any).comentario_especialista || (activeWorkout as any).feedback;
+        if (apiCommentText && apiCommentText.trim()) {
+          const alreadyExists = mockComments.some(c => c.content === apiCommentText);
+          if (!alreadyExists) {
+            const apiComment: Comment = {
+              id: `api-c-${activeWorkout.id_entrenamiento}`,
+              parentId: null,
+              userId: 'esp-1',
+              userName: 'Dr. Carlos Mendoza',
+              userRole: 'specialist' as const,
+              content: apiCommentText,
+              createdAt: activeWorkout.fecha_programada + 'T12:00:00Z',
+              contextType: 'workout' as const,
+              contextId: activeWorkout.id_entrenamiento
+            };
+            setComments([apiComment, ...mockComments]);
+            return;
+          }
+        }
+        setComments(mockComments);
+      });
     } else if (activeRestDay) {
-      repos.comments.getComments('restday', activeRestDay.id_descanso).then(setComments)
+      repos.comments.getComments('restday', activeRestDay.id_descanso).then(setComments);
     } else {
-      setComments([])
+      setComments([]);
     }
   }, [activeWorkout, activeRestDay, updateTick])
 
   // Save Workout
   const handleSaveActiveWorkout = async () => {
     if (activeWorkout) {
+      try {
+        const payload = {
+          tipo_entrenamiento: activeWorkout.tipo || activeWorkout.tipo_entrenamiento || 'Fuerza',
+          zona_esfuerzo: activeWorkout.zona_esfuerzo || '',
+          fecha_programada: activeWorkout.fecha_programada,
+          calorias_objetivo: activeWorkout.macros_objetivo_kcal ?? (activeWorkout as any).calorias_objetivo ?? 0,
+            descripcion: activeWorkout.descripcion || '',
+            estado: (activeWorkout.estado || 'pendiente').toLowerCase()
+          };
+        await specialistsService.updateWorkoutParameters(activeWorkout.id_entrenamiento, payload);
+      } catch (apiErr) {
+        console.error('Failed to update workout parameters on backend:', apiErr);
+      }
+
       await repos.workouts.saveWorkout(activeWorkout)
       toast.show('Entrenamiento guardado con éxito', 'success')
       setUpdateTick(t => t + 1)
@@ -1138,8 +1183,18 @@ export function SpecialistPlanTab({ userId, readOnly = false }: { userId: string
         contextId: activeWorkout.id_entrenamiento
       }
       await repos.comments.postComment(commentData)
+      
+      // Update local active workout comment state for immediate feedback and load/save sync
+      activeWorkout.comentario = newCommentText;
+      
+      try {
+        await specialistsService.updateWorkoutComment(activeWorkout.id_entrenamiento, { texto: newCommentText })
+      } catch (apiErr) {
+        console.error('Failed to update workout comment on backend:', apiErr)
+      }
+
       setNewCommentText('')
-      toast.show('Comentario de entrenamiento publicado', 'success')
+      toast.show('Comentario publicado', 'success')
       setUpdateTick(t => t + 1)
     } else if (activeRestDay) {
       const commentData = {
@@ -1308,17 +1363,17 @@ export function SpecialistPlanTab({ userId, readOnly = false }: { userId: string
                 <div className="flex flex-col gap-1 w-full text-left">
                   <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Estado</label>
                   <select
-                    value={activeWorkout.estado}
+                    value={activeWorkout.estado?.toLowerCase() || 'pendiente'}
                     onChange={(e) => {
                       activeWorkout.estado = e.target.value
                       setUpdateTick(t => t + 1)
                     }}
-                    className="form-input text-[12px] py-2 bg-surface-card border border-surface-border uppercase font-semibold text-white outline-none transition-colors focus:border-brand-orange"
-                  disabled={readOnly}
+                    className="form-input text-[12px] py-2 bg-surface-card border border-surface-border font-semibold text-white outline-none transition-colors focus:border-brand-orange"
+                    disabled={readOnly}
                   >
-                    {['Pendiente', 'En progreso', 'Completado'].map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
+                    <option value="pendiente">Pendiente</option>
+                    <option value="en_progreso">En progreso</option>
+                    <option value="completado">Completado</option>
                   </select>
                 </div>
                 <Input
@@ -1548,12 +1603,29 @@ export function SpecialistPlanTab({ userId, readOnly = false }: { userId: string
             setUpdateTick(t => t + 1)
           }}
           exercise={selectedExercise}
+          gender={gender}
           onSave={async (updated) => {
             if (activeWorkout) {
               try {
                 const isNew = updated.id_entrenamiento_ejercicio.startsWith('we-');
                     
                 if (isNew) {
+                  if (updated.ejercicio.id_ejercicio === 'otro') {
+                    const newExerciseId = await specialistsService.registerNewExercise({
+                      nombre: updated.ejercicio.nombre,
+                      descripcion: updated.ejercicio.descripcion || '',
+                      tipo: updated.ejercicio.tipo || 'Fuerza',
+                      necesita_mapa: updated.ejercicio.necesita_mapa || false,
+                      instrucciones: {
+                        objetivo: updated.ejercicio.instrucciones?.objetivo || '',
+                        ejecucion: updated.ejercicio.instrucciones?.ejecucion || '',
+                        errores_comunes: updated.ejercicio.instrucciones?.errores_comunes || '',
+                        posicion_inicial: updated.ejercicio.instrucciones?.posicion_inicial || '',
+                        consejos_tecnicos: updated.ejercicio.instrucciones?.consejos_tecnicos || []
+                      }
+                    });
+                    updated.ejercicio.id_ejercicio = newExerciseId;
+                  }
                   const payload = {
                     id_ejercicio: updated.ejercicio.id_ejercicio,
                     orden: updated.orden || 1,
@@ -1562,11 +1634,10 @@ export function SpecialistPlanTab({ userId, readOnly = false }: { userId: string
                     repeticiones: parseInt(String(updated.repeticiones)) || 0,
                     peso_objetivo: updated.peso_objetivo || 0,
                     duracion_segundos: updated.duracion_segundos || 0,
-                    comentario: updated.ejercicio.descripcion || '',
-                    estado: updated.estado || 'Pendiente'
+                    comentario: updated.comentario || '',
+                    estado: updated.estado || 'pendiente'
                   };
                   const response = await specialistsService.addExerciseToWorkout(activeWorkout.id_entrenamiento, payload);
-                  // If the backend returns a new UUID (or object with ID), update it dynamically!
                   if (response && (typeof response === 'string' || response.id_entrenamiento_ejercicio)) {
                     updated.id_entrenamiento_ejercicio = typeof response === 'string' ? response : response.id_entrenamiento_ejercicio;
                   }
@@ -1578,8 +1649,8 @@ export function SpecialistPlanTab({ userId, readOnly = false }: { userId: string
                     repeticiones: parseInt(String(updated.repeticiones)) || 0,
                     peso_objetivo: updated.peso_objetivo || 0,
                     duracion_segundos: updated.duracion_segundos || 0,
-                    comentario: updated.ejercicio.descripcion || '',
-                    estado: updated.estado || 'Pendiente'
+                    comentario: updated.comentario || '',
+                    estado: updated.estado || 'pendiente'
                   };
                   await specialistsService.updateExerciseInWorkout(updated.id_entrenamiento_ejercicio, payload);
                 }
@@ -2217,7 +2288,7 @@ export function SpecialistNutritionTab({ userId, readOnly = false }: { userId: s
                           {meal.etiquetas.map((t, idx) => (
                             <span key={idx} className="text-[9px] bg-surface-card2 border border-surface-border text-surface-muted px-2 py-0.5 rounded-full">{t}</span>
                           ))}
-                        </div>
+               </div>
                       )}
                     </div>
                     <div className="text-right shrink-0">
@@ -2596,7 +2667,7 @@ const NotificacionesTab = ({ userId }: { userId: string }) => {
       id_usuario: userId,
       titulo: title.trim(),
       mensaje: message.trim(),
-      tipo: category.toLowerCase(),
+      tipo: category,
     });
   };
 
@@ -2683,7 +2754,7 @@ const NotificacionesTab = ({ userId }: { userId: string }) => {
                     <p className="text-[12px] text-surface-muted leading-relaxed">{item.mensaje || `ID: ${item.id_notificacion}`}</p>
                   </div>
                 </div>
-              )
+              );
             })}
           </div>
         )}
@@ -2822,7 +2893,7 @@ export function UserDetailPage() {
           <PerfilTab u={mergedPatient} />
         )
       )}
-      {tab === 'plan' && <SpecialistPlanTab key={mergedPatient.id_usuario} userId={mergedPatient.id_usuario} />}
+      {tab === 'plan' && <SpecialistPlanTab key={mergedPatient.id_usuario} userId={mergedPatient.id_usuario} gender={mergedPatient.genero} />}
       {tab === 'nutricion' && <SpecialistNutritionTab key={mergedPatient.id_usuario} userId={mergedPatient.id_usuario} />}
       {tab === 'reporte-clinico' && <ClinicalReportTab patientId={mergedPatient.id_usuario} />}
       {tab === 'notificaciones' && <NotificacionesTab userId={mergedPatient.id_usuario} />}

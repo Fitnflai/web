@@ -440,6 +440,9 @@ export const usersService = {
       if (tab === 'nutricion') {
         return generateMockNutrition(fecha_inicio_plan, fecha_fin_plan);
       }
+      if (tab === 'notificaciones') {
+        return []; // Return an empty array for notifications in mock mode
+      }
       return MOCK_USERS.find(user => user.id_usuario === id_usuario);
     }
     const apiTab = tab === 'reporte-clinico' ? 'reporte_clinico' : tab;

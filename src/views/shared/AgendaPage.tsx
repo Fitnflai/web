@@ -585,7 +585,9 @@ function NewAppointmentModal() {
       fecha: fecha,
       hora_inicio: `${horaInicio}:00`, // Add seconds for ISO format
       duracion_minutos: duracionMinutos,
-      estado: estado === 'confirmada' ? 'Programado' : 'Pendiente', // Map to backend status
+      estado: userRole === 'specialist'
+        ? (estado === 'confirmada' ? 'Programada' : 'Pendiente')
+        : (estado === 'confirmada' ? 'Programado' : 'Pendiente'), // Map to backend status
       motivo: motivo,
       notas_adicionales: notas,
       link_videollamada: linkVideo,

@@ -10,6 +10,7 @@ export interface SpecialistAgendaSummary {
   pendientes: number;
   canceladas: number;
   programadas: number;
+  terminadas: number;
 }
 
 export interface SpecialistAppointment {
@@ -146,7 +147,7 @@ export interface AddExerciseToWorkoutPayload {
   estado: string;
 }
 
-export interface ModifyWorkoutPayload {
+export interface UpdateWorkoutParametersPayload {
   tipo_entrenamiento: string;
   zona_esfuerzo: string;
   fecha_programada: string;
@@ -155,8 +156,22 @@ export interface ModifyWorkoutPayload {
   estado: string;
 }
 
-export interface ModifyWorkoutCommentPayload {
+export interface UpdateWorkoutCommentPayload {
   texto: string;
+}
+
+export interface RegisterNewExercisePayload {
+  nombre: string;
+  descripcion: string;
+  tipo: string;
+  necesita_mapa: boolean;
+  instrucciones: {
+    objetivo: string;
+    ejecucion: string;
+    errores_comunes: string;
+    posicion_inicial: string;
+    consejos_tecnicos: string[];
+  };
 }
 
 export interface BaseExerciseItem {
@@ -298,7 +313,8 @@ export const specialistsService = {
         confirmadas: appointmentsInPeriod.filter(apt => apt.estado === 'confirmada').length,
         pendientes: appointmentsInPeriod.filter(apt => apt.estado === 'pendiente').length,
         canceladas: appointmentsInPeriod.filter(apt => apt.estado === 'cancelada').length,
-        programadas: appointmentsInPeriod.length // In mock, all are "programadas"
+        programadas: appointmentsInPeriod.length, // In mock, all are "programadas"
+        terminadas: appointmentsInPeriod.filter(apt => (apt.estado as any) === 'completada' || (apt.estado as any) === 'terminada').length
       }
     } else {
       const { data } = await apiClient.get<SpecialistAgendaSummary>('/specialist/specialist/agenda-global/resumen-semana-actual', {
@@ -330,8 +346,9 @@ export const specialistsService = {
           tipo_cita: apt.tipo,
         }))
     } else {
-      const { data } = await apiClient.post<SpecialistAppointment[]>('/specialist/specialist/agenda-global/obtener-citas-especialistas', null, {
-        params: { fecha_inicio, fecha_fin, ...(estado && { estado }) }
+      const mappedEstado = estado ? (estado.charAt(0).toUpperCase() + estado.slice(1)) : undefined;
+      const { data } = await apiClient.post<SpecialistAppointment[]>('/specialist/specialist/agenda-global/obtener-citas-especialista', null, {
+        params: { fecha_inicio, fecha_fin, ...(mappedEstado && { estado: mappedEstado }) }
       })
       return data
     }
@@ -490,28 +507,22 @@ export const specialistsService = {
     }
   },
 
-  modifyWorkout: async (id_entrenamiento: string, payload: ModifyWorkoutPayload): Promise<string> => {
+  updateWorkoutParameters: async (id_entrenamiento: string, payload: UpdateWorkoutParametersPayload): Promise<string> => {
     if (USE_MOCK) {
-      return new Promise((resolve) => {
-        console.log(`MOCK: Modifying workout ${id_entrenamiento} with payload:`, payload);
-        setTimeout(() => resolve('Workout modified successfully (MOCK)'), 500);
-      });
-    } else {
-      const { data } = await apiClient.put<string>(`/specialist/specialist/pacientes/modificar-entrenamiento/${id_entrenamiento}`, payload);
-      return data;
+      console.log('MOCK: Updating workout parameters:', id_entrenamiento, payload);
+      return id_entrenamiento;
     }
+    const { data } = await apiClient.put<string>(`/specialist/specialist/pacientes/modificar-entrenamiento/${id_entrenamiento}`, payload);
+    return data;
   },
 
-  modifyWorkoutComment: async (id_entrenamiento: string, payload: ModifyWorkoutCommentPayload): Promise<string> => {
+  updateWorkoutComment: async (id_entrenamiento: string, payload: UpdateWorkoutCommentPayload): Promise<string> => {
     if (USE_MOCK) {
-      return new Promise((resolve) => {
-        console.log(`MOCK: Modifying workout comment ${id_entrenamiento} with payload:`, payload);
-        setTimeout(() => resolve('Workout comment modified successfully (MOCK)'), 500);
-      });
-    } else {
-      const { data } = await apiClient.put<string>(`/specialist/specialist/pacientes/modificar-comentario/${id_entrenamiento}`, payload);
-      return data;
+      console.log('MOCK: Updating workout comment:', id_entrenamiento, payload);
+      return id_entrenamiento;
     }
+    const { data } = await apiClient.put<string>(`/specialist/specialist/pacientes/modificar-comentario/${id_entrenamiento}`, payload);
+    return data;
   },
 
   deleteWorkoutExercise: async (id_entrenamiento_ejercicio: string): Promise<any> => {
@@ -739,6 +750,15 @@ export const specialistsService = {
       return { success: true };
     }
     const { data } = await apiClient.post(`/specialist/specialist/pacientes/agregar-ejercicio-en-entrenamiento/agregar/${id_entrenamiento}`, payload);
+    return data;
+  },
+
+  registerNewExercise: async (payload: RegisterNewExercisePayload): Promise<string> => {
+    if (USE_MOCK) {
+      console.log('MOCK: Creating new exercise:', payload);
+      return 'new-exercise-uuid';
+    }
+    const { data } = await apiClient.post<string>('/specialist/specialist/pacientes/registrar-nuevo-ejercicio', payload);
     return data;
   },
 
