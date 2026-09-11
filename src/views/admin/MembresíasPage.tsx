@@ -73,6 +73,8 @@ export function MembresíasPage() {
     const [disc, setDisc] = useState(15)
     const [planDrafts, setPlanDrafts] = useState<Record<string, Partial<UpdatePlanPayload>>>({})
 
+
+
   const handleUpdateDraft = (id_plan: string, field: keyof UpdatePlanPayload, value: any) => {
     setPlanDrafts(prev => {
       const existing = prev[id_plan] || { id_plan };
@@ -148,6 +150,12 @@ export function MembresíasPage() {
     staleTime: 1000 * 60 * 5, // 5 minutes
   })
 
+  useEffect(() => {
+    if (plans && plans.length > 0 && typeof plans[0].descuento_anual === 'number') {
+      setDisc(plans[0].descuento_anual);
+    }
+  }, [plans]);
+
   const handleAddCompareRow = () => {
     const text = prompt('Nueva característica comparativa:')
     if (text && text.trim()) {
@@ -178,11 +186,15 @@ export function MembresíasPage() {
   }
 
   // Calculate revenue based on fetched stats and plans
-  const revenue = stats && plans ? Math.round(
+  const computedRevenue = stats && plans ? Math.round(
     stats.essential_activos * getPlanMonthlyPrice(plans.find((p: any) => normalizePlanId(p) === 'ess')) +
     stats.pro_activos * getPlanMonthlyPrice(plans.find((p: any) => normalizePlanId(p) === 'pro')) +
     stats.elite_activos * getPlanMonthlyPrice(plans.find((p: any) => normalizePlanId(p) === 'elite'))
-  ) : 0
+  ) : 0;
+
+  const displayRevenue = (stats && typeof stats.ingresos_este_mes === 'number')
+    ? stats.ingresos_este_mes
+    : computedRevenue;
   const saving = plans ? (((getPlanMonthlyPrice(plans.find((p: any) => normalizePlanId(p) === 'pro')) * disc / 100 * 12).toFixed(2))) : '0.00'
 
   const tabs: {id:MTab;label:string}[] = [{id:'planes',label:'Planes'},{id:'comparativa',label:'Comparativa'}]
@@ -210,11 +222,50 @@ export function MembresíasPage() {
 
           const draftsArray = Object.values(planDrafts);
           try {
-            await Promise.all(draftsArray.map(draft => updatePlanMutation.mutateAsync(draft as UpdatePlanPayload)));
+            await Promise.all(draftsArray.map(draft => {
+              const originalPlan = plans?.find((pl: any) => pl.id_plan === draft.id_plan);
+              if (!originalPlan) return Promise.resolve();
+
+              // Construct prices array with updated fields
+              const preciosPayload = (originalPlan.precios || []).map((pr: any) => {
+                const isMonthly = pr.frecuencia === 'mensual';
+                const isAnnual = pr.frecuencia === 'anual';
+                
+                let updatedPrecio = pr.precio;
+                let updatedTrial = draft.dias_prueba !== undefined ? draft.dias_prueba : pr.dias_prueba;
+                
+                if (isMonthly && draft.monto !== undefined) {
+                  updatedPrecio = draft.monto;
+                } else if (isAnnual) {
+                  const newMonthlyPrice = draft.monto !== undefined ? draft.monto : (originalPlan.precios?.find((p: any) => p.frecuencia === 'mensual')?.precio ?? 0);
+                  updatedPrecio = Number((newMonthlyPrice * (1 - disc / 100) * 12).toFixed(2));
+                }
+
+                return {
+                  id_precio: pr.id_precio,
+                  frecuencia: pr.frecuencia,
+                  precio: updatedPrecio,
+                  dias_prueba: updatedTrial,
+                  descuento_porcentaje: isAnnual ? disc : pr.descuento_porcentaje,
+                  stripe_price_id: pr.stripe_price_id
+                };
+              });
+
+              const backendPayload = {
+                id_plan: draft.id_plan,
+                nombre: originalPlan.nombre,
+                descripcion: draft.descripcion !== undefined ? draft.descripcion : originalPlan.descripcion,
+                orden: originalPlan.orden,
+                estado: draft.activo !== undefined ? draft.activo : (originalPlan.estado ?? originalPlan.activo ?? true),
+                precios: preciosPayload
+              };
+
+              return updatePlanMutation.mutateAsync(backendPayload as any);
+            }));
             setPlanDrafts({}); // Clear local drafts on success
             showToast("Todos los cambios se guardaron con éxito");
           } catch (err) {
-            // Error handled in mutation onError
+            // Error handled in mutation
           }
         }} variant="primary">💾 Guardar</Button>
       </div>
@@ -233,7 +284,7 @@ export function MembresíasPage() {
           </div>
         ) : (
           <>
-            <StatCard label="Ingresos este mes" value={`$${revenue.toLocaleString()}`} valueColor="#4CAF82" delta={stats?.crecimiento_porcentaje !== undefined ? `↑ +${stats.crecimiento_porcentaje}%` : '↑ +0%'} deltaUp />
+            <StatCard label="Ingresos este mes" value={`$${displayRevenue.toLocaleString()}`} valueColor="#4CAF82" delta={stats?.crecimiento_porcentaje !== undefined ? `↑ +${stats.crecimiento_porcentaje}%` : '↑ +0%'} deltaUp />
             <StatCard label="Essential" value={stats?.essential_activos.toLocaleString() || '0'} delta="activos" />
             <StatCard label="Pro" value={stats?.pro_activos.toLocaleString() || '0'} valueColor="#E8622A" delta="activos" />
             <StatCard label="Elite" value={stats?.elite_activos.toLocaleString() || '0'} valueColor="#F5C842" />
@@ -471,7 +522,7 @@ export function MembresíasPage() {
             <label htmlFor="benefit-select" className="form-label">Seleccionar Beneficio</label>
             <select
               id="benefit-select"
-              className="form-select w-full"
+              className="form-input w-full"
               value={selectedBenefitId}
               onChange={(e) => setSelectedBenefitId(e.target.value)}
             >

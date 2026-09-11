@@ -38,9 +38,11 @@ const STATUS_META: Record<AppointmentStatus, { label:string; variant:'green'|'or
 
 // ─── Helpers ──────────────────────────────────────────────────────
 function getWeekDates(offset: number): Date[] {
-  const today = new Date('2026-06-08')
+  const today = new Date()
   const monday = new Date(today)
-  monday.setDate(today.getDate() - today.getDay() + 1 + offset * 7)
+  const day = today.getDay()
+  const diff = today.getDate() - day + (day === 0 ? -6 : 1) + offset * 7
+  monday.setDate(diff)
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday)
     d.setDate(monday.getDate() + i)
@@ -319,49 +321,172 @@ function CalendarWeekView({
 }
 
 // ─── Availability Manager ─────────────────────────────────────────
-function AvailabilityManager() {
-  const [selectedProf, setSelectedProf] = useState('pro-001')
-  const [availability, setAvailability] = useState(() => {
-    const map: Record<string, Record<string, boolean>> = {}
-    MOCK_AVAILABILITY.forEach(pa => {
-      map[pa.profesional_id] = {}
-      pa.slots.forEach(s => {
-        map[pa.profesional_id][`${s.dia}-${s.hora_inicio}`] = s.disponible
-      })
-    })
-    return map
-  })
+function AvailabilityManager({ id_especialista }: { id_especialista?: string } = {}) {
   const { showToast, userRole } = useAppStore()
+  const queryClient = useQueryClient()
+  const [selectedProf, setSelectedProf] = useState('pro-001')
+  
+  // Resolve the actual specialist ID
+  const activeProfId = id_especialista || selectedProf
 
-  const prof = MOCK_PROFESSIONALS.find(p => p.id === selectedProf)
-  const slots = MOCK_AVAILABILITY.find(a => a.profesional_id === selectedProf)?.slots ?? []
+  // We manage weekly state using React Query with week navigation for both roles
+  const [weekOffset, setWeekOffset] = useState(0)
+  const weekDates = useMemo(() => getWeekDates(weekOffset), [weekOffset])
+  const weekStartIso = toISODate(weekDates[0])
+  const weekEndIso = toISODate(weekDates[6])
 
-  const toggleSlot = (dia: string, hora: string) => {
-    setAvailability(prev => ({
-      ...prev,
-      [selectedProf]: {
-        ...prev[selectedProf],
-        [`${dia}-${hora}`]: !prev[selectedProf]?.[`${dia}-${hora}`],
-      },
-    }))
+  // Fetch availability via React Query
+  const { data: availabilitySlots, isLoading: isLoadingAvailability } = useQuery({
+    queryKey: ['availabilitySlots', userRole, activeProfId, weekStartIso],
+    queryFn: () => {
+      if (userRole === 'admin') {
+        const numericId = parseProfId(activeProfId);
+        return specialistsService.getAdminAvailability(numericId, weekStartIso, weekEndIso);
+      } else {
+        return specialistsService.getSpecialistRealAvailability(weekStartIso, weekEndIso);
+      }
+    },
+    enabled: !!activeProfId,
+  })
+
+  // Local state to manage toggled slots in the grid (key: "YYYY-MM-DD-HH:MM")
+  const [toggledAvailability, setToggledAvailability] = useState<Record<string, { disponible: boolean; id?: number }>>({})
+
+  useEffect(() => {
+    if (availabilitySlots) {
+      const initialMap: Record<string, { disponible: boolean; id?: number }> = {}
+      availabilitySlots.forEach(slot => {
+        let hourStr = '00:00'
+        if (slot.hora_inicio.includes('T')) {
+          hourStr = slot.hora_inicio.split('T')[1].substring(0, 5)
+        } else {
+          hourStr = slot.hora_inicio.substring(0, 5)
+        }
+        const key = `${slot.fecha}-${hourStr}`
+        initialMap[key] = {
+          disponible: slot.estado.toLowerCase() === 'disponible',
+          id: slot.id
+        }
+      })
+      setToggledAvailability(initialMap)
+    }
+  }, [availabilitySlots])
+
+  // Save mutation
+  const saveMutation = useMutation({
+    mutationFn: (payload: any[]) => {
+      if (userRole === 'admin') {
+        const numericId = parseProfId(activeProfId);
+        return specialistsService.saveAdminAvailability(numericId, payload);
+      } else {
+        return specialistsService.saveSpecialistRealAvailability(payload);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['availabilitySlots', userRole, activeProfId, weekStartIso] })
+      showToast('Disponibilidad guardada correctamente')
+    },
+    onError: (err: any) => {
+      console.error('SAVE AVAILABILITY AXIOS ERROR:', err);
+      console.error('SERVER RESPONDED WITH DETAIL:', err.response?.data);
+      const detail = err.response?.data?.detail;
+      const errorMsg = detail ? (typeof detail === 'object' ? JSON.stringify(detail) : detail) : err.message;
+      showToast(`Error al guardar disponibilidad: ${errorMsg}`)
+    }
+  })
+
+  // Copy mutation
+  const copyWeekAvailabilityMutation = useMutation({
+    mutationFn: (payload: { sourceStartDate: string, targetStartDate: string }) => {
+      if (userRole === 'admin') {
+        const numericId = parseProfId(activeProfId);
+        return specialistsService.copyAdminAvailability(numericId, payload.sourceStartDate, payload.targetStartDate);
+      } else {
+        return specialistsService.copySpecialistRealAvailability(payload.sourceStartDate, payload.targetStartDate);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['availabilitySlots', userRole] })
+      showToast('Disponibilidad copiada a la próxima semana')
+    },
+    onError: (err: any) => {
+      showToast(`Error al copiar disponibilidad: ${err.message}`)
+    }
+  })
+
+  const prof = MOCK_PROFESSIONALS.find(p => p.id === activeProfId)
+  const uniqueHours = HOURS
+
+  // Retrieve appointments to disable active slots
+  const currentWeekAppointments = useMemo(() => {
+    if (!activeProfId) return []
+    return MOCK_APPOINTMENTS.filter(apt => 
+      apt.profesional.id === activeProfId &&
+      weekDates.some(d => toISODate(d) === apt.fecha)
+    )
+  }, [activeProfId, weekDates])
+
+  const toggleSlotAdmin = (dayIso: string, hour: string, slotId?: number) => {
+    const key = `${dayIso}-${hour}`
+    setToggledAvailability(prev => {
+      const current = prev[key]
+      return {
+        ...prev,
+        [key]: {
+          disponible: current ? !current.disponible : true,
+          id: current?.id ?? slotId
+        }
+      }
+    })
   }
 
-  // Group by day
-  const byDay = useMemo(() => {
-    const map: Record<string, AvailabilitySlot[]> = {}
-    slots.forEach(s => {
-      if (!map[s.dia]) map[s.dia] = []
-      map[s.dia].push(s)
-    })
-    return map
-  }, [slots])
+  const handleSaveAvailability = () => {
+    const payload: any[] = []
+    weekDates.forEach(date => {
+      const dayIso = toISODate(date)
+      HOURS.forEach(hour => {
+        const key = `${dayIso}-${hour}`
+        const state = toggledAvailability[key]
+        const isDisponible = state ? state.disponible : false
 
-  const days = Object.keys(byDay)
-  const uniqueHours = HOURS
+        const hasAppointment = currentWeekAppointments.some(apt => 
+          apt.fecha === dayIso && apt.hora_inicio === hour
+        )
+        if (hasAppointment) return
+
+        const [h, m] = hour.split(':').map(Number)
+            const startIso = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00.000Z`
+            const endIso = `${String(h + 1).padStart(2, '0')}:${String(m).padStart(2, '0')}:00.000Z`
+
+        payload.push({
+          fecha: dayIso,
+          hora_inicio: startIso,
+          hora_fin: endIso,
+              estado: isDisponible ? 'disponible' : 'no_disponible'
+        })
+      })
+    })
+    saveMutation.mutate(payload)
+  }
+
+  const handleCopyNextWeek = () => {
+    copyWeekAvailabilityMutation.mutate({
+      sourceStartDate: weekStartIso,
+      targetStartDate: toISODate(getWeekDates(weekOffset + 1)[0]), // Monday of next week
+    })
+  }
+
+  const formatWeekRange = (dates: Date[]) => {
+    if (dates.length < 7) return ''
+    const start = dates[0]
+    const end = dates[6]
+    const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
+    return `${start.getDate()} ${months[start.getMonth()]} al ${end.getDate()} ${months[end.getMonth()]} 2026`
+  }
 
   return (
     <div>
-      {userRole !== 'specialist' && (
+      {userRole !== 'specialist' && !id_especialista && (
         <>
           {/* Prof selector */}
           <div className="flex items-center gap-3 mb-5 flex-wrap">
@@ -369,8 +494,8 @@ function AvailabilityManager() {
             <div className="flex gap-2 flex-wrap">
               {MOCK_PROFESSIONALS.slice(0, 3).map(p => (
                 <button key={p.id} onClick={() => setSelectedProf(p.id)}
-                  className={cn('flex items-center gap-2 px-3 py-1.5 rounded-xl text-[12px] border cursor-pointer transition-all', selectedProf === p.id ? 'border-brand-purple text-white' : 'border-surface-border text-surface-muted hover:border-surface-muted')}
-                  style={selectedProf === p.id ? { background: 'rgba(155,89,182,.15)' } : { background: 'var(--surface-card)' }}>
+                  className={cn('flex items-center gap-2 px-3 py-1.5 rounded-xl text-[12px] border cursor-pointer transition-all', activeProfId === p.id ? 'border-brand-purple text-white' : 'border-surface-border text-surface-muted hover:border-surface-muted')}
+                  style={activeProfId === p.id ? { background: 'rgba(155,89,182,.15)' } : { background: 'var(--surface-card)' }}>
                   <Avatar initials={p.initials} color={p.color} size="sm" />
                   {p.nombre}
                 </button>
@@ -380,15 +505,34 @@ function AvailabilityManager() {
         </>
       )}
 
-      {userRole !== 'specialist' && prof && (
+      {(userRole !== 'specialist' || userRole === 'specialist') && (
         <div className="flex items-center gap-3 p-3 rounded-xl mb-5" style={{ background: 'rgba(155,89,182,.07)', border: '1px solid rgba(155,89,182,.2)' }}>
-          <Avatar initials={prof.initials} color={prof.color} size="md" />
+          <Avatar initials={userRole === 'specialist' ? 'ME' : (prof?.initials || '??')} color={prof?.color || 'purple'} size="md" />
           <div>
-            <div className="text-[13px] font-semibold">{prof.nombre}</div>
-            <div className="text-[11px] text-surface-muted">{prof.especialidad} · Semana del 8 al 14 jun 2026</div>
+            <div className="text-[13px] font-semibold">{userRole === 'specialist' ? 'Mi Agenda' : (prof?.nombre || 'Especialista')}</div>
+            <div className="text-[11px] text-surface-muted">{userRole === 'specialist' ? 'Gestión de tu disponibilidad' : (prof?.especialidad || '')} · Semana del {formatWeekRange(weekDates)}</div>
           </div>
         </div>
       )}
+
+      {/* Week Navigator */}
+      <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
+        <div className="flex items-center gap-2">
+          <button onClick={() => setWeekOffset(w => w - 1)}
+            className="w-8 h-8 bg-surface-card border border-surface-border rounded-lg flex items-center justify-center cursor-pointer hover:border-brand-orange text-surface-muted hover:text-white">
+            <ChevronLeft size={15}/>
+          </button>
+          <div className="text-[13px] font-semibold min-w-48 text-center">{formatWeekRange(weekDates)}</div>
+          <button onClick={() => setWeekOffset(w => w + 1)}
+            className="w-8 h-8 bg-surface-card border border-surface-border rounded-lg flex items-center justify-center cursor-pointer hover:border-brand-orange text-surface-muted hover:text-white">
+            <ChevronRight size={15}/>
+          </button>
+          <button onClick={() => setWeekOffset(0)}
+            className="px-3 py-1.5 text-[11px] rounded-lg bg-surface-card border border-surface-border text-surface-muted hover:text-white cursor-pointer">
+            Semana actual
+          </button>
+        </div>
+      </div>
 
       {/* Grid */}
       <div className="card-base p-0 overflow-hidden mb-5">
@@ -400,71 +544,82 @@ function AvailabilityManager() {
             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-brand-orange/20 border border-brand-orange/40 inline-block" />Con cita</span>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-[11px]">
-            <thead>
-              <tr>
-                <th className="text-left p-2.5 text-[10px] text-surface-muted uppercase border-b border-surface-border font-medium min-w-20">Hora</th>
-                {days.map(d => (
-                  <th key={d} className="text-center p-2.5 text-[10px] text-surface-muted uppercase border-b border-surface-border font-medium min-w-24">{d}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {uniqueHours.map(hora => (
-                <tr key={hora}>
-                  <td className="p-2 border-b border-surface-border text-surface-muted font-medium">{hora}</td>
-                  {days.map(dia => {
-                    const slot = byDay[dia]?.find(s => s.hora_inicio === hora)
-
-                    const key = `${dia}-${hora}`
-                    const isAvail = availability[selectedProf]?.[key] ?? (slot ? slot.disponible : false)
-                    // Check if has appointment
-                    const hasApt = MOCK_APPOINTMENTS.some(a =>
-                      a.profesional.id === selectedProf &&
-                      a.hora_inicio === hora &&
-                      (a.estado === 'confirmada' || a.estado === 'pendiente')
-                    )
-                    return (
-                      <td key={dia} className="p-1.5 border-b border-surface-border border-r border-surface-border last:border-r-0">
-                        <button
-                          onClick={() => !hasApt && toggleSlot(dia, hora)}
-                          className={cn(
-                            'w-full py-2 rounded-lg text-[10px] font-medium cursor-pointer border transition-all',
-                            hasApt
-                              ? 'cursor-not-allowed'
-                              : 'hover:opacity-80',
-                          )}
-                          style={
-                            hasApt
-                              ? { background: 'rgba(232,98,42,.15)', borderColor: 'rgba(232,98,42,.4)', color: '#E8622A' }
-                              : isAvail
-                              ? { background: 'rgba(76,175,130,.12)', borderColor: 'rgba(76,175,130,.4)', color: '#4CAF82' }
-                              : { background: 'var(--surface-card2)', borderColor: 'var(--surface-border)', color: 'var(--surface-muted)' }
-                          }
-                          title={hasApt ? 'Este slot tiene una cita asignada' : isAvail ? 'Clic para marcar no disponible' : 'Clic para marcar disponible'}
-                        >
-                          {hasApt ? '📅 Cita' : isAvail ? '✓ Libre' : '—'}
-                        </button>
-                      </td>
-                    )
-                  })}
+        
+        {isLoadingAvailability ? (
+          <div className="p-10 text-center text-surface-muted animate-pulse">Cargando disponibilidad de la API...</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-[11px]">
+              <thead>
+                <tr>
+                  <th className="text-left p-2.5 text-[10px] text-surface-muted uppercase border-b border-surface-border font-medium min-w-20">Hora</th>
+                  {weekDates.map((d, i) => (
+                    <th key={i} className="text-center p-2.5 text-[10px] text-surface-muted uppercase border-b border-surface-border font-medium min-w-24">
+                      {WEEK_DAYS[d.getDay() === 0 ? 6 : d.getDay() - 1]} {d.getDate()}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {uniqueHours.map(hora => (
+                  <tr key={hora}>
+                    <td className="p-2 border-b border-surface-border text-surface-muted font-medium">{hora}</td>
+                    {weekDates.map(date => {
+                      const dayIso = toISODate(date)
+                      const key = `${dayIso}-${hora}`
+                      const state = toggledAvailability[key]
+                      const isAvail = state ? state.disponible : false
+
+                      const hasAppointment = currentWeekAppointments.some(apt => 
+                        apt.fecha === dayIso && apt.hora_inicio === hora
+                      )
+
+                      return (
+                        <td key={key} className="p-1.5 border-b border-surface-border border-r border-surface-border last:border-r-0">
+                          <button
+                            disabled={hasAppointment}
+                            onClick={() => toggleSlotAdmin(dayIso, hora, state?.id)}
+                            className={cn(
+                              'w-full py-2 rounded-lg text-[10px] font-medium border transition-all',
+                              hasAppointment
+                                ? 'cursor-not-allowed opacity-60'
+                                : 'cursor-pointer hover:opacity-80'
+                            )}
+                            style={
+                              hasAppointment
+                                ? { background: 'rgba(232,98,42,.15)', borderColor: 'rgba(232,98,42,.4)', color: '#E8622A' }
+                                : isAvail
+                                ? { background: 'rgba(76,175,130,.12)', borderColor: 'rgba(76,175,130,.4)', color: '#4CAF82' }
+                                : { background: 'var(--surface-card2)', borderColor: 'var(--surface-border)', color: 'var(--surface-muted)' }
+                            }
+                            title={hasAppointment ? 'Este slot tiene una cita asignada' : isAvail ? 'Clic para marcar no disponible' : 'Clic para marcar disponible'}
+                          >
+                            {hasAppointment ? '📅 Cita' : isAvail ? '✓ Libre' : '—'}
+                          </button>
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       <div className="flex gap-3">
-        <button onClick={() => showToast('Disponibilidad guardada correctamente')}
+        <button onClick={handleSaveAvailability}
+          disabled={saveMutation.isPending}
           className="px-4 py-2 rounded-lg bg-brand-orange text-white text-[12px] font-medium cursor-pointer">
-          💾 Guardar disponibilidad
+          💾 {saveMutation.isPending ? 'Guardando...' : 'Guardar disponibilidad'}
         </button>
-        <button onClick={() => showToast('Disponibilidad copiada a próxima semana')}
-          className="px-4 py-2 rounded-lg bg-surface-card border border-surface-border text-white text-[12px] cursor-pointer">
-          Copiar a próxima semana
-        </button>
+        {userRole !== 'admin' && (
+          <button onClick={handleCopyNextWeek}
+            disabled={copyWeekAvailabilityMutation.isPending}
+            className="px-4 py-2 rounded-lg bg-surface-card border border-surface-border text-white text-[12px] cursor-pointer">
+            {copyWeekAvailabilityMutation.isPending ? 'Copiando...' : 'Copiar a próxima semana'}
+          </button>
+        )}
       </div>
     </div>
   )
@@ -950,7 +1105,7 @@ export function AgendaPage({ id_especialista }: { id_especialista?: string } = {
       )}
 
       {/* ── DISPONIBILIDAD ── */}
-      {tab === 'disponibilidad' && <AvailabilityManager />}
+      {tab === 'disponibilidad' && <AvailabilityManager id_especialista={id_especialista} />}
 
       {/* Detail panel */}
       {selectedApt && (

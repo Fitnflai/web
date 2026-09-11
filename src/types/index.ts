@@ -325,7 +325,10 @@ export interface MembershipPlan {
   dias_prueba: number
   descuento_anual: number
   precio: PlanPrice
-  caracteristicas: MembershipBenefit[]
+  precios?: any[]
+  orden?: number
+  estado?: boolean
+  caracteristicas: any[]
   usuarios_activos?: number
 }
 

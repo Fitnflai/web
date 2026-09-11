@@ -24,12 +24,18 @@ export const membershipsService = {
   },
 
   linkBenefit: async (payload: LinkBenefitPayload): Promise<void> => {
-    await apiClient.post('/admin/memberships/plans/link-benefit', payload)
+    const body = {
+      id_plan: payload.id_plan,
+      id_beneficio: payload.id_beneficio || undefined,
+      nombre: payload.nuevo_nombre || undefined,
+      nueva_descripcion: payload.nueva_descripcion || undefined
+    };
+    await apiClient.post('/admin/memberships/plans/link-benefit', body);
   },
 
-  updatePlan: async (payload: UpdatePlanPayload): Promise<MembershipPlan> => {
-    const { id_plan, ...body } = payload
-    const { data } = await apiClient.patch<MembershipPlan>(`/admin/memberships/plans/${id_plan}`, body)
-    return data
+  updatePlan: async (payload: any): Promise<any> => {
+    const { id_plan, ...body } = payload;
+    const { data } = await apiClient.patch(`/admin/memberships/plans/${id_plan}`, body);
+    return data;
   }
 }

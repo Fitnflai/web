@@ -515,7 +515,9 @@ export function DashboardPage() {
                           <td className="p-2.5 border-b border-surface-border font-medium text-white">{t.id_transaccion || t.id}</td>
                           <td className="p-2.5 border-b border-surface-border font-semibold text-white">{t.cliente || t.client || t.paciente_nombre || 'Cliente'}</td>
                           <td className="p-2.5 border-b border-surface-border">
-                            <Badge variant={(t.tipo || t.type) === 'membresia' ? 'yellow' : 'blue'}>{(t.tipo || t.type) === 'membresia' ? 'Membresía' : 'Cita'}</Badge>
+                            <Badge variant={(t.tipo || t.type || t.tipo_membresia) ? 'yellow' : 'blue'}>
+                              {t.tipo_membresia ? `Membresía: ${t.tipo_membresia}` : (t.tipo || t.type) === 'membresia' ? 'Membresía' : 'Cita'}
+                            </Badge>
                           </td>
                           <td className="p-2.5 border-b border-surface-border text-surface-muted">{t.detalle || t.detail}</td>
                           <td className="p-2.5 border-b border-surface-border font-bold text-brand-green">${(t.monto || t.amount || 0).toFixed(2)}</td>

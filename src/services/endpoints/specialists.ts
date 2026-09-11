@@ -2,6 +2,21 @@ import { apiClient } from '@/services/api/client'
 import { MOCK_APPOINTMENTS } from '@/services/mocks/agenda.mock'
 
 const USE_MOCK = false // TODO: Change to false when integrating with real backend
+
+export interface AdminAvailabilitySlot {
+  fecha: string;
+  hora_inicio: string;
+  hora_fin: string;
+  estado: string;
+  id: number;
+}
+
+export interface AdminSaveAvailabilityPayload {
+  fecha: string;
+  hora_inicio: string;
+  hora_fin: string;
+  estado: string;
+}
 import type { SpecialistPatientsResponse, SpecialistDashboardResponse, SpecialistDashboardTabResponse } from '@/types'
 
 export interface SpecialistAgendaSummary {
@@ -761,6 +776,60 @@ export const specialistsService = {
       return 'new-exercise-uuid';
     }
     const { data } = await apiClient.post<string>('/specialist/specialist/pacientes/registrar-nuevo-ejercicio', payload);
+    return data;
+  },
+
+  getAdminAvailability: async (id_especialista: number, fecha_inicio: string, fecha_fin: string): Promise<AdminAvailabilitySlot[]> => {
+    const { data } = await apiClient.get<AdminAvailabilitySlot[]>('/admin/agenda-global/disponibilidad/obtener', {
+      params: { id_especialista, fecha_inicio, fecha_fin }
+    });
+    return data;
+  },
+
+  saveAdminAvailability: async (id_especialista: number, payload: AdminSaveAvailabilityPayload[]): Promise<AdminAvailabilitySlot[]> => {
+    const { data } = await apiClient.post<AdminAvailabilitySlot[]>('/admin/agenda-global/disponibilidad/guardar', payload, {
+      params: { id_especialista }
+    });
+    return data;
+  },
+
+  updateAdminAvailabilityState: async (id_horario_especialista: number, estado: string): Promise<AdminAvailabilitySlot> => {
+    const { data } = await apiClient.put<AdminAvailabilitySlot>(`/admin/agenda-global/disponibilidad/actualizar/${id_horario_especialista}`, null, {
+      params: { estado }
+    });
+    return data;
+  },
+
+  copyAdminAvailability: async (id_especialista: number, fecha_inicio_origen: string, fecha_inicio_destino: string): Promise<any> => {
+    const { data } = await apiClient.post('/admin/agenda-global/disponibilidad/copiar', null, {
+      params: { id_especialista, fecha_inicio_origen, fecha_inicio_destino }
+    });
+    return data;
+  },
+
+  getSpecialistRealAvailability: async (fecha_inicio: string, fecha_fin: string): Promise<AdminAvailabilitySlot[]> => {
+    const { data } = await apiClient.get<AdminAvailabilitySlot[]>('/specialist/specialist/agenda-global/disponibilidad/obtener', {
+      params: { fecha_inicio, fecha_fin }
+    });
+    return data;
+  },
+
+  saveSpecialistRealAvailability: async (payload: AdminSaveAvailabilityPayload[]): Promise<AdminAvailabilitySlot[]> => {
+    const { data } = await apiClient.post<AdminAvailabilitySlot[]>('/specialist/specialist/agenda-global/disponibilidad/guardar', payload);
+    return data;
+  },
+
+  updateSpecialistRealAvailabilityState: async (id_horario_especialista: number, estado: string): Promise<AdminAvailabilitySlot> => {
+    const { data } = await apiClient.put<AdminAvailabilitySlot>(`/specialist/specialist/agenda-global/disponibilidad/actualizar/${id_horario_especialista}`, null, {
+      params: { estado }
+    });
+    return data;
+  },
+
+  copySpecialistRealAvailability: async (fecha_inicio_origen: string, fecha_inicio_destino: string): Promise<any> => {
+    const { data } = await apiClient.post('/specialist/specialist/agenda-global/disponibilidad/copiar', null, {
+      params: { fecha_inicio_origen, fecha_inicio_destino }
+    });
     return data;
   },
 

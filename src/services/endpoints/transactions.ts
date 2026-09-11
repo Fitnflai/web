@@ -60,7 +60,33 @@ export const transactionsService = {
     }
     
     if (Array.isArray(resolvedData)) {
-      return resolvedData as APITransaction[]
+      return resolvedData.map((tx: any) => {
+        // Normalize 'tipo'
+        let normalizedTipo = 'cita';
+        const tipoStr = String(tx.tipo || '').toLowerCase();
+        if (tipoStr.includes('membresia') || tipoStr.includes('membresía')) {
+          normalizedTipo = 'membresia';
+        }
+
+        // Normalize 'estado'
+        let normalizedEstado = 'pendiente';
+        const estadoStr = String(tx.estado || '').toLowerCase();
+        if (estadoStr.includes('exitos') || estadoStr.includes('completad')) {
+          normalizedEstado = 'exitosa';
+        } else if (estadoStr.includes('cancel')) {
+          normalizedEstado = 'cancelada';
+        }
+
+        return {
+          id_transaccion: tx.id_transaccion,
+          fecha: tx.fecha,
+          cliente: tx.cliente,
+          tipo: normalizedTipo,
+          detalle: tx.detalle,
+          monto: Number(tx.monto || 0),
+          estado: normalizedEstado
+        };
+      }) as APITransaction[];
     }
     
     return []

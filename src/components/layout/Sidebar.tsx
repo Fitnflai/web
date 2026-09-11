@@ -7,6 +7,10 @@ import { useAppStore } from '@/store/useAppStore'
 import { cn } from '@/utils'
 import type { NavPage } from '@/types'
 import { useTranslation } from '@/i18n/useTranslation'
+import { useQuery } from '@tanstack/react-query'
+import { usersService } from '@/services/endpoints/users'
+import { notificationsService } from '@/services/endpoints/notifications'
+import { specialistsService } from '@/services/endpoints/specialists'
 
 interface NavItem { id: NavPage; labelKey: string; icon: React.ElementType; badge?: number }
 
@@ -15,19 +19,48 @@ export function Sidebar() {
   const { t } = useTranslation()
   const activeBase = (currentPage as string).replace('-detalle', '') as NavPage
 
+  const { data: usersData } = useQuery({
+    queryKey: ['adminUsersCount'],
+    queryFn: () => usersService.getAdminUsers(1, 1, 'todos', ''),
+    enabled: userRole === 'admin',
+    staleTime: 1000 * 60 * 10, // 10 minutes
+  })
+  const usersCount = usersData?.total
+
+  const { data: profStats } = useQuery({
+    queryKey: ['adminProfStatsCount'],
+    queryFn: usersService.getProfessionalStats,
+    enabled: userRole === 'admin',
+    staleTime: 1000 * 60 * 10, // 10 minutes
+  })
+  const specialistsCount = profStats?.total
+
+  const { data: receivedNotifications } = useQuery({
+    queryKey: ['receivedNotificationsCount', userRole],
+    queryFn: () => {
+      if (userRole === 'admin') {
+        return notificationsService.getReceivedNotifications()
+      }
+      return specialistsService.getSpecialistReceivedNotifications()
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  })
+
+  const unreadCount = receivedNotifications ? receivedNotifications.filter((n: any) => !n.leido).length : 0
+
   const adminSections: { title: string; items: NavItem[] }[] = [
     { title: t('sidebar.dashboard'), items: [{ id: 'dashboard', labelKey: 'sidebar.dashboard', icon: LayoutDashboard }] },
     { title: t('sidebar.users'), items: [
-      { id: 'usuarios',      labelKey: 'sidebar.users',     icon: Users,       badge: 248 },
-      { id: 'profesionales', labelKey: 'sidebar.specialists',icon: IdCard,      badge: 12  },
-      { id: 'agenda',        labelKey: 'sidebar.agenda',  icon: CalendarDays },
-      { id: 'enviar-notificaciones', labelKey: 'sidebar.sendNotifications', icon: Bell, badge: 3 },
+      { id: 'usuarios',      labelKey: 'sidebar.users',     icon: Users, badge: usersCount },
+      { id: 'profesionales', labelKey: 'sidebar.specialists',icon: IdCard, badge: specialistsCount },
+
+      { id: 'enviar-notificaciones', labelKey: 'sidebar.sendNotifications', icon: Bell,  },
     ]},
     { title: t('sidebar.membership'), items: [
       { id: 'membresias',     labelKey: 'sidebar.membership',     icon: Crown },
       { id: 'transacciones',  labelKey: 'sidebar.transactions',   icon: DollarSign },
     ]},
-    { title: t('sidebar.configuration'), items: [{ id: 'notificaciones-recibidas', labelKey: 'sidebar.receivedNotifications', icon: Bell, badge: 2 }, { id: 'configuracion', labelKey: 'sidebar.configuration', icon: Settings }] },
+    { title: t('sidebar.configuration'), items: [      { id: 'notificaciones-recibidas', labelKey: 'sidebar.receivedNotifications', icon: Bell, badge: unreadCount }, { id: 'configuracion', labelKey: 'sidebar.configuration', icon: Settings }] },
   ]
 
   const specialistSections: { title: string; items: NavItem[] }[] = [
@@ -38,7 +71,7 @@ export function Sidebar() {
       { id: 'enviar-notificaciones', labelKey: 'sidebar.sendNotifications', icon: Bell },
     ]},
     { title: t('sidebar.configuration'), items: [
-      { id: 'notificaciones-recibidas', labelKey: 'sidebar.receivedNotifications', icon: Bell, badge: 2 },
+      { id: 'notificaciones-recibidas', labelKey: 'sidebar.receivedNotifications', icon: Bell, badge: unreadCount },
       { id: 'perfil-especialista', labelKey: 'sidebar.configuration',       icon: UserCircle },
     ]},
   ]
