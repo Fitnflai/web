@@ -868,14 +868,15 @@ export function AgendaPage({ id_especialista }: { id_especialista?: string } = {
       if (userRole === 'specialist') {
         return specialistsService.getWeeklyAgendaSummary(fecha_inicio, fecha_fin)
       } else { // userRole === 'admin'
-        if (filterProf === 'todos') {
+        const targetProfId = id_especialista || filterProf;
+        if (targetProfId === 'todos') {
           return specialistsService.getAdminWeeklyAgendaSummary(fecha_inicio, fecha_fin)
         } else {
-          return specialistsService.getAdminSpecialistWeeklyAgendaSummary(parseProfId(filterProf), fecha_inicio, fecha_fin)
+          return specialistsService.getAdminSpecialistWeeklyAgendaSummary(parseProfId(targetProfId), fecha_inicio, fecha_fin)
         }
       }
     },
-    enabled: (userRole === 'specialist' || userRole === 'admin') && !id_especialista,
+    enabled: userRole === 'specialist' || userRole === 'admin',
   })
 
   // --- API Appointments Query ---
@@ -927,6 +928,15 @@ export function AgendaPage({ id_especialista }: { id_especialista?: string } = {
 
   // Stats for current week
   const stats = useMemo(() => {
+    if (apiSummary) { // Use API summary if available for any role
+      return {
+        total: apiSummary.citas_esta_semana,
+        confirmada: apiSummary.confirmadas,
+        pendiente: apiSummary.pendientes,
+        cancelada: apiSummary.canceladas,
+        programadas: apiSummary.programadas,
+      }
+    }
     if (id_especialista && apiAppointments) {
       const confirmed = apiAppointments.filter(apt => apt.estado_cita?.toLowerCase() === 'confirmada').length;
       const pending = apiAppointments.filter(apt => apt.estado_cita?.toLowerCase() === 'pendiente').length;
@@ -939,15 +949,6 @@ export function AgendaPage({ id_especialista }: { id_especialista?: string } = {
         cancelada: canceled,
         programadas: scheduled,
       };
-    }
-    if (apiSummary) { // Use API summary if available for any role
-      return {
-        total: apiSummary.citas_esta_semana,
-        confirmada: apiSummary.confirmadas,
-        pendiente: apiSummary.pendientes,
-        cancelada: apiSummary.canceladas,
-        programadas: apiSummary.programadas,
-      }
     }
     // Fallback to local mock data if no API summary
     const weekApts = appointments.filter(a => weekDates.some(d => toISODate(d) === a.fecha))
