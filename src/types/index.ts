@@ -395,6 +395,8 @@ export interface RecipientCounts {
 export interface RecentCampaign {
   id_campana: number
   titulo: string
+  title?: string
+  subject?: string
   destinatarios_filtro: string
   estado: string
   fecha_programada: string
@@ -404,7 +406,10 @@ export interface RecentCampaign {
 
 export interface SendNotificationPayload {
   titulo: string
+  title?: string
+  subject?: string
   mensaje: string
+  message?: string
   destinatarios_filtro: string
   fecha_programada?: string | null
 }

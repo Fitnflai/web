@@ -69,16 +69,16 @@ export interface SpecialistCertificate {
 }
 
 export interface SpecialistProfile {
-  biografia: string;
+  biografia: string | null;
   nombre: string;
   email: string;
-  especialidad: string;
+  especialidad: string | null;
   anios_experiencia: number | null;
-  ciudad_pais: string;
-  telefono: string;
+  ciudad_pais: string | null;
+  telefono: string | null;
   estado_cuenta: string;
-  tipo_documento: string;
-  numero_documento: string;
+  tipo_documento: string | null;
+  numero_documento: string | null;
   url_doc_frente: string | null;
   url_doc_dorso: string | null;
   historial_laboral: SpecialistWorkHistory[];
@@ -254,6 +254,8 @@ export interface SpecialistNotificationStats {
 export interface SpecialistRecentCampaign {
   id_campania: number;
   titulo: string;
+  title?: string;
+  subject?: string;
   destinatarios_filtro: string;
   estado: string;
   fecha_programada: string;
@@ -271,7 +273,10 @@ export interface SpecialistRecipientCounts {
 
 export interface SendSpecialistNotificationPayload {
   titulo: string;
+  title?: string;
+  subject?: string;
   mensaje: string;
+  message?: string;
   destinatarios_filtro: string;
   fecha_programada: string | null;
 }

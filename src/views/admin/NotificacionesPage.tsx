@@ -105,7 +105,10 @@ export function NotificacionesPage() {
                 }
                 sendNotificationMutation.mutate({
                   titulo: titulo.trim(),
+                  title: titulo.trim(),
+                  subject: titulo.trim(),
                   mensaje: mensaje.trim(),
+                  message: mensaje.trim(),
                   destinatarios_filtro: dest as any,
                   fecha_programada: null
                 });
@@ -176,7 +179,7 @@ export function NotificacionesPage() {
             <div key={i} className="flex items-start gap-3 p-3 rounded-xl border border-surface-border bg-surface-card mb-2.5">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-base" style={{ background: `${color}22` }}>{icon}</div>
               <div className="flex-1">
-                <div className="text-[12px] font-medium">{r.titulo}</div>
+                <div className="text-[12px] font-medium">{r.titulo || r.title || r.subject || 'Sin título'}</div>
                 <div className="text-[11px] text-surface-muted mt-0.5">{subtitleText}</div>
               </div>
               <Badge variant={badgeVariant}>{badgeText}</Badge>

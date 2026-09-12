@@ -6,6 +6,26 @@ import { toast } from '@/components/ui/Toast'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { profileService, UpdateAdminProfilePayload } from '@/services/endpoints/users'
 
+const formatFastApiError = (error: any): string => {
+  if (error.response?.data?.detail && Array.isArray(error.response.data.detail)) {
+    return error.response.data.detail
+      .map((err: any) => {
+        const field = err.loc && err.loc.length > 1 ? err.loc[1] : 'unknown field';
+        return `[${field}] ${err.msg}`;
+      })
+      .join(' | ');
+  }
+  return error.message || 'Error desconocido';
+};
+
+const getDisplayAvatarUrl = (url: string | null): string | undefined => {
+  if (!url) return undefined;
+  if (url.startsWith('blob:') || url.startsWith('data:')) return url;
+  const separator = url.includes('?') ? '&' : '?';
+  // Add dynamic timestamp to prevent browser image caching
+  return `${url}${separator}t=${new Date().getTime()}`;
+};
+
 export function ConfiguracionPage() {
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -25,37 +45,49 @@ export function ConfiguracionPage() {
     if (profileData?.admin) {
       setNombre(profileData.admin.nombre)
       setEmail(profileData.admin.email)
-      setTelefono(profileData.admin.telefono)
+      setTelefono(profileData.admin.telefono ?? '')
       setDescripcion(profileData.admin.biografia || '')
-      setAvatarUrl(profileData.admin.avatar_url)
+      setAvatarUrl(profileData.admin.avatar_url || null)
     }
   }, [profileData])
 
   const updateProfileMutation = useMutation({
     mutationFn: (payload: UpdateAdminProfilePayload) => profileService.updateAdminProfile(payload),
-    onSuccess: () => {
-      toast.show('Perfil actualizado con éxito', 'success')
-      queryClient.invalidateQueries({ queryKey: ['adminProfile'] })
+    onSuccess: (data: any) => {
+      const message = typeof data === 'string' ? data : 'Perfil actualizado con éxito';
+      toast.show(message, 'success');
+      queryClient.invalidateQueries({ queryKey: ['adminProfile'] });
     },
-    onError: (error) => {
-      toast.show(`Error al actualizar el perfil: ${error.message}`, 'error')
+    onError: (error: any) => {
+      const errorMessage = formatFastApiError(error);
+      toast.show(`Error al actualizar el perfil: ${errorMessage}`, 'error');
     },
   })
 
   const uploadAvatarMutation = useMutation({
     mutationFn: (file: File) => profileService.updateAdminAvatar(file),
-    onSuccess: (data) => {
-      setAvatarUrl(data.foto_url);
-      toast.show('Avatar actualizado con éxito', 'success')
-      queryClient.invalidateQueries({ queryKey: ['adminProfile'] })
+    onSuccess: (data: any) => {
+      const newAvatarUrl = typeof data === 'string'
+        ? data
+        : (data.foto_url || data.avatar_url || data.url || null);
+      setAvatarUrl(newAvatarUrl);
+      toast.show('Avatar actualizado con éxito', 'success');
+      queryClient.invalidateQueries({ queryKey: ['adminProfile'] });
     },
-    onError: (error) => {
-      toast.show(`Error al subir el avatar: ${error.message}`, 'error')
+    onError: (error: any) => {
+      const errorMessage = formatFastApiError(error);
+      toast.show(`Error al subir el avatar: ${errorMessage}`, 'error');
     },
   })
 
   const handleUpdateProfile = () => {
-    updateProfileMutation.mutate({ nombre, email, telefono, biografia: descripcion })
+    const payload: UpdateAdminProfilePayload = {
+      nombre,
+      email,
+      telefono: telefono === '' ? null : telefono,
+      biografia: descripcion,
+    };
+    updateProfileMutation.mutate(payload);
   }
 
   const handleAvatarClick = () => {
@@ -64,7 +96,8 @@ export function ConfiguracionPage() {
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
-      uploadAvatarMutation.mutate(event.target.files[0])
+      uploadAvatarMutation.mutate(event.target.files[0]);
+      event.target.value = '';
     }
   }
 
@@ -94,14 +127,15 @@ export function ConfiguracionPage() {
           <div className="flex flex-col items-center justify-center shrink-0">
             <div className="relative cursor-pointer" onClick={handleAvatarClick}>
               {avatarUrl ? (
-                <img src={avatarUrl} alt="Admin Avatar" className="w-16 h-16 rounded-full object-cover border-[3px] border-surface-card" />
+                <img src={getDisplayAvatarUrl(avatarUrl)} alt="Admin Avatar" className="w-16 h-16 rounded-full object-cover border-[3px] border-surface-card" />
               ) : (
                 <Avatar initials="AD" color="#E8622A" size="lg" className="w-16 h-16 text-xl border-[3px] border-surface-card" />
               )}
               <div className="absolute bottom-0 right-0 w-5 h-5 rounded-full flex items-center justify-center cursor-pointer border border-surface-card bg-brand-orange">
                 <Upload size={10} className="text-white"/>
-              </div>
+            </div>
               <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
+
             </div>
           </div>
           {/* Right Description Section */}
@@ -135,6 +169,7 @@ export function ConfiguracionPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              readOnly={true}
               className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-orange"
             />
           </div>

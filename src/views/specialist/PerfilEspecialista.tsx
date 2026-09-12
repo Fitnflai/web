@@ -18,6 +18,25 @@ import {
 
 
 
+const formatFastApiError = (error: any): string => {
+  if (error.response?.data?.detail && Array.isArray(error.response.data.detail)) {
+    return error.response.data.detail
+      .map((err: any) => {
+        const field = err.loc && err.loc.length > 1 ? err.loc[1] : 'unknown field';
+        return `[${field}] ${err.msg}`;
+      })
+      .join(' | ');
+  }
+  return error.message || 'Error desconocido';
+};
+
+const getDisplayDocUrl = (url: string | null | undefined): string | undefined => {
+  if (!url) return undefined;
+  if (url.startsWith('blob:') || url.startsWith('data:')) return url;
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}t=${new Date().getTime()}`;
+};
+
 export function PerfilEspecialista() {
   const { setPage } = useAppStore()
   const queryClient = useQueryClient()
@@ -72,7 +91,7 @@ export function PerfilEspecialista() {
 
   useEffect(() => {
     if (specialistProfile) {
-      const [ciudad, pais] = specialistProfile.ciudad_pais.split(', ').map(s => s.trim())
+      const [ciudad, pais] = (specialistProfile.ciudad_pais || '').split(', ').map(s => s.trim())
       setP({
         ...original,
 
@@ -114,7 +133,7 @@ export function PerfilEspecialista() {
       setIsEditing(false)
     },
     onError: (error) => {
-      toast.show(`Error al actualizar el perfil: ${error.message}`, 'error')
+      toast.show(`Error al actualizar el perfil: ${formatFastApiError(error)}`, 'error')
     },
   })
 
@@ -125,7 +144,7 @@ export function PerfilEspecialista() {
       toast.show('Documento cargado con éxito', 'success')
     },
     onError: (error) => {
-      toast.show(`Error al cargar documento: ${error.message}`, 'error')
+      toast.show(`Error al cargar documento: ${formatFastApiError(error)}`, 'error')
     },
   })
 
@@ -136,7 +155,7 @@ export function PerfilEspecialista() {
       toast.show('Documento eliminado con éxito', 'success')
     },
     onError: (error) => {
-      toast.show(`Error al eliminar documento: ${error.message}`, 'error')
+      toast.show(`Error al eliminar documento: ${formatFastApiError(error)}`, 'error')
     },
   })
 
@@ -147,7 +166,7 @@ export function PerfilEspecialista() {
       toast.show('Certificado cargado con éxito', 'success')
     },
     onError: (error) => {
-      toast.show(`Error al cargar certificado: ${error.message}`, 'error')
+      toast.show(`Error al cargar certificado: ${formatFastApiError(error)}`, 'error')
     },
   })
 
@@ -158,7 +177,7 @@ export function PerfilEspecialista() {
       toast.show('Certificado eliminado con éxito', 'success')
     },
     onError: (error) => {
-      toast.show(`Error al eliminar certificado: ${error.message}`, 'error')
+      toast.show(`Error al eliminar certificado: ${formatFastApiError(error)}`, 'error')
     },
   })
 
@@ -191,7 +210,7 @@ export function PerfilEspecialista() {
             if (isEditing) {
               // Prepare payload for updateProfileMutation
               if (!p) return
-              const [ciudad_only, pais_only] = p.ciudad.split(', ').map(s => s.trim())
+              const [ciudad_only = '', pais_only = ''] = (p.ciudad || '').split(', ').map(s => s.trim())
               const payload: UpdateSpecialistProfilePayload = {
                 email: p.email || '',
                 biografia: p.bio || '',
@@ -236,6 +255,7 @@ export function PerfilEspecialista() {
                       // Assuming avatar upload would use a similar mutation. For now, it's just a placeholder.
                       // This part needs to be connected to a specific avatar upload endpoint when available.
                       toast.show(`Avatar file selected: ${file.name}`, 'info')
+                      e.target.value = '' // Clear the input
                     }
                   }}
                 />
@@ -276,8 +296,7 @@ export function PerfilEspecialista() {
             <input
               type="email"
               value={p.email || ''}
-              disabled={!isEditing || isSaving}
-              onChange={(e) => handleFieldChange('email', e.target.value)}
+              disabled={true}
               placeholder="Ej. garcia@fitnflai.com"
               className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-purple disabled:opacity-75 disabled:cursor-not-allowed"
             />
@@ -394,7 +413,7 @@ export function PerfilEspecialista() {
                         variant="ghost"
                         size="sm"
                         className="px-1.5 h-7 text-[10px]"
-                        onClick={() => window.open(p.docDelantero, '_blank')}
+                        onClick={() => window.open(getDisplayDocUrl(p.docDelantero), '_blank')}
                       >
                         Ver
                       </Button>
@@ -450,7 +469,7 @@ export function PerfilEspecialista() {
                         variant="ghost"
                         size="sm"
                         className="px-1.5 h-7 text-[10px]"
-                        onClick={() => window.open(p.docTrasero, '_blank')}
+                        onClick={() => window.open(getDisplayDocUrl(p.docTrasero), '_blank')}
                       >
                         Ver
                       </Button>

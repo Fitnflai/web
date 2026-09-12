@@ -968,7 +968,7 @@ export interface AdminProfile {
   id_usuario: string;
   nombre: string;
   email: string;
-  telefono: string;
+  telefono: string | null;
   avatar_url: string | null;
   biografia: string | null;
 }
@@ -980,12 +980,13 @@ export interface AdminProfileResponse {
 export interface UpdateAdminProfilePayload {
   nombre: string;
   email: string;
-  telefono: string;
+  telefono: string | null;
   biografia?: string | null;
 }
 
 export interface UploadAvatarResponse {
   foto_url: string;
+  avatar_url?: string;
 }
 
 // Mock Admin Profile
@@ -1009,7 +1010,7 @@ export const profileService = {
     return data;
   },
 
-  updateAdminProfile: async (payload: UpdateAdminProfilePayload): Promise<AdminProfileResponse> => {
+  updateAdminProfile: async (payload: UpdateAdminProfilePayload): Promise<AdminProfileResponse | string> => {
     if (USE_MOCK) {
       return new Promise((resolve) => {
         setTimeout(() => {
@@ -1034,11 +1035,14 @@ export const profileService = {
     }
     const formData = new FormData();
     formData.append('file', file);
-    const { data } = await apiClient.post('/admin/profile/update-avatar', formData, {
+    const { data } = await apiClient.post('/adminprofile/update-avatar', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
+    if (typeof data === 'string') {
+      return { foto_url: data, avatar_url: data };
+    }
     return data;
   },
 };
