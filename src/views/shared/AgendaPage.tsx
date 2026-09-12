@@ -505,15 +505,15 @@ function AvailabilityManager({ id_especialista }: { id_especialista?: string } =
         </>
       )}
 
-      {(userRole !== 'specialist' || userRole === 'specialist') && (
-        <div className="flex items-center gap-3 p-3 rounded-xl mb-5" style={{ background: 'rgba(155,89,182,.07)', border: '1px solid rgba(155,89,182,.2)' }}>
-          <Avatar initials={userRole === 'specialist' ? 'ME' : (prof?.initials || '??')} color={prof?.color || 'purple'} size="md" />
-          <div>
-            <div className="text-[13px] font-semibold">{userRole === 'specialist' ? 'Mi Agenda' : (prof?.nombre || 'Especialista')}</div>
-            <div className="text-[11px] text-surface-muted">{userRole === 'specialist' ? 'Gestión de tu disponibilidad' : (prof?.especialidad || '')} · Semana del {formatWeekRange(weekDates)}</div>
+        {userRole === 'admin' && !id_especialista && prof && (
+          <div className="flex items-center gap-3 p-3 rounded-xl mb-5" style={{ background: 'rgba(155,89,182,.07)', border: '1px solid rgba(155,89,182,.2)' }}>
+            <Avatar initials={prof.initials} color={prof.color} size="md" />
+            <div>
+              <div className="text-[13px] font-semibold">{prof.nombre}</div>
+              <div className="text-[11px] text-surface-muted">{prof.especialidad} · Semana del {formatWeekRange(weekDates)}</div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Week Navigator */}
       <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
