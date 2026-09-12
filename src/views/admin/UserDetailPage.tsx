@@ -15,6 +15,7 @@ import { ProgressTab } from '@/components/patient/ProgressTab'
 import { ClinicalReportTab } from '@/components/patient/ClinicalReportTab'
 import { SpecialistNutritionTab } from '../specialist/UserDetailPage'
 
+import { apiClient } from '@/services/api/client'
 import { PLAN_NAMES, PLAN_MONTOS, DAYS_ES } from '@/constants'
 const TODAY = '2026-06-06'
 import { formatDate, getPlanState, STATE_LABEL, typeColor } from '@/utils'
@@ -1502,6 +1503,40 @@ export function AdminPlanTab({ userId }: { userId: string }) {
   const [selectedExercise, setSelectedExercise] = useState<WorkoutExercise | null>(null)
 
   // Calculate start and end dates based on weekOffset
+  const handleUploadMedia = async (idEjercicio: string, file: File, type: 'masculino' | 'femenino') => {
+    const formDataObj = new FormData();
+    if (type === 'masculino') {
+      formDataObj.append('multimedia_masculino', file);
+    } else {
+      formDataObj.append('multimedia_femenino', file);
+    }
+
+    try {
+      const { data } = await apiClient.post(`/admin/ejercicios/${idEjercicio}/cargar-media`, formDataObj, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      toast.show('Archivo multimedia cargado con éxito', 'success');
+      // Update state dynamically to update the video player preview URL immediately
+      setSelectedExercise(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          ejercicio: {
+            ...prev.ejercicio,
+            multimedia_url: type === 'masculino' ? (data.multimedia_url || prev.ejercicio.multimedia_url) : prev.ejercicio.multimedia_url,
+            multimedia_url_femenino: type === 'femenino' ? (data.multimedia_url_femenino || prev.ejercicio.multimedia_url_femenino) : prev.ejercicio.multimedia_url_femenino,
+          }
+        };
+      });
+    } catch (err: any) {
+      console.error('Error uploading media:', err);
+      toast.show(`Error al cargar multimedia: ${err.message}`, 'error');
+    }
+  };
+
+  // Calculate start and end dates based on weekOffset
   const weekDates = useMemo(() => getWeekDates(weekOffset), [weekOffset])
   const startDate = useMemo(() => formatDateISO(weekDates[0]), [weekDates])
   const endDate = useMemo(() => formatDateISO(weekDates[6]), [weekDates])
@@ -1727,63 +1762,156 @@ export function AdminPlanTab({ userId }: { userId: string }) {
 
       {/* Exercise detail popup modal */}
       {selectedExercise && (
-        <Modal isOpen={selectedExercise !== null} onClose={() => setSelectedExercise(null)} title={selectedExercise.ejercicio.nombre}>
-          <div className="space-y-4 text-[12px] text-left text-white max-h-[450px] overflow-y-auto pr-1">
-            <div className="grid grid-cols-2 gap-3 bg-surface-card2 border border-surface-border p-3 rounded-lg">
-              <div>
-                <span className="text-[10px] text-surface-muted uppercase font-bold">Series</span>
-                <div className="text-white font-bold text-[14px] mt-0.5">{selectedExercise.series}</div>
-              </div>
-              <div>
-                <span className="text-[10px] text-surface-muted uppercase font-bold">Repeticiones</span>
-                <div className="text-white font-bold text-[14px] mt-0.5">{selectedExercise.repeticiones}</div>
-              </div>
-              <div>
-                <span className="text-[10px] text-surface-muted uppercase font-bold">Peso Objetivo</span>
-                <div className="text-white font-bold text-[14px] mt-0.5">{selectedExercise.peso_objetivo} kg</div>
-              </div>
-              <div>
-                <span className="text-[10px] text-surface-muted uppercase font-bold">Descanso</span>
-                <div className="text-white font-bold text-[14px] mt-0.5">{selectedExercise.descanso_segundos} seg</div>
+        <Modal 
+          isOpen={selectedExercise !== null} 
+          onClose={() => setSelectedExercise(null)} 
+          title={`Detalle del Ejercicio: ${selectedExercise.ejercicio.nombre}`}
+          className="max-w-4xl"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-[12px] text-left text-white max-h-[500px] overflow-y-auto pr-1 select-none">
+            {/* Left Column: Parámetros del Ejercicio */}
+            <div className="space-y-4">
+              <div className="text-[12px] font-bold text-brand-orange uppercase tracking-wider">Parámetros del Ejercicio</div>
+              
+              <div className="space-y-3 bg-surface-card border border-surface-border p-4 rounded-xl">
+                <div>
+                  <span className="text-[10px] text-surface-muted uppercase font-bold block mb-1">Tipo de Ejercicio</span>
+                  <input type="text" value={selectedExercise.ejercicio.tipo || ''} disabled className="form-input opacity-70 cursor-not-allowed bg-surface-card2" />
+                </div>
+                <div>
+                  <span className="text-[10px] text-surface-muted uppercase font-bold block mb-1">Nombre del Ejercicio</span>
+                  <input type="text" value={selectedExercise.ejercicio.nombre || ''} disabled className="form-input opacity-70 cursor-not-allowed bg-surface-card2" />
+                </div>
+                <div>
+                  <span className="text-[10px] text-surface-muted uppercase font-bold block mb-1">Descripción del Ejercicio</span>
+                  <textarea value={selectedExercise.ejercicio.descripcion || ''} disabled rows={2} className="form-input w-full p-2 bg-surface-card2 border border-surface-border rounded-lg opacity-70 cursor-not-allowed outline-none" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-[10px] text-surface-muted uppercase font-bold block mb-1">Series</span>
+                    <input type="text" value={selectedExercise.series || 0} disabled className="form-input opacity-70 cursor-not-allowed bg-surface-card2" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-surface-muted uppercase font-bold block mb-1">Series Completadas</span>
+                    <input type="text" value={selectedExercise.series_completadas || 0} disabled className="form-input opacity-70 cursor-not-allowed bg-surface-card2" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-surface-muted uppercase font-bold block mb-1">Reps / Distancia</span>
+                    <input type="text" value={selectedExercise.repeticiones || ''} disabled className="form-input opacity-70 cursor-not-allowed bg-surface-card2" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-surface-muted uppercase font-bold block mb-1">Orden</span>
+                    <input type="text" value={selectedExercise.orden || 0} disabled className="form-input opacity-70 cursor-not-allowed bg-surface-card2" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-surface-muted uppercase font-bold block mb-1">Descanso (s)</span>
+                    <input type="text" value={selectedExercise.descanso_segundos || 0} disabled className="form-input opacity-70 cursor-not-allowed bg-surface-card2" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-surface-muted uppercase font-bold block mb-1">Peso Objetivo (kg)</span>
+                    <input type="text" value={selectedExercise.peso_objetivo || 0} disabled className="form-input opacity-70 cursor-not-allowed bg-surface-card2" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-surface-muted uppercase font-bold block mb-1">Duración (s)</span>
+                    <input type="text" value={selectedExercise.duracion_segundos || 0} disabled className="form-input opacity-70 cursor-not-allowed bg-surface-card2" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-surface-muted uppercase font-bold block mb-1">Estado</span>
+                    <input type="text" value={selectedExercise.estado || ''} disabled className="form-input opacity-70 cursor-not-allowed bg-surface-card2" />
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-[10px] text-surface-muted uppercase font-bold block mb-1">Comentario de Asignación</span>
+                  <textarea value={selectedExercise.comentario || ''} disabled rows={2} className="form-input w-full p-2 bg-surface-card2 border border-surface-border rounded-lg opacity-70 cursor-not-allowed outline-none" />
+                </div>
               </div>
             </div>
 
-            <div>
-              <span className="text-[10px] text-brand-orange uppercase font-bold">Descripción de Ejercicio</span>
-              <p className="text-white mt-1 leading-relaxed text-[11px]">{selectedExercise.ejercicio.descripcion}</p>
+            {/* Right Column: Multimedia del Ejercicio & Instrucciones */}
+            <div className="space-y-4">
+              <div className="text-[12px] font-bold text-brand-orange uppercase tracking-wider">Multimedia del Ejercicio</div>
+              
+              <div className="bg-surface-card border border-surface-border p-4 rounded-xl space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-[10px] text-surface-muted uppercase font-bold block mb-1">URL del Video / Multimedia</span>
+                    <input type="text" value={selectedExercise.ejercicio.multimedia_url || ''} disabled className="form-input opacity-70 cursor-not-allowed bg-surface-card2 truncate" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-surface-muted uppercase font-bold block mb-1">Video Femenino (URL)</span>
+                    <input type="text" value={selectedExercise.ejercicio.multimedia_url_femenino || ''} disabled className="form-input opacity-70 cursor-not-allowed bg-surface-card2 truncate" />
+                  </div>
+                </div>
+
+                {/* File Upload Zone - ACTIVE! */}
+                <div className="grid grid-cols-2 gap-2 border-t border-surface-border/30 pt-3">
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-brand-orange uppercase font-bold block">Subir Video Masculino</span>
+                    <input 
+                      type="file" 
+                      accept="video/*,image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleUploadMedia(selectedExercise.ejercicio.id_ejercicio, file, 'masculino');
+                      }}
+                      className="text-[9px] text-white block w-full file:mr-1 file:py-1 file:px-1.5 file:rounded-md file:border-0 file:text-[9px] file:font-semibold file:bg-brand-orange file:text-white hover:file:bg-brand-orange/80 cursor-pointer"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-brand-orange uppercase font-bold block">Subir Video Femenino</span>
+                    <input 
+                      type="file" 
+                      accept="video/*,image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleUploadMedia(selectedExercise.ejercicio.id_ejercicio, file, 'femenino');
+                      }}
+                      className="text-[9px] text-white block w-full file:mr-1 file:py-1 file:px-1.5 file:rounded-md file:border-0 file:text-[9px] file:font-semibold file:bg-brand-orange file:text-white hover:file:bg-brand-orange/80 cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                {/* Video Player Preview */}
+                <div className="relative w-full h-auto max-h-[160px] rounded-md overflow-hidden bg-surface-card2 border border-surface-border flex items-center justify-center">
+                  {selectedExercise.ejercicio.multimedia_url ? (
+                    <video 
+                      src={selectedExercise.ejercicio.multimedia_url} 
+                      controls 
+                      className="max-h-[160px] w-full object-contain rounded-md" 
+                    />
+                  ) : (
+                    <span className="text-surface-muted p-4 text-center">Sin video multimedia</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="text-[12px] font-bold text-brand-orange uppercase tracking-wider pt-2">Instrucciones de Ejecución</div>
+              
+              <div className="bg-surface-card border border-surface-border p-4 rounded-xl space-y-3">
+                <div>
+                  <span className="text-[10px] text-surface-muted uppercase font-bold block mb-1">Objetivo</span>
+                  <textarea value={selectedExercise.ejercicio.instrucciones?.objetivo || ''} disabled rows={2} className="form-input w-full p-2 bg-surface-card2 border border-surface-border rounded-lg opacity-70 cursor-not-allowed outline-none text-[11px]" />
+                </div>
+                <div>
+                  <span className="text-[10px] text-surface-muted uppercase font-bold block mb-1">Posición Inicial</span>
+                  <textarea value={selectedExercise.ejercicio.instrucciones?.posicion_inicial || ''} disabled rows={2} className="form-input w-full p-2 bg-surface-card2 border border-surface-border rounded-lg opacity-70 cursor-not-allowed outline-none text-[11px]" />
+                </div>
+                <div>
+                  <span className="text-[10px] text-surface-muted uppercase font-bold block mb-1">Ejecución Técnica</span>
+                  <textarea value={selectedExercise.ejercicio.instrucciones?.ejecucion || ''} disabled rows={2} className="form-input w-full p-2 bg-surface-card2 border border-surface-border rounded-lg opacity-70 cursor-not-allowed outline-none text-[11px]" />
+                </div>
+                <div>
+                  <span className="text-[10px] text-surface-muted uppercase font-bold block mb-1">Consejos Técnicos</span>
+                  <textarea value={(selectedExercise.ejercicio.instrucciones?.consejos_tecnicos || []).join(', ') || ''} disabled rows={2} className="form-input w-full p-2 bg-surface-card2 border border-surface-border rounded-lg opacity-70 cursor-not-allowed outline-none text-[11px]" />
+                </div>
+                <div>
+                  <span className="text-[10px] text-surface-muted uppercase font-bold block mb-1">Errores Comunes</span>
+                  <textarea value={selectedExercise.ejercicio.instrucciones?.errores_comunes || ''} disabled rows={2} className="form-input w-full p-2 bg-surface-card2 border border-surface-border rounded-lg opacity-70 cursor-not-allowed outline-none text-[11px]" />
+                </div>
+              </div>
             </div>
-
-            {selectedExercise.ejercicio.instrucciones?.posicion_inicial && (
-              <div>
-                <span className="text-[10px] text-brand-orange uppercase font-bold">Posición Inicial</span>
-                <p className="text-white mt-1 leading-relaxed text-[11px]">{selectedExercise.ejercicio.instrucciones.posicion_inicial}</p>
-              </div>
-            )}
-
-            {selectedExercise.ejercicio.instrucciones?.ejecucion && (
-              <div>
-                <span className="text-[10px] text-brand-orange uppercase font-bold">Ejecución</span>
-                <p className="text-white mt-1 leading-relaxed text-[11px]">{selectedExercise.ejercicio.instrucciones.ejecucion}</p>
-              </div>
-            )}
-
-            {selectedExercise.ejercicio.instrucciones?.errores_comunes && (
-              <div>
-                <span className="text-[10px] text-brand-red uppercase font-bold">Errores Comunes</span>
-                <p className="text-white mt-1 leading-relaxed text-[11px]">{selectedExercise.ejercicio.instrucciones.errores_comunes}</p>
-              </div>
-            )}
-
-            {(selectedExercise.ejercicio.instrucciones?.consejos_tecnicos?.length ?? 0) > 0 && (
-              <div>
-                <span className="text-[10px] text-brand-orange uppercase font-bold">Consejos Técnicos</span>
-                <ul className="list-disc pl-4 mt-1 space-y-1 text-[11px]">
-                  {selectedExercise.ejercicio.instrucciones?.consejos_tecnicos?.map((tip: string, idx: number) => (
-                    <li key={idx}>{tip}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
           </div>
           <div className="flex justify-end mt-4 pt-3 border-t border-surface-border">
             <Button variant="ghost" onClick={() => setSelectedExercise(null)}>Cerrar</Button>
