@@ -833,4 +833,53 @@ export const specialistsService = {
     return data;
   },
 
+  registerSpecialistSelfRegistration: async (formData: any): Promise<any> => {
+    const formDataObject = new FormData();
+
+    const requestJson = {
+      nombre_completo: formData.nombre,
+      email: formData.email,
+      password: formData.contrasena,
+      telefono_contacto: formData.tel,
+      idiomas: formData.idiomas,
+      especialidad: formData.especialidad_label || formData.especialidad,
+      anios_experiencia: parseInt(formData.experiencia, 10) || 0,
+      ciudad: formData.ciudad,
+      pais: 'Colombia',
+      biografia: formData.bio,
+      linkedin: formData.linkedin,
+      web: formData.web,
+      tipo_documento: formData.docTipo,
+      numero_documento: formData.docNumero,
+      trayectos: (formData.trayectos || []).map((t: any) => ({
+        titulo: t.titulo,
+        organizacion: t.org,
+        fecha_inicio: t.inicio,
+        fecha_fin: t.fin || null,
+        descripcion: t.desc || ''
+      })),
+      certificados: (formData.certificados || []).map((c: any) => ({
+        nombre: c.nombre,
+        organizacion_emisora: c.org,
+        anio_obtencion: c.año,
+        fecha_vencimiento: c.venc || null
+      }))
+    };
+
+    formDataObject.append('data_json', JSON.stringify(requestJson));
+    if (formData.docDelantero) {
+      formDataObject.append('file_frente', formData.docDelantero);
+    }
+    if (formData.docTrasero) {
+      formDataObject.append('file_dorso', formData.docTrasero);
+    }
+
+    const { data } = await apiClient.post('/specialist/registrar-especialista', formDataObject, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return data;
+  },
+
 }

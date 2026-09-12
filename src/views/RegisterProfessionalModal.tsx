@@ -8,7 +8,9 @@ import { useTranslation } from '@/i18n/useTranslation';
 import { T } from '@/components/ui/Typography';
 import { toast } from '@/components/ui/Toast';
 import { MOCK_PROFESSIONALS } from '@/services/mocks/professionals.mock';
+import { useAppStore } from '@/store/useAppStore';
 import { usersService, SpecialityTypeResponse, RegisterProfessionalPayload } from '@/services/endpoints/users';
+import { specialistsService } from '@/services/endpoints/specialists';
 import type { Professional, ProfRole } from '@/types';
 import {
   IconSparkles,
@@ -96,6 +98,7 @@ const DEFAULT_SPECIALTY_OPTIONS: SelectOption[] = [
 
 export function RegisterProfessionalModal({ isOpen, onClose, onSuccess }: RegisterProfessionalModalProps) {
   const { t } = useTranslation();
+  const { userRole } = useAppStore();
 
   const { data: specialityTypes, isLoading: isLoadingSpecialityTypes } = useQuery<SpecialityTypeResponse[]>({
     queryKey: ['specialityTypes'],
@@ -112,18 +115,36 @@ export function RegisterProfessionalModal({ isOpen, onClose, onSuccess }: Regist
       }));
 
   const registerMutation = useMutation({
-    mutationFn: (payload: RegisterProfessionalPayload) => usersService.registerProfessional(payload),
+    mutationFn: (dataPayload: any) => {
+      if (userRole === 'admin') {
+        const payload: RegisterProfessionalPayload = {
+          nombre: dataPayload.nombre,
+          email: dataPayload.email,
+          password: dataPayload.contrasena,
+          tipo_ids: [dataPayload.especialidad],
+          id_disciplina: 1,
+          nivel_acceso: 'completo',
+          ciudad: dataPayload.ciudad,
+          pais: 'Colombia',
+          telefono_contacto: dataPayload.tel,
+          anios_experiencia: parseInt(dataPayload.experiencia, 10) || 0,
+        };
+        return usersService.registerProfessional(payload);
+      } else {
+        return specialistsService.registerSpecialistSelfRegistration(dataPayload);
+      }
+    },
     onSuccess: (data) => {
       console.log('Professional registered successfully', data);
       // Fallback locally by appending the new professional to MOCK_PROFESSIONALS
       // This part is for local simulation when USE_MOCK is true in users.ts
       const resolvedSpecialty = specialtyOptions.find(opt => opt.value === formData.especialidad)?.label || 'Coach';
       const newProfessional: Professional = {
-        id: `pro-${data.id_especialista}`,
-        nombre: data.nombre,
-        initials: `${data.nombre.split(' ')[0]?.[0] || ''}${data.nombre.split(' ')[1]?.[0] || ''}`.toUpperCase(),
+        id: `pro-${data?.id_especialista || 'self'}`,
+        nombre: data?.nombre || formData.nombre,
+        initials: `${(data?.nombre || formData.nombre).split(' ')[0]?.[0] || ''}${(data?.nombre || formData.nombre).split(' ')[1]?.[0] || ''}`.toUpperCase(),
         color: ['#9B59B6', '#4CAF82', '#4A7CC7', '#E8622A', '#E24B4A'][Math.floor(Math.random() * 5)],
-        email: data.email,
+        email: data?.email || formData.email,
         tel: formData.tel,
         ciudad: formData.ciudad,
         rol: 'Entrenador' as ProfRole,
@@ -139,10 +160,10 @@ export function RegisterProfessionalModal({ isOpen, onClose, onSuccess }: Regist
         bio: formData.bio,
         areas: resolvedSpecialty.split(', '),
         pacientes: 0,
-        accesoNivel: data.nivel_acceso === 'completo' ? 'Completo' : data.nivel_acceso === 'parcial' ? 'Parcial' : data.nivel_acceso === 'lectura' ? 'Lectura' : 'Sin acceso',
-        accesoDesc: data.nivel_acceso || 'Cuenta pendiente de activación',
+        accesoNivel: data?.nivel_acceso === 'completo' ? 'Completo' : data?.nivel_acceso === 'parcial' ? 'Parcial' : data?.nivel_acceso === 'lectura' ? 'Lectura' : 'Sin acceso',
+        accesoDesc: data?.nivel_acceso || 'Cuenta pendiente de activación',
         ultimoAcceso: 'Nunca',
-        estado: data.estado as any,
+        estado: (data?.estado || 'pendiente') as any,
         docTipo: formData.docTipo,
         docNumero: formData.docNumero,
         docDelantero: formData.docDelantero?.name || '',
@@ -391,20 +412,12 @@ export function RegisterProfessionalModal({ isOpen, onClose, onSuccess }: Regist
   };
 
   const handleSubmit = () => {
-    const payload: RegisterProfessionalPayload = {
-      nombre: formData.nombre,
-      email: formData.email,
-      password: formData.contrasena,
-      tipo_ids: [formData.especialidad],
-      id_disciplina: 1, // Assuming a default discipline ID
-      nivel_acceso: 'completo', // Default access level
-      ciudad: formData.ciudad,
-      pais: 'Colombia', // Assuming default country
-      telefono_contacto: formData.tel,
-      anios_experiencia: parseInt(formData.experiencia, 10) || 0,
+    const resolvedSpecialty = specialtyOptions.find(opt => opt.value === formData.especialidad)?.label || 'Coach';
+    const payloadWithLabel = {
+      ...formData,
+      especialidad_label: resolvedSpecialty
     };
-
-    registerMutation.mutate(payload);
+    registerMutation.mutate(payloadWithLabel);
   };
 
   const renderStepIndicators = () => {
