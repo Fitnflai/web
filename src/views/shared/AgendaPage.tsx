@@ -69,7 +69,7 @@ function timeToMinutes(t: string): number {
 function AppointmentCard({ apt, compact = false, onClick }: {
   apt: Appointment; compact?: boolean; onClick?: () => void
 }) {
-  const tm = TYPE_META[apt.tipo]
+  const tm = TYPE_META[apt.tipo] || { label: 'Desconocido', color: '#808080', bg: 'rgba(128,128,128,.15)' }
   const sm = STATUS_META[apt.estado]
 
   if (compact) {
@@ -95,7 +95,7 @@ function AppointmentCard({ apt, compact = false, onClick }: {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className="text-[13px] font-semibold">{apt.motivo.slice(0, 55)}{apt.motivo.length > 55 ? '…' : ''}</span>
+            <span className="text-[13px] font-semibold">{(apt.motivo || '').slice(0, 55)}{((apt.motivo || '').length > 55 ? '…' : '')}</span>
           </div>
           <div className="flex items-center gap-3 flex-wrap text-[11px] text-surface-muted">
             <span className="flex items-center gap-1"><Clock size={11}/>{apt.hora_inicio} – {apt.hora_fin}</span>
@@ -120,7 +120,7 @@ function AppointmentDetailPanel({ apt, onClose, onStatusChange }: {
   onStatusChange: (id: string, status: AppointmentStatus) => void
 }) {
   const { showToast } = useAppStore()
-  const tm = TYPE_META[apt.tipo]
+const tm = TYPE_META[apt.tipo] || { label: 'Desconocido', color: '#808080', bg: 'rgba(128,128,128,.15)' }
   const sm = STATUS_META[apt.estado]
 
   return (
@@ -279,7 +279,7 @@ function CalendarWeekView({
               {aptsByDate[iso]?.length > 0 && (
                 <div className="flex justify-center gap-0.5 mt-1">
                   {aptsByDate[iso].slice(0, 3).map((a, j) => (
-                    <div key={j} className="w-1.5 h-1.5 rounded-full" style={{ background: TYPE_META[a.tipo].color }} />
+                    <div key={j} className="w-1.5 h-1.5 rounded-full" style={{ background: (TYPE_META[a.tipo] || { color: '#808080' }).color }} />
                   ))}
                 </div>
               )}
@@ -300,7 +300,7 @@ function CalendarWeekView({
               return (
                 <div key={i} className={cn('border-r border-surface-border last:border-0 p-1 relative', isToday && 'bg-brand-orange/[0.03]')}>
                   {colApts.map(apt => {
-                    const tm = TYPE_META[apt.tipo]
+const tm = TYPE_META[apt.tipo] || { label: 'Desconocido', color: '#808080', bg: 'rgba(128,128,128,.15)' }
                     return (
                       <button key={apt.id} onClick={() => onSelectApt(apt)}
                         className="flex flex-col gap-0.5 text-left w-full rounded-lg px-2 py-1.5 mb-1 text-[10px] font-medium border cursor-pointer transition-all hover:opacity-90"
@@ -689,8 +689,8 @@ function mapBackendAppointmentsToAppointments(list: SpecialistAppointment[]): Ap
       fecha: fecha,
       hora_inicio: hora_inicio,
       hora_fin: hora_fin,
-      tipo: sa.tipo_cita.toLowerCase() as Appointment['tipo'],
-      estado: sa.estado_cita.toLowerCase() as AppointmentStatus,
+      tipo: (sa.tipo_cita || '').toLowerCase() as Appointment['tipo'],
+      estado: (sa.estado_cita || '').toLowerCase() as AppointmentStatus,
       motivo: sa.motivo,
       link_videollamada: `https://meet.fitnflai.com/${sa.id_cita_agenda_especialista}`, // Placeholder
       profesional: professional,

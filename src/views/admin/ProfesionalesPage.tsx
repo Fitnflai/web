@@ -242,9 +242,9 @@ function ProfDetail({ onUpdate }: { onUpdate: () => void }) {
 
   const pupilOptions: SelectOption[] = useMemo(() => {
     if (isMockProfessional) {
-      const assignedNames = (p.pacAsi || []).map(pa => pa.nombre.toLowerCase())
+      const assignedNames = (p.pacAsi || []).map(pa => (pa.nombre || '').toLowerCase())
       return MOCK_USERS
-        .filter(u => !assignedNames.includes(u.apodo.toLowerCase()))
+        .filter(u => !assignedNames.includes((u.apodo || '').toLowerCase()))
         .map(u => ({
           value: u.id_usuario,
           label: `${u.nombre} (${u.nombre_disciplina || 'Running'})`
