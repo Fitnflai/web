@@ -75,11 +75,13 @@ export function PerfilEspecialista() {
     docNumero: '',
     docDelantero: undefined,
     docTrasero: undefined,
+    avatar_url: undefined,
   }), []);
 
   const [p, setP] = useState<Professional | null>(null)
   const [isEditing, setIsEditing] = useState(false)
 
+  const fileInputRefAvatar = useRef<HTMLInputElement>(null)
   const fileInputRefFrente = useRef<HTMLInputElement>(null)
   const fileInputRefDorso = useRef<HTMLInputElement>(null)
   const fileInputRefCert = useRef<HTMLInputElement>(null)
@@ -92,6 +94,7 @@ export function PerfilEspecialista() {
   useEffect(() => {
     if (specialistProfile) {
       const [ciudad, pais] = (specialistProfile.ciudad_pais || '').split(', ').map(s => s.trim())
+      const cachedAvatar = localStorage.getItem('fitnflai_specialist_avatar')
       setP({
         ...original,
 
@@ -108,6 +111,7 @@ export function PerfilEspecialista() {
         docNumero: specialistProfile.numero_documento || '',
         docDelantero: specialistProfile.url_doc_frente || undefined,
         docTrasero: specialistProfile.url_doc_dorso || undefined,
+        avatar_url: specialistProfile.avatar_url || cachedAvatar || undefined,
         tray: (specialistProfile.historial_laboral || []).map(item => {
           const [inicio, fin = ''] = (item.periodo || '').split('-').map(s => s.trim());
           return { titulo: item.puesto, org: item.empresa, inicio, fin, desc: '' };
@@ -134,6 +138,24 @@ export function PerfilEspecialista() {
     },
     onError: (error) => {
       toast.show(`Error al actualizar el perfil: ${formatFastApiError(error)}`, 'error')
+    },
+  })
+
+  const uploadAvatarMutation = useMutation({
+    mutationFn: (file: File) => specialistsService.uploadSpecialistAvatar(file),
+    onSuccess: (newAvatarUrl) => {
+      if (newAvatarUrl) {
+        localStorage.setItem('fitnflai_specialist_avatar', newAvatarUrl)
+        setP(prev => {
+          if (!prev) return null;
+          return { ...prev, avatar_url: newAvatarUrl }
+        })
+      }
+      queryClient.invalidateQueries({ queryKey: ['specialistProfile'] })
+      toast.show('Foto de perfil actualizada con éxito', 'success')
+    },
+    onError: (error) => {
+      toast.show(`Error al cargar la foto de perfil: ${formatFastApiError(error)}`, 'error')
     },
   })
 
@@ -181,7 +203,7 @@ export function PerfilEspecialista() {
     },
   })
 
-  const isSaving = updateProfileMutation.isPending || uploadDocMutation.isPending || deleteDocMutation.isPending || uploadCertMutation.isPending || deleteCertMutation.isPending
+  const isSaving = updateProfileMutation.isPending || uploadAvatarMutation.isPending || uploadDocMutation.isPending || deleteDocMutation.isPending || uploadCertMutation.isPending || deleteCertMutation.isPending
 
   if (isLoadingProfile || !p) {
     return (
@@ -244,30 +266,29 @@ export function PerfilEspecialista() {
           {/* Left: Avatar and Upload button */}
           <div className="flex flex-col items-center justify-center shrink-0">
             <div className="relative">
-                <Avatar initials={p.initials} color={p.color} size="lg" className="w-16 h-16 text-xl border-[3px] border-surface-card" />
+                 <Avatar initials={p.initials} color={p.color} size="lg" src={getDisplayDocUrl(p.avatar_url)} className="w-16 h-16 text-xl border-[3px] border-surface-card" />
                 <input
                   type="file"
-                  ref={fileInputRefFrente} // Using ref for triggering click programmatically if needed for avatar upload
+                  ref={fileInputRefAvatar}
+                  accept="image/*"
                   style={{ display: 'none' }} // Hide the input
                   onChange={(e) => {
                     const file = e.target.files?.[0]
                     if (file) {
-                      // Assuming avatar upload would use a similar mutation. For now, it's just a placeholder.
-                      // This part needs to be connected to a specific avatar upload endpoint when available.
-                      toast.show(`Avatar file selected: ${file.name}`, 'info')
+                      uploadAvatarMutation.mutate(file)
                       e.target.value = '' // Clear the input
                     }
                   }}
                 />
                 <div
                   className={cn(
-                    "absolute bottom-0 right-0 w-5 h-5 rounded-full flex items-center justify-center border border-surface-card bg-brand-orange",
+                    "absolute bottom-0 right-0 w-5 h-5 rounded-full flex items-center justify-center border border-surface-card bg-brand-orange cursor-pointer hover:opacity-90",
                     !isEditing && "opacity-40 cursor-not-allowed pointer-events-none"
                   )}
                   aria-disabled={!isEditing || isSaving}
                   onClick={() => {
-                    if (isEditing && fileInputRefFrente.current) {
-                      fileInputRefFrente.current.click() // Trigger hidden file input
+                    if (isEditing && fileInputRefAvatar.current) {
+                      fileInputRefAvatar.current.click() // Trigger hidden file input
                     }
                   }}
                 >

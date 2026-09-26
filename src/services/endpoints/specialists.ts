@@ -83,6 +83,7 @@ export interface SpecialistProfile {
   url_doc_dorso: string | null;
   historial_laboral: SpecialistWorkHistory[];
   certificados: SpecialistCertificate[];
+  avatar_url: string | null;
 }
 
 export interface UpdateSpecialistProfilePayload {
@@ -451,6 +452,7 @@ export const specialistsService = {
               { id_certificado: 'cert-1', nombre: 'Certificación en Nutrición Deportiva Avanzada', organizacion_emisora: 'Instituto de Salud y Deporte', anio_obtencion: '2016' },
               { id_certificado: 'cert-2', nombre: 'Master en Dietética y Nutrición', organizacion_emisora: 'Universidad Nacional', anio_obtencion: '2013', fecha_vencimiento: null },
             ],
+            avatar_url: null,
           });
         }, 500);
       });
@@ -526,6 +528,26 @@ export const specialistsService = {
     } else {
       const { data } = await apiClient.delete<any>(`/specialist/specialist/profile/certificado/eliminar/${certificado_id}`);
       return data;
+    }
+  },
+
+  uploadSpecialistAvatar: async (file: File): Promise<string> => {
+    if (USE_MOCK) {
+      return new Promise((resolve) => {
+        console.log('MOCK: Uploading specialist avatar with file:', file);
+        const mockUrl = URL.createObjectURL(file);
+        setTimeout(() => resolve(mockUrl), 500);
+      });
+    } else {
+      const formData = new FormData();
+      formData.append('file', file);
+      const { data } = await apiClient.post<any>('/users/me/avatar', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      if (typeof data === 'string') {
+        return data;
+      }
+      return data?.foto_url || data?.avatar_url || data?.url || '';
     }
   },
 

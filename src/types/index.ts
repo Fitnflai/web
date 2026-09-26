@@ -137,6 +137,7 @@ export interface Professional {
   docNumero?: string
   docDelantero?: string
   docTrasero?: string
+  avatar_url?: string | null
 }
 
 // ─── Plan ─────────────────────────────────────────────────────────
