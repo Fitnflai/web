@@ -30,3 +30,6 @@ dist-ssr
 
 # ATL/SDD cache
 .atl/.skill-registry.cache.json
+
+# CodeGraph Index
+.codegraph/

@@ -349,6 +349,19 @@ function AvailabilityManager({ id_especialista }: { id_especialista?: string } =
     enabled: !!activeProfId,
   })
 
+  // Fetch appointments via React Query to disable active slots
+  const { data: apiAppointments } = useQuery<SpecialistAppointment[]>({
+    queryKey: ['availabilityAppointments', userRole, activeProfId, weekStartIso, weekEndIso],
+    queryFn: () => {
+      if (userRole === 'specialist') {
+        return specialistsService.getSpecialistAppointments(weekStartIso, weekEndIso)
+      } else { // userRole === 'admin'
+        return specialistsService.getAdminSpecialistAppointments(parseProfId(activeProfId), weekStartIso, weekEndIso)
+      }
+    },
+    enabled: !!activeProfId,
+  })
+
   // Local state to manage toggled slots in the grid (key: "YYYY-MM-DD-HH:MM")
   const [toggledAvailability, setToggledAvailability] = useState<Record<string, { disponible: boolean; id?: number }>>({})
 
@@ -420,11 +433,14 @@ function AvailabilityManager({ id_especialista }: { id_especialista?: string } =
   // Retrieve appointments to disable active slots
   const currentWeekAppointments = useMemo(() => {
     if (!activeProfId) return []
+    if (apiAppointments) {
+      return mapBackendAppointmentsToAppointments(apiAppointments)
+    }
     return MOCK_APPOINTMENTS.filter(apt => 
       apt.profesional.id === activeProfId &&
       weekDates.some(d => toISODate(d) === apt.fecha)
     )
-  }, [activeProfId, weekDates])
+  }, [activeProfId, weekDates, apiAppointments])
 
   const toggleSlotAdmin = (dayIso: string, hour: string, slotId?: number) => {
     const key = `${dayIso}-${hour}`
@@ -541,7 +557,7 @@ function AvailabilityManager({ id_especialista }: { id_especialista?: string } =
           <div className="flex items-center gap-3 text-[11px] text-surface-muted">
             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-brand-green/20 border border-brand-green/40 inline-block" />Disponible</span>
             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-surface-card2 border border-surface-border inline-block" />No disponible</span>
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-brand-orange/20 border border-brand-orange/40 inline-block" />Con cita</span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-brand-orange/20 border border-brand-orange/40 inline-block" />Cita programada</span>
           </div>
         </div>
         
@@ -594,7 +610,7 @@ function AvailabilityManager({ id_especialista }: { id_especialista?: string } =
                             }
                             title={hasAppointment ? 'Este slot tiene una cita asignada' : isAvail ? 'Clic para marcar no disponible' : 'Clic para marcar disponible'}
                           >
-                            {hasAppointment ? '📅 Cita' : isAvail ? '✓ Libre' : '—'}
+                            {hasAppointment ? '📅 Cita programada' : isAvail ? '✓ Libre' : '—'}
                           </button>
                         </td>
                       )
