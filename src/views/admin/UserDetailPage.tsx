@@ -1358,10 +1358,11 @@ export function UserDetailPage() {
           <div className="card-base mb-4">
             <div className="text-[13px] font-semibold mb-3">Dispositivos conectados</div>
             {[
-              { name:'Apple Health', connected: u.apple_health?.conectado ?? u.health_connected, detail: u.apple_health?.detalle, color:'#FF2D55', icon:'❤️' },
-              { name:'Strava', connected: u.strava?.conectado ?? !!u.strava_access_token, detail: u.strava?.detalle, color:'#FC4C02', icon:'🚴' },
               { name:'Garmin', connected: u.garmin?.conectado ?? !!u.last_garmin_sync, detail: u.garmin?.detalle, color:'#007EC5', icon:'⌚' },
-              { name:'Google Fit', connected: u.google_fit?.conectado, detail: u.google_fit?.detalle, color:'#4285F4', icon:'🏃' },
+              { name:'Strava', connected: u.strava?.conectado ?? !!u.strava_access_token, detail: u.strava?.detalle, color:'#FC4C02', icon:'🚴' },
+              { name:'Health Connect', connected: u.google_fit?.conectado || u.health_connected, detail: u.google_fit?.detalle, color:'#00A389', icon:'💚' },
+              { name:'Apple HealthKit', connected: u.apple_health?.conectado ?? u.health_connected, detail: u.apple_health?.detalle, color:'#FF2D55', icon:'❤️' },
+              { name:'Huawei Health', connected: (u as any).huawei_health?.conectado ?? false, detail: (u as any).huawei_health?.detalle, color:'#FF5722', icon:'🧡' },
             ].map((d) => (
               <div key={d.name} className="flex items-center justify-between py-2.5 border-b border-surface-border last:border-0">
                 <div className="flex items-center gap-2.5">
@@ -1371,13 +1372,6 @@ export function UserDetailPage() {
                 <Badge variant={d.connected ? 'green' : 'muted'}>{d.connected ? 'Conectado' : 'No conectado'}</Badge>
               </div>
             ))}
-          </div>
-          <div className="card-base">
-            <div className="text-[13px] font-semibold mb-3">Tokens</div>
-            <FieldRow label="strava_access_token"><span className="font-mono text-[10px] text-surface-muted">{u.strava_access_token || '—'}</span></FieldRow>
-            <FieldRow label="last_strava_sync">{u.last_strava_sync ? new Date(u.last_strava_sync).toLocaleString('es-CO') : 'Nunca'}</FieldRow>
-            <FieldRow label="last_garmin_sync">{u.last_garmin_sync ? new Date(u.last_garmin_sync).toLocaleString('es-CO') : 'Nunca'}</FieldRow>
-            <FieldRow label="health_connected"><Badge variant={u.health_connected?'green':'muted'}>{u.health_connected?'true':'false'}</Badge></FieldRow>
           </div>
         </div>
       )}
