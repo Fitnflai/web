@@ -913,7 +913,7 @@ export function UserDetailPage() {
                   type="number"
                   min="0"
                   max="5"
-                  value={currentUser.nivel_actividad ?? 0}
+                  value={isNaN(Number(currentUser.nivel_actividad)) ? 0 : Number(currentUser.nivel_actividad)}
                   disabled={!isEditing}
                   onChange={(e) => {
                     if (editForm) setEditForm({ ...editForm, nivel_actividad: Number(e.target.value) });
@@ -928,7 +928,7 @@ export function UserDetailPage() {
                   type="number"
                   min="0"
                   max="5"
-                  value={currentUser.nivel_motor_actual ?? 0}
+                  value={isNaN(Number(currentUser.nivel_motor_actual)) ? 0 : Number(currentUser.nivel_motor_actual)}
                   disabled={!isEditing}
                   onChange={(e) => {
                     if (editForm) setEditForm({ ...editForm, nivel_motor_actual: Number(e.target.value) });
