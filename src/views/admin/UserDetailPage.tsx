@@ -1360,8 +1360,8 @@ export function UserDetailPage() {
             <div className="text-[10px] font-bold text-surface-muted uppercase tracking-[0.8px] mb-2.5 pl-1">APLICACIONES DE DEPORTE</div>
             <div className="card-base bg-surface-card border border-surface-border rounded-xl p-5">
               {[
-                { name:'Garmin', connected: u.garmin?.conectado ?? !!u.last_garmin_sync, detail: u.garmin?.detalle, logo:'/images/devices/garmin.png', heightClass: 'h-[20px]' },
-                { name:'Strava', connected: u.strava?.conectado ?? !!u.strava_access_token, detail: u.strava?.detalle, logo:'/images/devices/strava.png', heightClass: 'h-[16px]' },
+                {name:'Garmin', connected: u.garmin?.conectado ?? !!u.last_garmin_sync, detail: u.garmin?.detalle, logo:'/images/devices/garmin.png', heightClass: 'h-[26px]' },
+                {name:'Strava', connected: u.strava?.conectado ?? !!u.strava_access_token, detail: u.strava?.detalle, logo:'/images/devices/strava.png', heightClass: 'h-[26px]' },
               ].map((d, idx, arr) => (
                 <div key={d.name} className={`flex items-center justify-between py-3 ${idx < arr.length - 1 ? 'border-b border-surface-border/50 pb-3' : 'pb-0'}`}>
                   <div className="flex items-center gap-3">
