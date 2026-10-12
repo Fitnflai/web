@@ -618,16 +618,19 @@ export function UserDetailPage() {
                       const finalEditForm = { ...editForm, tray: finalTray };
 
                       // 5. Call updateUserProfile
-                      const updatedUser = await usersService.updateUserProfile(u.id_usuario, finalEditForm);
+                      const resolvedId = u.id_usuario || (u as any).id;
+                      const updatedUser = await usersService.updateUserProfile(resolvedId, finalEditForm);
 
                       // 6. Upon final success, invalidate query caches, dispatch Zustand actions, close edit mode, and show success toast.
-        queryClient.invalidateQueries({ queryKey: ['userTabDetalle', u!.id_usuario] });
-        queryClient.invalidateQueries({ queryKey: ['userHeaderDetalle', u!.id_usuario] });
+                      queryClient.invalidateQueries({ queryKey: ['userTabDetalle', resolvedId] });
+                      queryClient.invalidateQueries({ queryKey: ['userHeaderDetalle', resolvedId] });
                       queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
                       queryClient.invalidateQueries({ queryKey: ['adminDashboardList'] });
-                      setSelectedUser(updatedUser);
+                      
+                      const finalUser = { ...u, ...finalEditForm };
+                      setSelectedUser(finalUser);
                       if (isPac) {
-                        setSelectedPatient(updatedUser as Patient);
+                        setSelectedPatient(finalUser as Patient);
                       }
                       setIsEditing(false);
                       toast.show('Cambios guardados con éxito', 'success');
