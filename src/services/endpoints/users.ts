@@ -409,8 +409,12 @@ export const usersService = {
   },
 
   updateUserProfile: async (id_usuario: string, payload: Partial<User>): Promise<User> => {
-    if (USE_MOCK || isMockId(id_usuario)) {
-      const userIndex = MOCK_USERS.findIndex(u => u.id_usuario === id_usuario);
+    const resolvedId = (id_usuario && id_usuario !== 'undefined')
+      ? id_usuario
+      : (payload.id_usuario || (payload as any).id || useAppStore.getState().selectedUser?.id_usuario || (useAppStore.getState().selectedUser as any)?.id || '');
+
+    if (USE_MOCK || isMockId(resolvedId)) {
+      const userIndex = MOCK_USERS.findIndex(u => u.id_usuario === resolvedId);
       if (userIndex > -1) {
         MOCK_USERS[userIndex] = { ...MOCK_USERS[userIndex], ...payload };
         return MOCK_USERS[userIndex];
@@ -479,7 +483,7 @@ export const usersService = {
       apiPayload.dias_entrenamiento = Array.isArray(payload.dias_entrenamiento) ? payload.dias_entrenamiento : [];
     }
 
-    const { data } = await apiClient.patch(`/admin/usuarios/${id_usuario}/actualizar-perfil`, apiPayload);
+    const { data } = await apiClient.patch(`/admin/usuarios/${resolvedId}/actualizar-perfil`, apiPayload);
     return data;
   },
   getAdminUsers: async (page: number, pageSize: number, filtro: string, search: string): Promise<{ total: number, data: any[] }> => {
