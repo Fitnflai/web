@@ -417,7 +417,69 @@ export const usersService = {
       }
       return Promise.reject(new Error('User not found for profile update'));
     }
-    const { data } = await apiClient.patch(`/admin/usuarios/${id_usuario}/actualizar-perfil`, payload);
+
+    // Map Partial<User> to API-expected request body
+    const apiPayload: any = {};
+
+    const ensureISOString = (val?: string): string | undefined => {
+      if (!val) return undefined;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+        return `${val}T00:00:00.000Z`;
+      }
+      return val;
+    };
+
+    const ensureTimeString = (val?: string): string | undefined => {
+      if (!val) return undefined;
+      if (/^\d{2}:\d{2}$/.test(val)) {
+        return `${val}:00`;
+      }
+      return val;
+    };
+
+    if (payload.nombre !== undefined) apiPayload.nombre = payload.nombre;
+    if (payload.email !== undefined) apiPayload.email = payload.email;
+    if (payload.apodo !== undefined) apiPayload.apodo = payload.apodo;
+    if (payload.genero !== undefined) apiPayload.genero = payload.genero;
+    if (payload.fecha_nacimiento !== undefined) {
+      apiPayload.fecha_nacimiento = ensureISOString(payload.fecha_nacimiento);
+    }
+    if (payload.ciudad !== undefined) apiPayload.ciudad = payload.ciudad;
+    if (payload.altitud !== undefined) apiPayload.altitud = Number(payload.altitud);
+    if (payload.idioma !== undefined) apiPayload.idioma = payload.idioma;
+    if (payload.peso !== undefined) apiPayload.peso = Number(payload.peso);
+    if (payload.unidad_peso !== undefined) apiPayload.unidad_peso = payload.unidad_peso;
+    if (payload.altura !== undefined) apiPayload.altura = Number(payload.altura);
+    if (payload.unidad_altura !== undefined) apiPayload.unidad_altura = payload.unidad_altura;
+    if (payload.nivel_actividad !== undefined) apiPayload.nivel_actividad = Number(payload.nivel_actividad);
+    if (payload.nivel_motor_actual !== undefined) apiPayload.nivel_motor_actual = Number(payload.nivel_motor_actual);
+    if (payload.tiempo_sin_entrenar !== undefined) apiPayload.tiempo_sin_entrenar = payload.tiempo_sin_entrenar;
+    
+    // Mismatched names
+    if (payload.duracion_semanas_objetivo !== undefined) {
+      apiPayload.duracion_objetivo_semana = Number(payload.duracion_semanas_objetivo);
+    }
+    if (payload.fecha_inicio_preferida !== undefined) {
+      apiPayload.fecha_inicio_preferido = ensureISOString(payload.fecha_inicio_preferida);
+    }
+
+    if (payload.alimentacion !== undefined) apiPayload.alimentacion = payload.alimentacion;
+    if (payload.estilo_comunicacion !== undefined) apiPayload.estilo_comunicacion = payload.estilo_comunicacion;
+    if (payload.intensidad_notificaciones !== undefined) apiPayload.intensidad_notificaciones = payload.intensidad_notificaciones;
+    if (payload.dia_reporte !== undefined) apiPayload.dia_reporte = payload.dia_reporte;
+    
+    if (payload.hora_reporte !== undefined) {
+      apiPayload.hora_reporte = ensureTimeString(payload.hora_reporte);
+    }
+    if (payload.notification_time !== undefined) {
+      apiPayload.notification_time = ensureTimeString(payload.notification_time);
+    }
+    
+    if (payload.dias_entrenamiento !== undefined) {
+      apiPayload.dias_entrenamiento = Array.isArray(payload.dias_entrenamiento) ? payload.dias_entrenamiento : [];
+    }
+
+    const { data } = await apiClient.patch(`/admin/usuarios/${id_usuario}/actualizar-perfil`, apiPayload);
     return data;
   },
   getAdminUsers: async (page: number, pageSize: number, filtro: string, search: string): Promise<{ total: number, data: any[] }> => {

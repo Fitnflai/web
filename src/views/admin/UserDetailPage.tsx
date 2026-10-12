@@ -729,12 +729,8 @@ export function UserDetailPage() {
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">OBJETIVO PRINCIPAL</label>
                 <textarea
                   value={currentUser.objetivo_principal || ''}
-                  disabled={!isEditing}
-                  onChange={(e) => {
-                    if (editForm) setEditForm({ ...editForm, objetivo_principal: e.target.value });
-                    triggerUpdate()
-                  }}
-                  placeholder="Escribe el objetivo principal del deportista..."
+                  disabled={true}
+                  placeholder="El objetivo principal no se puede editar directamente..."
                   className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-orange min-h-[80px] resize-y disabled:opacity-75 disabled:cursor-not-allowed"
                 />
               </div>
@@ -817,12 +813,8 @@ export function UserDetailPage() {
                 <input
                   type="number"
                   value={currentUser.edad || 0}
-                  disabled={!isEditing}
-                  onChange={(e) => {
-                    if (editForm) setEditForm({ ...editForm, edad: Number(e.target.value) });
-                    triggerUpdate()
-                  }}
-                  placeholder="Ej. 30"
+                  disabled={true}
+                  placeholder="Calculada automáticamente"
                   className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-orange disabled:opacity-75 disabled:cursor-not-allowed"
                 />
               </div>
@@ -950,12 +942,7 @@ export function UserDetailPage() {
                 <input
                   type="text"
                   value={currentUser.clasificacion_visible_actual || ''}
-                  disabled={!isEditing}
-                  onChange={(e) => {
-                    if (editForm) setEditForm({ ...editForm, clasificacion_visible_actual: e.target.value });
-                    triggerUpdate()
-                  }}
-                  placeholder="Ej. Avanzado, Intermedio"
+                  disabled={true}
                   className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-orange disabled:opacity-75 disabled:cursor-not-allowed"
                 />
               </div>
@@ -1028,12 +1015,8 @@ export function UserDetailPage() {
                 <input
                   type="text"
                   value={currentUser.proxima_competencia ? currentUser.proxima_competencia.substring(0, 10) : '—'}
-                  disabled={!isEditing}
-                  onChange={(e) => {
-                    if (editForm) setEditForm({ ...editForm, proxima_competencia: e.target.value });
-                    triggerUpdate()
-                  }}
-                  placeholder="AAAA-MM-DD"
+                  disabled={true}
+                  placeholder="Se actualiza desde logros deportivos"
                   className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-orange disabled:opacity-75 disabled:cursor-not-allowed"
                 />
               </div>
@@ -1056,11 +1039,7 @@ export function UserDetailPage() {
                 <input
                   type="text"
                   value={currentUser.nombre_plan_activo || PLAN_NAMES[currentUser.plan_idx] || 'Essential'}
-                  disabled={!isEditing}
-                  onChange={(e) => {
-                    if (editForm) setEditForm({ ...editForm, nombre_plan_activo: e.target.value });
-                    triggerUpdate()
-                  }}
+                  disabled={true}
                   className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-orange disabled:opacity-75 disabled:cursor-not-allowed"
                 />
               </div>
@@ -1069,11 +1048,7 @@ export function UserDetailPage() {
                 <input
                   type="text"
                   value={currentUser.estado_suscripcion || (currentUser.tiene_plan_activo ? 'Activa' : 'Inactiva')}
-                  disabled={!isEditing}
-                  onChange={(e) => {
-                    if (editForm) setEditForm({ ...editForm, estado_suscripcion: e.target.value });
-                    triggerUpdate()
-                  }}
+                  disabled={true}
                   className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-orange disabled:opacity-75 disabled:cursor-not-allowed"
                 />
               </div>
@@ -1082,11 +1057,7 @@ export function UserDetailPage() {
                 <input
                   type="text"
                   value={currentUser.fecha_fin_suscripcion ? currentUser.fecha_fin_suscripcion.substring(0, 10) : '—'}
-                  disabled={!isEditing}
-                  onChange={(e) => {
-                    if (editForm) setEditForm({ ...editForm, fecha_fin_suscripcion: e.target.value });
-                    triggerUpdate()
-                  }}
+                  disabled={true}
                   placeholder="AAAA-MM-DD"
                   className="form-input w-full bg-surface-card2 border border-surface-border rounded-lg px-3 py-2 text-[12px] outline-none transition-colors focus:border-brand-orange disabled:opacity-75 disabled:cursor-not-allowed"
                 />
