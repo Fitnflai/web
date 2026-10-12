@@ -1358,23 +1358,36 @@ export function UserDetailPage() {
           <div className="card-base mb-4">
             <div className="text-[13px] font-semibold mb-3">Dispositivos conectados</div>
             {[
-              { name:'Garmin', connected: u.garmin?.conectado ?? !!u.last_garmin_sync, detail: u.garmin?.detalle, color:'#007EC5', logo:'/images/devices/garmin.png' },
-              { name:'Strava', connected: u.strava?.conectado ?? !!u.strava_access_token, detail: u.strava?.detalle, color:'#FC4C02', logo:'/images/devices/strava.png' },
-              { name:'Health Connect', connected: u.google_fit?.conectado || u.health_connected, detail: u.google_fit?.detalle, color:'#00A389', logo:'/images/devices/health_connect.svg' },
-              { name:'Apple HealthKit', connected: u.apple_health?.conectado ?? u.health_connected, detail: u.apple_health?.detalle, color:'#FF2D55', logo:'/images/devices/apple_health.svg' },
-              { name:'Huawei Health', connected: (u as any).huawei_health?.conectado ?? false, detail: (u as any).huawei_health?.detalle, color:'#FF5722', logo:'/images/devices/huawei_health.png' },
+              { name:'Garmin', connected: u.garmin?.conectado ?? !!u.last_garmin_sync, detail: u.garmin?.detalle, color:'#007EC5', logo:'/images/devices/garmin.png', isWordmark: true },
+              { name:'Strava', connected: u.strava?.conectado ?? !!u.strava_access_token, detail: u.strava?.detalle, color:'#FC4C02', logo:'/images/devices/strava.png', isWordmark: true },
+              { name:'Health Connect', connected: u.google_fit?.conectado || u.health_connected, detail: u.google_fit?.detalle, color:'#00A389', logo:'/images/devices/health_connect.svg', isWordmark: false },
+              { name:'Apple HealthKit', connected: u.apple_health?.conectado ?? u.health_connected, detail: u.apple_health?.detalle, color:'#FF2D55', logo:'/images/devices/apple_health.svg', isWordmark: false },
+              { name:'Huawei Health', connected: (u as any).huawei_health?.conectado ?? false, detail: (u as any).huawei_health?.detalle, color:'#FF5722', logo:'/images/devices/huawei_health.png', isWordmark: false },
             ].map((d) => (
               <div key={d.name} className="flex items-center justify-between py-2.5 border-b border-surface-border last:border-0">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden bg-surface-card2 border border-surface-border p-1.5">
-                    <img src={d.logo} alt={d.name} className="w-full h-full object-contain" />
-                  </div>
-                  <div>
-                    <div className="text-[12px] font-medium">{d.name}</div>
-                    {d.connected && (
-                      <div className="text-[11px] text-surface-muted">{d.detail || 'Activo'}</div>
-                    )}
-                  </div>
+                  {d.isWordmark ? (
+                    <div className="flex flex-col justify-center min-h-[36px] pl-1">
+                      <div className="h-9 flex items-center">
+                        <img src={d.logo} alt={d.name} className={`${d.name === 'Garmin' ? 'h-4' : 'h-3'} object-contain`} />
+                      </div>
+                      {d.connected && (
+                        <div className="text-[11px] text-surface-muted -mt-1.5 pb-1">{d.detail || 'Activo'}</div>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden bg-surface-card2 border border-surface-border p-1.5">
+                        <img src={d.logo} alt={d.name} className="w-full h-full object-contain" />
+                      </div>
+                      <div>
+                        <div className="text-[12px] font-medium">{d.name}</div>
+                        {d.connected && (
+                          <div className="text-[11px] text-surface-muted">{d.detail || 'Activo'}</div>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
                 <Badge variant={d.connected ? 'green' : 'muted'}>{d.connected ? 'Conectado' : 'No conectado'}</Badge>
               </div>
