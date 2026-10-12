@@ -1367,7 +1367,12 @@ export function UserDetailPage() {
               <div key={d.name} className="flex items-center justify-between py-2.5 border-b border-surface-border last:border-0">
                 <div className="flex items-center gap-2.5">
                   <div className="w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0" style={{background:`${d.color}22`}}>{d.icon}</div>
-                  <div><div className="text-[12px] font-medium">{d.name}</div><div className="text-[11px] text-surface-muted">{d.detail || (d.connected ? 'Activo' : 'Sin conexión')}</div></div>
+                  <div>
+                    <div className="text-[12px] font-medium">{d.name}</div>
+                    {d.connected && (
+                      <div className="text-[11px] text-surface-muted">{d.detail || 'Activo'}</div>
+                    )}
+                  </div>
                 </div>
                 <Badge variant={d.connected ? 'green' : 'muted'}>{d.connected ? 'Conectado' : 'No conectado'}</Badge>
               </div>
