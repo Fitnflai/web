@@ -1386,7 +1386,7 @@ export function UserDetailPage() {
             <div className="card-base bg-surface-card border border-surface-border rounded-xl p-5">
               {[
                 { name:'Health Connect', connected: u.google_fit?.conectado || u.health_connected, detail: u.google_fit?.detalle, logo:'/images/devices/health_connect.svg', bgStyle: {} },
-                { name:'Apple HealthKit', connected: u.apple_health?.conectado ?? u.health_connected, detail: u.apple_health?.detalle, logo:'/images/devices/apple_health.svg', bgStyle: { background: '#FFFFFF' } },
+                { name:'Apple HealthKit', connected: u.apple_health?.conectado ?? u.health_connected, detail: u.apple_health?.detalle, logo:'/images/devices/apple_health.svg', bgStyle: {} },
                 { name:'Huawei Health', connected: (u as any).huawei_health?.conectado ?? false, detail: (u as any).huawei_health?.detalle, logo:'/images/devices/huawei_health.png', bgStyle: {} },
               ].map((d, idx, arr) => (
                 <div key={d.name} className={`flex items-center justify-between py-3 ${idx < arr.length - 1 ? 'border-b border-surface-border/50 pb-3' : 'pb-0'}`}>
