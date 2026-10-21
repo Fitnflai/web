@@ -128,6 +128,7 @@
     },
     "deviceIntegration": {
       "title": "Compatible with your favorite devices",
+      "comingSoon": "Coming Soon",
       "brands": {
         "garmin": "Garmin",
         "strava": "Strava",

@@ -38,353 +38,6 @@ const ShieldIcon = ({ text }: { text: string }) => (
   </div>
 );
 
-// High-fidelity responsive SVG Radar Chart component for evaluation progress (Image 1)
-function RadarChart({ isSpanish }: { isSpanish: boolean }) {
-  const center = 150;
-  const maxRadius = 100;
-  const numAxes = 6;
-  
-  const axes = [
-    { labelEs: 'Fuerza', labelEn: 'Strength' },
-    { labelEs: 'Resistencia', labelEn: 'Endurance' },
-    { labelEs: 'Cardio', labelEn: 'Cardio' },
-    { labelEs: 'Equilibrio', labelEn: 'Balance' },
-    { labelEs: 'Movilidad', labelEn: 'Mobility' },
-    { labelEs: 'Core', labelEn: 'Core' }
-  ];
-
-  const getCoordinates = (index: number, value: number) => {
-    const angle = (index * 2 * Math.PI) / numAxes - Math.PI / 2;
-    const radius = (value / 100) * maxRadius;
-    const x = center + radius * Math.cos(angle);
-    const y = center + radius * Math.sin(angle);
-    return { x, y };
-  };
-
-  const week1Values = [40, 50, 45, 35, 55, 30];
-  const week6Values = [85, 90, 80, 75, 85, 80];
-
-  const getPointsString = (values: number[]) => {
-    return values
-      .map((val, idx) => {
-        const { x, y } = getCoordinates(idx, val);
-        return `${x},${y}`;
-      })
-      .join(' ');
-  };
-
-  const week1Points = getPointsString(week1Values);
-  const week6Points = getPointsString(week6Values);
-  const gridLevels = [25, 50, 75, 100];
-
-  return (
-    <div className="relative w-full max-w-[280px] mx-auto select-none">
-      <svg viewBox="0 0 300 300" className="w-full h-auto overflow-visible">
-        {/* Background Grids: Concentric Hexagons */}
-        {gridLevels.map((level) => {
-          const points = getPointsString(Array(numAxes).fill(level));
-          return (
-            <polygon
-              key={level}
-              points={points}
-              fill="none"
-              stroke="#2d3748"
-              strokeWidth="1"
-              strokeDasharray="4 4"
-            />
-          );
-        })}
-
-        {/* Axis Lines */}
-        {axes.map((_, idx) => {
-          const { x, y } = getCoordinates(idx, 100);
-          return (
-            <line
-              key={idx}
-              x1={center}
-              y1={center}
-              x2={x}
-              y2={y}
-              stroke="#2d3748"
-              strokeWidth="1"
-            />
-          );
-        })}
-
-        {/* Semana 6 (Orange Progress) Polygon */}
-        <polygon
-          points={week6Points}
-          fill="rgba(234, 88, 12, 0.25)"
-          stroke="#ea580c"
-          strokeWidth="2.5"
-          className="transition-all duration-500 ease-in-out hover:fill-opacity-40"
-        />
-        {/* Semana 6 vertices dots */}
-        {week6Values.map((val, idx) => {
-          const { x, y } = getCoordinates(idx, val);
-          return (
-            <circle
-              key={`w6-${idx}`}
-              cx={x}
-              cy={y}
-              r="4"
-              fill="#ea580c"
-              className="transition-all duration-300 hover:scale-150"
-            />
-          );
-        })}
-
-        {/* Semana 1 (Red Initial) Polygon */}
-        <polygon
-          points={week1Points}
-          fill="rgba(239, 68, 68, 0.25)"
-          stroke="#ef4444"
-          strokeWidth="2"
-          className="transition-all duration-500 ease-in-out hover:fill-opacity-40"
-        />
-        {/* Semana 1 vertices dots */}
-        {week1Values.map((val, idx) => {
-          const { x, y } = getCoordinates(idx, val);
-          return (
-            <circle
-              key={`w1-${idx}`}
-              cx={x}
-              cy={y}
-              r="3.5"
-              fill="#ef4444"
-              className="transition-all duration-300 hover:scale-150"
-            />
-          );
-        })}
-
-        {/* Axis Labels */}
-        {axes.map((axis, idx) => {
-          const { x, y } = getCoordinates(idx, 120);
-          const label = isSpanish ? axis.labelEs : axis.labelEn;
-          
-          let textAnchor: 'start' | 'middle' | 'end' = 'middle';
-          if (x < center - 10) textAnchor = 'end';
-          if (x > center + 10) textAnchor = 'start';
-
-          let dy = '0.35em';
-          if (y < center - 40) dy = '-0.2em';
-          if (y > center + 40) dy = '1em';
-
-          return (
-            <text
-              key={idx}
-              x={x}
-              y={y}
-              textAnchor={textAnchor}
-              dy={dy}
-              fill="#a0aec0"
-              fontSize="12"
-              fontWeight="bold"
-              className="transition-colors duration-300 hover:fill-white font-sans"
-            >
-              {label}
-            </text>
-          );
-        })}
-      </svg>
-    </div>
-  );
-}
-
-// Premium Interactive Calculator replicating the 3-phone screen stage layouts (Image 2)
-function TrainingCalculator({ onPortalEntry }: { onPortalEntry: (role: 'admin' | 'specialist') => void }) {
-  const { language } = useAppStore()
-  const isSpanish = language === 'ES'
-
-  const [activeDiscipline, setActiveDiscipline] = useState<'running' | 'cycling' | 'triathlon' | 'hiking' | 'functional'>('running')
-
-  const disciplinesContent = {
-    running: {
-      title: isSpanish ? 'Genera tu plan de entrenamiento de Running' : 'Generate your Running training plan',
-      desc: isSpanish 
-        ? '¿Quieres saber qué logros puedes alcanzar con un plan de Fitnflai? Genera tu plan de entrenamiento dinámico y descúbrelo.' 
-        : 'Want to know what milestones you can achieve with a Fitnflai plan? Generate your dynamic training plan and find out.',
-      step1: isSpanish 
-        ? 'Cuéntanos un poco sobre ti, como tu nivel actual de running y la distancia para la que te estás preparando' 
-        : 'Tell us a bit about yourself, like your current training level and your target distance',
-      step2: isSpanish 
-        ? 'Dinos cuánto estás dispuesto a entrenar, desde la duración del plan hasta los días de entrenamiento a la semana' 
-        : 'Tell us how much you are willing to train, from plan duration to weekly training schedule',
-      step3: isSpanish 
-        ? 'Te daremos tu plan con los ritmos y entrenamientos ideales para tu carrera. Empecemos...' 
-        : 'We will give you your plan with the ideal paces and workouts for your race. Let\'s begin...',
-      btn: isSpanish ? 'Generar mi Plan' : 'Generate my Plan'
-    },
-    cycling: {
-      title: isSpanish ? 'Genera tus entrenamientos de Ciclismo' : 'Generate your Cycling workouts',
-      desc: isSpanish 
-        ? '¿Quieres optimizar tu potencia o terminar tu primer gran fondo en bicicleta? Obtén tu plan de entrenamiento adaptativo de ciclismo.' 
-        : 'Want to optimize your power output or finish your first cycling gran fondo? Get your custom adaptive cycling training plan.',
-      step1: isSpanish 
-        ? 'Cuéntanos sobre tu nivel, potencia estimada (FTP) y los recorridos de ruta o montaña que quieres conquistar' 
-        : 'Tell us about your level, estimated power output (FTP), and the road or mountain routes you want to dominate',
-      step2: isSpanish 
-        ? 'Elige tus días disponibles de pedaleo a la semana y los entrenamientos cruzados de fuerza en el gimnasio' 
-        : 'Choose your available weekly riding days and cross-training strength sessions in the gym',
-      step3: isSpanish 
-        ? 'Te daremos tu rutina con vatios objetivo (W/Kg) y entrenamientos recomendados de rodaje. Empecemos...' 
-        : 'We will give you your routine with target power (W/Kg) and recommended training rides. Let\'s begin...',
-      btn: isSpanish ? 'Generar mis Entrenamientos' : 'Generate my Workouts'
-    },
-    triathlon: {
-      title: isSpanish ? 'Genera tu planificación de Triatlón' : 'Generate your Triathlon planning',
-      desc: isSpanish 
-        ? 'Combina natación, ciclismo y carrera a pie en una sola rutina inteligente que se ajusta a tu fatiga diaria.' 
-        : 'Combine swimming, cycling, and running into a single smart routine that automatically adjusts to your daily fatigue.',
-      step1: isSpanish 
-        ? 'Cuéntanos tus ritmos en el agua, potencia en bici y tiempos de carrera junto con tu distancia objetivo' 
-        : 'Tell us your swim paces, cycling power, and run times along with your target triathlon distance',
-      step2: isSpanish 
-        ? 'Ajusta tus sesiones de natación en piscina, rodajes en ruta y entrenamientos en transición (ladrillos)' 
-        : 'Fine-tune your pool swims, road rides, and weekly transitional brick training workouts',
-      step3: isSpanish 
-        ? 'Te daremos tu planificación con las horas semanales y ritmos óptimos de carrera. Empecemos...' 
-        : 'We will give you your plan with weekly hours distribution and optimal race-day pacing. Let\'s begin...',
-      btn: isSpanish ? 'Generar mi Plan de Triatlón' : 'Generate my Triathlon Plan'
-    },
-    hiking: {
-      title: isSpanish ? 'Genera tu entrenamiento de Senderismo' : 'Generate your Hiking training',
-      desc: isSpanish 
-        ? 'Acondiciona tu cuerpo para largas caminatas de montaña, desnivel acumulado y aclimatación de altitud.' 
-        : 'Bulletproof your body for long mountain hikes, elevation gain, and smart altitude acclimation.',
-      step1: isSpanish 
-        ? 'Cuéntanos el desnivel positivo de tu expedición y las horas estimadas de marcha continua en altura' 
-        : 'Tell us your expedition\'s vertical gain and estimated continuous hiking hours at high altitude',
-      step2: isSpanish 
-        ? 'Define tus sesiones de subida de escalones, caminatas con mochila cargada y fortalecimiento articular' 
-        : 'Define your step-up sessions, loaded backpack hikes, and joints-strengthening routines',
-      step3: isSpanish 
-        ? 'Te daremos tus entrenamientos con el ritmo de marcha recomendado (km/h) y el equipamiento ideal. Empecemos...' 
-        : 'We will give you your workouts with recommended hiking pace (km/h) and ideal equipment. Let\'s begin...',
-      btn: isSpanish ? 'Generar mi Ruta' : 'Generate my Route'
-    },
-    functional: {
-      title: isSpanish ? 'Genera tu rutina de Funcional y Fuerza' : 'Generate your Functional & Strength routine',
-      desc: isSpanish 
-        ? 'Aumenta tu fuerza máxima, estabilidad del CORE y rango de movimiento para prevenir lesiones en el deporte.' 
-        : 'Increase your peak strength, core stability, and range of motion to prevent injuries in sports.',
-      step1: isSpanish 
-        ? 'Elige tu objetivo principal: ganar fuerza máxima, hipertrofia muscular, resistencia metabólica o movilidad' 
-        : 'Choose your main goal: peak strength, muscle hypertrophy, metabolic endurance, or active mobility',
-      step2: isSpanish 
-        ? 'Configura tus días disponibles, elementos de entrenamiento y tus puntos de dolor para evitar lesiones' 
-        : 'Configure your available days, training equipment, and any joint pain areas to prevent injuries',
-      step3: isSpanish 
-        ? 'Te daremos tu volumen semanal de series recomendadas y el rango de intensidad óptimo. Empecemos...' 
-        : 'We will give you your recommended weekly set volume and optimal intensity ranges. Let\'s begin...',
-      btn: isSpanish ? 'Generar mi Rutina' : 'Design my Workout'
-    }
-  }
-
-  const currentData = disciplinesContent[activeDiscipline]
-
-  return (
-    <section className="py-24 bg-gray-950/70 text-white relative z-10" id="calculadora">
-      <div className="container mx-auto px-6 text-center">
-
-        {/* Discipline Selector Tabs */}
-        <div className="flex flex-wrap justify-center items-center gap-3 mb-12 max-w-4xl mx-auto px-4 select-none">
-          {[
-            { id: 'running', name: isSpanish ? 'Running / Trail' : 'Running & Trail', icon: IconRun, color: 'text-orange-500' },
-            { id: 'cycling', name: isSpanish ? 'Ciclismo (Ruta / MTB)' : 'Cycling (Road / MTB)', icon: IconBike, color: 'text-emerald-500' },
-            { id: 'triathlon', name: isSpanish ? 'Triatlón' : 'Triathlon', icon: IconSwimming, color: 'text-blue-500' },
-            { id: 'hiking', name: isSpanish ? 'Senderismo / Montaña' : 'Hiking & Mountain', icon: IconMountain, color: 'text-yellow-500' },
-            { id: 'functional', name: isSpanish ? 'Funcional / Fuerza' : 'Functional & Strength', icon: IconDeviceWatch, color: 'text-purple-500' },
-          ].map((tab) => {
-            const Icon = tab.icon
-            const isActive = activeDiscipline === tab.id
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveDiscipline(tab.id as any)}
-                className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-xs md:text-sm font-bold tracking-wide border cursor-pointer transition-all duration-300 ${
-                  isActive 
-                    ? 'bg-orange-500/10 border-orange-500 text-orange-500 shadow-[0_0_20px_rgba(234,88,12,0.15)] scale-105' 
-                    : 'bg-[#141416]/50 border-gray-800/80 text-gray-400 hover:border-gray-700 hover:text-white'
-                }`}
-              >
-                <Icon size={18} className={tab.color} />
-                <span>{tab.name}</span>
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Title & Subtitle */}
-        <T.H2 className="text-4xl lg:text-5xl font-extrabold text-white tracking-tight mb-4 max-w-3xl mx-auto leading-tight min-h-[96px] flex items-center justify-center">
-          {currentData.title}
-        </T.H2>
-        <T.P className="text-lg text-gray-400 max-w-3xl mx-auto mb-16 leading-relaxed min-h-[56px]">
-          {currentData.desc}
-        </T.P>
-
-        {/* 3 Phone Mockups Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12 max-w-5xl mx-auto mb-16 items-center justify-center">
-          
-          {/* Phone 1: Unlock Your Potential */}
-          <div className="flex flex-col items-center">
-            <div className="w-64 h-[550px] mb-6 relative bg-gray-950 rounded-[2.2rem] border-[8px] border-neutral-800 shadow-2xl overflow-hidden flex items-center justify-center select-none transform hover:scale-105 transition-transform duration-300">
-              {/* Notch */}
-              <div className="absolute top-2 left-1/2 -translate-x-1/2 w-16 h-3.5 bg-black rounded-full z-40 flex items-center justify-center">
-                <div className="w-1.5 h-1.5 bg-neutral-900 rounded-full"></div>
-              </div>
-              <img src="/images/mockup_01.jpeg" alt="Unlock Your Potential" className="w-full h-full object-cover rounded-[1.6rem]" />
-            </div>
-            <p className="text-sm font-semibold text-gray-400 mt-4 max-w-[240px] leading-relaxed min-h-[48px]">
-              {currentData.step1}
-            </p>
-          </div>
-
-          {/* Phone 2: Details & Schedule */}
-          <div className="flex flex-col items-center">
-            <div className="w-64 h-[550px] mb-6 relative bg-gray-950 rounded-[2.2rem] border-[8px] border-neutral-800 shadow-2xl overflow-hidden flex items-center justify-center select-none transform hover:scale-105 transition-transform duration-300">
-              {/* Notch */}
-              <div className="absolute top-2 left-1/2 -translate-x-1/2 w-16 h-3.5 bg-black rounded-full z-40 flex items-center justify-center">
-                <div className="w-1.5 h-1.5 bg-neutral-900 rounded-full"></div>
-              </div>
-              <img src="/images/mockup_02.jpeg" alt="Configura tu Disponibilidad" className="w-full h-full object-cover rounded-[1.6rem]" />
-            </div>
-            <p className="text-sm font-semibold text-gray-400 mt-4 max-w-[240px] leading-relaxed min-h-[48px]">
-              {currentData.step2}
-            </p>
-          </div>
-
-          {/* Phone 3: Dynamic Result */}
-          <div className="flex flex-col items-center">
-            <div className="w-64 h-[550px] mb-6 relative bg-gray-950 rounded-[2.2rem] border-[8px] border-neutral-800 shadow-2xl overflow-hidden flex items-center justify-center select-none transform hover:scale-105 transition-transform duration-300 ring-4 ring-orange-500/10">
-              {/* Notch */}
-              <div className="absolute top-2 left-1/2 -translate-x-1/2 w-16 h-3.5 bg-black rounded-full z-40 flex items-center justify-center">
-                <div className="w-1.5 h-1.5 bg-neutral-900 rounded-full"></div>
-              </div>
-              <img src="/images/mockup_03.jpeg" alt="Dynamic Result" className="w-full h-full object-cover rounded-[1.6rem]" />
-            </div>
-            <p className="text-sm font-semibold text-gray-400 mt-4 max-w-[240px] leading-relaxed min-h-[48px]">
-              {currentData.step3}
-            </p>
-          </div>
-
-        </div>
-
-        {/* Big Coral Button (from Image 2) */}
-        <div className="flex justify-center mt-6">
-          <button
-            onClick={() => onPortalEntry('admin')}
-            className="px-10 py-4 bg-[#ea580c] hover:bg-orange-600 text-white font-black text-xl rounded-xl transition duration-300 shadow-xl cursor-pointer"
-          >
-            {currentData.btn}
-          </button>
-        </div>
-
-      </div>
-    </section>
-  )
-}
-
 export const athleticNutritionProfiles = [
   {
     name: "Stephanie",
@@ -1004,9 +657,14 @@ export function LandingPage() {
           <T.P className="text-xl text-gray-300 mb-8">{t('landing.deviceIntegration.title')}</T.P>
           <div className="flex flex-wrap justify-center items-center gap-8 text-gray-400">
             {/* Using simple text for brands with generic icons */}
-            <div className="flex items-center space-x-2">
-              <IconDeviceWatch size={36} className="text-gray-500" />
-              <T.P className="text-2xl font-semibold">{t('landing.deviceIntegration.brands.garmin')}</T.P>
+            <div className="flex items-center space-x-2 relative">
+              <IconDeviceWatch size={36} className="text-gray-500 shrink-0" />
+              <div className="relative">
+                <T.P className="text-2xl font-semibold leading-none">{t('landing.deviceIntegration.brands.garmin')}</T.P>
+                <span className="absolute left-0 top-full text-[8px] font-black uppercase tracking-widest text-[#ea580c] mt-[2px] whitespace-nowrap">
+                  {t('landing.deviceIntegration.comingSoon')}
+                </span>
+              </div>
             </div>
             <div className="flex items-center space-x-2">
               <IconRoute size={36} className="text-gray-500" />
@@ -1050,51 +708,74 @@ export function LandingPage() {
                 num: '01',
                 titleEs: 'No te conocen',
                 titleEn: "They don't know you",
-                descEs: 'Te dan un plan sin saber cómo está tu cuerpo hoy. Nosotros te evaluamos primero.',
-                descEn: 'They give you a plan without knowing how your body is today. We evaluate you first.'
+                whyEs: 'Te imponen rutinas prefabricadas basadas en algoritmos fijos, sin entender tu biomecánica individual, dolores previos ni nivel actual. Falta un diagnóstico inicial de partida.',
+                whyEn: 'They impose pre-made routines based on fixed algorithms, without understanding your individual biomechanics, previous pains, or current level. An initial starting diagnostic is completely missing.',
+                betterEs: 'Te evaluamos primero con 6 pruebas funcionales que haces en casa (sin equipo) para construir tu radar anatómico en 6 dimensiones y diseñar con datos de tu cuerpo real.',
+                betterEn: 'We evaluate you first with 6 functional tests you can do at home (no equipment) to build your 6-dimensional anatomical radar and design around your actual body metrics.'
               },
               {
                 num: '02',
                 titleEs: 'Ignoran tu realidad',
                 titleEn: 'They ignore your reality',
-                descEs: 'Que vives a 2.850m, que hoy tienes 20 minutos, que tu energía cambia con tu ciclo. Fitnflai lo sabe.',
-                descEn: 'That you live at 2,850m, that today you only have 20 minutes, that your energy changes with your cycle. Fitnflai knows it.'
+                whyEs: 'No consideran que vives a 2.850m de altura, que tus niveles de energía varían con tu ciclo hormonal, o que hoy solo tienes 20 minutos por el trabajo.',
+                whyEn: "They don't consider that you live at 2,850m altitude, that your energy levels vary with your hormonal cycle, or that today you only have 20 minutes due to work.",
+                betterEs: 'Adaptamos la carga a tu fatiga diaria, altura geográfica y fases hormonales. Si tu día o tus minutos cambian, el plan se recalcula al instante contigo.',
+                betterEn: 'We adapt the load to your daily fatigue, geographic altitude, and hormonal phases. If your day or available minutes change, the plan instantly recalculates with you.'
               },
               {
                 num: '03',
                 titleEs: 'Te abandonan',
                 titleEn: 'They abandon you',
-                descEs: 'Te dan un plan y desaparecen. Fitnflai te acompaña y ajusta semana a semana.',
-                descEn: 'They give you a plan and disappear. Fitnflai accompanies you and adjusts week by week.'
+                whyEs: 'Una vez te suscribes, eres un número más leyendo un PDF interactivo o videos genéricos. Falta el soporte de profesionales de verdad para guiarte y prevenir lesiones.',
+                whyEn: 'Once you subscribe, you are just another number reading an interactive PDF or generic videos. Real professional support to guide you and prevent injuries is missing.',
+                betterEs: 'Cuentas con un equipo real de médicos deportivos y fisioterapeutas que monitorean tu fatiga y progreso semana a semana, haciendo ajustes clínicos proactivos.',
+                betterEn: 'You have a real team of sports doctors and physical therapists monitoring your fatigue and progress week by week, making proactive clinical adjustments.'
               },
               {
                 num: '04',
                 titleEs: 'No te explican nada',
                 titleEn: "They don't explain anything",
-                descEs: 'Ejercicios sin porqué. Aquí, si no se puede explicar, no se manda.',
-                descEn: 'Exercises with no "why". Here, if it cannot be explained, it is not prescribed.'
+                whyEs: 'Te ordenan hacer ejercicios mecánicamente sin explicar el propósito biológico o la técnica adecuada. Falta educación para tu autonomía.',
+                whyEn: 'They command you to perform exercises mechanically without explaining the biological purpose or proper technique. Education for your autonomy is missing.',
+                betterEs: 'Si no se puede explicar bajo ciencia del deporte, en Fitnflai no se prescribe. Te enseñamos la razón detrás de cada bloque de fuerza y resistencia.',
+                betterEn: 'If it cannot be explained under sports science, it is not prescribed at Fitnflai. We teach you the reason behind each strength and endurance block.'
               },
               {
                 num: '05',
                 titleEs: 'Te generan culpa',
                 titleEn: 'They make you feel guilty',
-                descEs: 'Si faltas, te castigan. Fitnflai nunca te juzga: el plan simplemente se ajusta.',
-                descEn: 'If you miss a workout, they punish you. Fitnflai never judges you: the plan simply adjusts.'
+                whyEs: 'Diseñan bajo el lema del "sufrimiento obligado". Si te saltas un día por cansancio o agenda, el plan se rompe y te frustras.',
+                whyEn: 'They design under the motto of "forced suffering". If you miss a day due to exhaustion or schedule, the plan breaks and you feel frustrated.',
+                betterEs: 'Entendemos el descanso y la fatiga como parte fundamental del progreso. Si no puedes entrenar hoy, rebalanceamos la semana automáticamente sin juzgarte.',
+                betterEn: 'We understand rest and fatigue as a fundamental part of progress. If you cannot train today, we automatically rebalance the week without judging you.'
               }
             ].map((item, idx) => (
               <div 
                 key={idx}
-                className="bg-gradient-to-r from-[#141416]/80 to-orange-950/15 border border-orange-500/10 rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8 text-left hover:border-orange-500/30 transition-all duration-300 hover:scale-[1.015] shadow-lg hover:shadow-orange-950/10"
+                className="bg-gradient-to-r from-[#141416]/80 to-orange-950/15 border border-orange-500/10 rounded-2xl p-6 sm:p-8 flex flex-col md:flex-row md:items-start gap-4 sm:gap-8 text-left hover:border-orange-500/30 transition-all duration-300 hover:scale-[1.015] shadow-lg hover:shadow-orange-950/10"
               >
-                <div className="sm:w-1/3 shrink-0">
+                <div className="md:w-1/3 shrink-0">
                   <h3 className="text-orange-500 font-extrabold text-base flex items-center gap-2 uppercase tracking-wide">
                     <span className="text-orange-500/60 font-mono text-sm">{item.num}</span>
                     <span>•</span>
                     <span>{isSpanish ? item.titleEs : item.titleEn}</span>
                   </h3>
                 </div>
-                <div className="text-gray-300 text-sm leading-relaxed sm:border-l sm:border-gray-800/80 sm:pl-8 flex-grow">
-                  {isSpanish ? item.descEs : item.descEn}
+                <div className="text-gray-300 text-sm leading-relaxed md:border-l md:border-gray-800/80 md:pl-8 flex-grow space-y-3">
+                  <div className="flex items-start gap-2.5">
+                    <span className="inline-block mt-1.5 w-1.5 h-1.5 rounded-full bg-red-500 shrink-0 shadow-[0_0_6px_rgba(239,68,68,0.5)]" />
+                    <p className="text-gray-400">
+                      <strong className="text-red-400 font-semibold">{isSpanish ? '¿Por qué no te conocen / Qué falta?: ' : 'Why / What is missing?: '}</strong>
+                      {isSpanish ? item.whyEs : item.whyEn}
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <span className="inline-block mt-1.5 w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
+                    <p className="text-gray-200">
+                      <strong className="text-emerald-400 font-bold">{isSpanish ? '¿Qué hacemos mejor?: ' : 'What we do better?: '}</strong>
+                      {isSpanish ? item.betterEs : item.betterEn}
+                    </p>
+                  </div>
                 </div>
               </div>
             ))}
@@ -1153,32 +834,18 @@ export function LandingPage() {
             </ul>
           </div>
 
-          {/* Right Side: Radar Chart */}
+          {/* Right Side: Mobile Mockup */}
           <div className="w-full lg:w-1/2 flex justify-center">
-            <div className="w-full max-w-[380px] bg-[#141416]/60 border border-gray-800/80 rounded-3xl p-8 flex flex-col items-center justify-center shadow-2xl relative overflow-hidden">
-              {/* Radar Chart SVG helper */}
-              <RadarChart isSpanish={isSpanish} />
-
-              {/* Legend */}
-              <div className="flex items-center justify-center gap-6 mt-6 border-t border-gray-800/60 pt-4 w-full">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444] shadow-md"></span>
-                  <span className="text-xs font-bold text-gray-400">
-                    {isSpanish ? 'Semana 1' : 'Week 1'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#ea580c] shadow-md"></span>
-                  <span className="text-xs font-bold text-gray-400">
-                    {isSpanish ? 'Semana 6' : 'Week 6'}
-                  </span>
-                </div>
+            <div className="w-[260px] h-[520px] relative bg-gray-950 rounded-[2.2rem] border-[8px] border-neutral-800 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] overflow-hidden flex items-center justify-center select-none transform hover:scale-[1.03] transition-transform duration-300 ring-4 ring-orange-500/5">
+              {/* Notch */}
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 w-16 h-3.5 bg-black rounded-full z-40 flex items-center justify-center">
+                <div className="w-1.5 h-1.5 bg-neutral-900 rounded-full"></div>
               </div>
-
-              {/* Subtext */}
-              <span className="text-xs font-black uppercase tracking-wider text-gray-500 mt-4 block text-center">
-                {isSpanish ? 'Tu progreso, visual e innegable.' : 'Your progress, visual and undeniable.'}
-              </span>
+              <img 
+                src="/images/mockup_14.jpeg" 
+                alt="Fitnflai App Evaluation" 
+                className="w-full h-full object-cover rounded-[1.6rem]" 
+              />
             </div>
           </div>
 
@@ -1227,18 +894,18 @@ export function LandingPage() {
             >
               {[
                 {
-                  metric: '10%',
+                  metric: 'IA',
                   titleEs: 'Regla de progresión',
                   titleEn: 'Progression rule',
-                  descEs: 'Ninguna carga sube más del 10% por semana. El estándar clínico más validado para prevenir lesiones.',
-                  descEn: 'No training volume increases by more than 10% per week. The most validated clinical standard for injury prevention.'
+                  descEs: 'Ajustes de carga milimétricos y progresivos semana a semana. El estándar clínico más avanzado para prevenir lesiones.',
+                  descEn: 'Precise and progressive training load adjustments week by week. The most advanced clinical standard for injury prevention.'
                 },
                 {
-                  metric: '9',
+                  metric: '6',
                   titleEs: 'Modalidades',
                   titleEn: 'Disciplines',
-                  descEs: 'Running, ciclismo, triatlón, fuerza, HIIT, movilidad, cardio, senderismo y MTB — cada una con su lógica.',
-                  descEn: 'Running, cycling, triathlon, strength, HIIT, mobility, cardio, hiking, and MTB — each with its own logic.'
+                  descEs: 'Trail running, triatlón, ciclismo de ruta, MTB, senderismo y acondicionamiento — cada una con su propia lógica.',
+                  descEn: 'Trail running, triathlon, road cycling, MTB, hiking, and conditioning — each with its own specific logic.'
                 },
                 {
                   metric: '6',
@@ -1450,8 +1117,8 @@ export function LandingPage() {
                 bgGradient: 'bg-gradient-to-br from-[#141416]/80 to-emerald-950/20 border-emerald-500/10 hover:border-emerald-500/30 hover:shadow-emerald-950/10',
                 titleEs: 'Verde',
                 titleEn: 'Green',
-                descEs: 'Estás respondiendo bien. El plan puede progresar — nunca más del 10% por semana.',
-                descEn: 'You are responding well. The plan can progress — never more than 10% per week.'
+                descEs: 'Estás respondiendo bien. El plan puede progresar — de forma cuidada y adaptada a tu ritmo y fatiga.',
+                descEn: 'You are responding well. The plan can progress — carefully adapted to your pace and fatigue.'
               },
               {
                 colorDot: 'bg-[#f59e0b]',
@@ -1594,170 +1261,6 @@ export function LandingPage() {
             </p>
           </div>
 
-        </div>
-      </section>
-
-      {/* Interactive Calculator Section */}
-      <TrainingCalculator onPortalEntry={handlePortalEntry} />
-
-      {/* User Testimonials Section (Image 1 Layered Offset Design - Brand Orange & Dark Background) */}
-      <section className="py-24 bg-gray-950/70 text-white overflow-hidden relative z-10">
-        <div className="relative max-w-5xl mx-auto px-12 md:px-16">
-          {/* Centered Profile Navigation Tabs */}
-
-
-          <button
-            onClick={() => setActiveProfileIndex((prev) => (prev === 0 ? athleticNutritionProfiles.length - 1 : prev - 1))}
-            className="absolute left-0 md:left-4 top-1/2 -translate-y-1/2 bg-gray-900/50 hover:bg-gray-800/70 text-white p-2 rounded-full shadow-lg border border-gray-700 transition-all duration-300"
-          >
-            <IconChevronLeft size={24} />
-          </button>
-          <button
-            onClick={() => setActiveProfileIndex((prev) => (prev === athleticNutritionProfiles.length - 1 ? 0 : prev + 1))}
-            className="absolute right-0 md:right-4 top-1/2 -translate-y-1/2 bg-gray-900/50 hover:bg-gray-800/70 text-white p-2 rounded-full shadow-lg border border-gray-700 transition-all duration-300"
-          >
-            <IconChevronRight size={24} />
-          </button>
-          <div className="flex flex-col md:flex-row items-stretch justify-center gap-8 md:gap-0 relative">
-            {/* Left Card: Profile Details (Orange Backdrop) */}
-            <div className="w-full md:w-[45%] bg-[#ea580c]/15 backdrop-blur-md border border-orange-500/20 rounded-3xl p-8 shadow-lg relative z-10 md:-mr-4 min-h-[420px]">
-              {(() => {
-                const currentProfile = athleticNutritionProfiles[activeProfileIndex];
-                return (
-                  <div className="space-y-6 text-left h-full flex flex-col justify-center">
-                    <div>
-                      {/* Title & Image */}
-                      <div className="flex items-center gap-4 mb-6">
-                        {!profileImgError ? (
-                          <img 
-                            src={currentProfile.image} 
-                            alt={currentProfile.name} 
-                            onError={() => setProfileImgError(true)}
-                            className="w-16 h-16 rounded-full object-cover border-2 border-orange-400 shadow-md shrink-0" 
-                          />
-                        ) : (
-                          <div className="w-16 h-16 rounded-full border-2 border-orange-400 bg-orange-600 flex items-center justify-center font-black text-xl text-white shadow-md shrink-0">
-                            {currentProfile.name.charAt(0)}
-                          </div>
-                        )}
-                        <div>
-                          <p className="text-xl font-extrabold text-white">{currentProfile.name}</p>
-                          <p className="text-sm text-gray-200">{isSpanish ? currentProfile.title.es : currentProfile.title.en}</p>
-                        </div>
-                      </div>
-
-                      {/* Nutrition Focus */}
-                      <h4 className="text-sm font-black uppercase tracking-wider text-orange-400 mb-2">
-                        {isSpanish ? 'Enfoque Nutricional' : 'Nutrition Focus'}
-                      </h4>
-                      <p className="text-lg font-bold text-white mb-6 leading-relaxed">
-                        {isSpanish ? currentProfile.nutritionFocus.es : currentProfile.nutritionFocus.en}
-                      </p>
-
-                      {/* Daily Target & Macros */}
-                      <div className="mb-6">
-                        <div className="flex justify-between items-center mb-4 border-b border-orange-500/30 pb-4">
-                          <span className="text-sm uppercase font-bold text-orange-300 tracking-wider">
-                            {isSpanish ? 'Objetivo Diario' : 'Daily Target'}
-                          </span>
-                          <span className="text-2xl font-black text-white">
-                            {currentProfile.dailyTargetCalories} kcal
-                          </span>
-                        </div>
-                        <h5 className="text-xs font-black uppercase tracking-wider text-gray-100 mb-3">
-                          {isSpanish ? 'Distribución de Macronutrientes' : 'Macronutrient Distribution'}
-                        </h5>
-                        <div className="space-y-2">
-                          {currentProfile.macros.map((macro) => (
-                            <div key={isSpanish ? macro.name.es : macro.name.en}>
-                              <div className="flex justify-between text-xs font-bold text-gray-100 mb-1">
-                                <span>{isSpanish ? macro.name.es : macro.name.en}</span>
-                                <span>{macro.percentage}%</span>
-                              </div>
-                              <div className="w-full bg-orange-900/40 h-2 rounded-full overflow-hidden">
-                                <div
-                                  className={`${macro.color} h-full rounded-full transition-all duration-500`}
-                                  style={{ width: `${macro.percentage}%` }}
-                                />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-
-                  </div>
-                );
-              })()}
-            </div>
-
-            {/* Right Card: Testimonial & Ratings (Dark Backdrop) */}
-            <div className="w-full md:w-[55%] bg-[#141416]/80 rounded-3xl p-8 md:p-10 text-white shadow-2xl relative z-20 border border-gray-800/80 min-h-[420px]">
-              {(() => {
-                const currentProfile = athleticNutritionProfiles[activeProfileIndex];
-                return (
-                  <div className="flex flex-col justify-center h-full space-y-6">
-                    {/* Testimonial Quote */}
-                    <div className="text-center flex-grow flex items-center justify-center">
-                      <T.H3 className="text-2xl md:text-3xl font-serif italic text-white leading-relaxed">
-                        {isSpanish ? currentProfile.quote.es : currentProfile.quote.en}
-                      </T.H3>
-                    </div>
-
-                    {/* Profile Name & Title */}
-                    <div className="text-center mb-6">
-                      <p className="font-extrabold text-lg text-orange-400 tracking-wide">
-                        {currentProfile.name}
-                      </p>
-                      <p className="text-sm text-gray-400">
-                        {isSpanish ? currentProfile.title.es : currentProfile.title.en}
-                      </p>
-                    </div>
-
-                    {/* App Ratings */}
-                    <div className="mt-auto pt-6 border-t border-gray-800/60 flex flex-col sm:flex-row justify-around items-center gap-6">
-                      {/* Apple Rating */}
-                      <div className="text-center">
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-white/80 mb-1 flex items-center justify-center gap-1">
-                          76,000+ {isSpanish ? 'opiniones en' : 'ratings on'}
-                          <IconBrandApple size={14} className="text-white" /> Apple App Store
-                        </p>
-                        <div className="flex items-center justify-center gap-1">
-                          <div className="flex text-white">
-                            <IconStar size={18} fill="currentColor" strokeWidth={0} />
-                            <IconStar size={18} fill="currentColor" strokeWidth={0} />
-                            <IconStar size={18} fill="currentColor" strokeWidth={0} />
-                            <IconStar size={18} fill="currentColor" strokeWidth={0} />
-                            <IconStar size={18} fill="currentColor" strokeWidth={0} />
-                          </div>
-                          <span className="text-base font-black ml-2">4.9</span>
-                        </div>
-                      </div>
-
-                      {/* Google Play Rating */}
-                      <div className="text-center">
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-white/80 mb-1 flex items-center justify-center gap-1">
-                          17,000+ {isSpanish ? 'opiniones en' : 'ratings on'}
-                          <IconBrandGooglePlay size={14} className="text-white" /> Google Play Store
-                        </p>
-                        <div className="flex items-center justify-center gap-1">
-                          <div className="flex text-white">
-                            <IconStar size={18} fill="currentColor" strokeWidth={0} />
-                            <IconStar size={18} fill="currentColor" strokeWidth={0} />
-                            <IconStar size={18} fill="currentColor" strokeWidth={0} />
-                            <IconStar size={18} fill="currentColor" strokeWidth={0} />
-                            <IconStar size={18} fill="currentColor" strokeWidth={0} />
-                          </div>
-                          <span className="text-base font-black ml-2">4.7</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
         </div>
       </section>
 
@@ -1986,6 +1489,167 @@ export function LandingPage() {
             <T.P className="text-sm text-gray-500 mt-4">
               {isSpanish ? 'Prueba gratuita de 21 días. Cancela cuando quieras.' : '21-day free trial. Cancel anytime.'}
             </T.P>
+          </div>
+        </div>
+      </section>
+
+      {/* User Testimonials Section (Image 1 Layered Offset Design - Brand Orange & Dark Background) */}
+      <section className="py-24 bg-gray-950/70 text-white overflow-hidden relative z-10">
+        <div className="relative max-w-5xl mx-auto px-12 md:px-16">
+          {/* Centered Profile Navigation Tabs */}
+
+
+          <button
+            onClick={() => setActiveProfileIndex((prev) => (prev === 0 ? athleticNutritionProfiles.length - 1 : prev - 1))}
+            className="absolute left-0 md:left-4 top-1/2 -translate-y-1/2 bg-gray-900/50 hover:bg-gray-800/70 text-white p-2 rounded-full shadow-lg border border-gray-700 transition-all duration-300"
+          >
+            <IconChevronLeft size={24} />
+          </button>
+          <button
+            onClick={() => setActiveProfileIndex((prev) => (prev === athleticNutritionProfiles.length - 1 ? 0 : prev + 1))}
+            className="absolute right-0 md:right-4 top-1/2 -translate-y-1/2 bg-gray-900/50 hover:bg-gray-800/70 text-white p-2 rounded-full shadow-lg border border-gray-700 transition-all duration-300"
+          >
+            <IconChevronRight size={24} />
+          </button>
+          <div className="flex flex-col md:flex-row items-stretch justify-center gap-8 md:gap-0 relative">
+            {/* Left Card: Profile Details (Orange Backdrop) */}
+            <div className="w-full md:w-[45%] bg-[#ea580c]/15 backdrop-blur-md border border-orange-500/20 rounded-3xl p-8 shadow-lg relative z-10 md:-mr-4 min-h-[420px]">
+              {(() => {
+                const currentProfile = athleticNutritionProfiles[activeProfileIndex];
+                return (
+                  <div className="space-y-6 text-left h-full flex flex-col justify-center">
+                    <div>
+                      {/* Title & Image */}
+                      <div className="flex items-center gap-4 mb-6">
+                        {!profileImgError ? (
+                          <img 
+                            src={currentProfile.image} 
+                            alt={currentProfile.name} 
+                            onError={() => setProfileImgError(true)}
+                            className="w-16 h-16 rounded-full object-cover border-2 border-orange-400 shadow-md shrink-0" 
+                          />
+                        ) : (
+                          <div className="w-16 h-16 rounded-full border-2 border-orange-400 bg-orange-600 flex items-center justify-center font-black text-xl text-white shadow-md shrink-0">
+                            {currentProfile.name.charAt(0)}
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-xl font-extrabold text-white">{currentProfile.name}</p>
+                          <p className="text-sm text-gray-200">{isSpanish ? currentProfile.title.es : currentProfile.title.en}</p>
+                        </div>
+                      </div>
+
+                      {/* Nutrition Focus */}
+                      <h4 className="text-sm font-black uppercase tracking-wider text-orange-400 mb-2">
+                        {isSpanish ? 'Enfoque Nutricional' : 'Nutrition Focus'}
+                      </h4>
+                      <p className="text-lg font-bold text-white mb-6 leading-relaxed">
+                        {isSpanish ? currentProfile.nutritionFocus.es : currentProfile.nutritionFocus.en}
+                      </p>
+
+                      {/* Daily Target & Macros */}
+                      <div className="mb-6">
+                        <div className="flex justify-between items-center mb-4 border-b border-orange-500/30 pb-4">
+                          <span className="text-sm uppercase font-bold text-orange-300 tracking-wider">
+                            {isSpanish ? 'Objetivo Diario' : 'Daily Target'}
+                          </span>
+                          <span className="text-2xl font-black text-white">
+                            {currentProfile.dailyTargetCalories} kcal
+                          </span>
+                        </div>
+                        <h5 className="text-xs font-black uppercase tracking-wider text-gray-100 mb-3">
+                          {isSpanish ? 'Distribución de Macronutrientes' : 'Macronutrient Distribution'}
+                        </h5>
+                        <div className="space-y-2">
+                          {currentProfile.macros.map((macro) => (
+                            <div key={isSpanish ? macro.name.es : macro.name.en}>
+                              <div className="flex justify-between text-xs font-bold text-gray-100 mb-1">
+                                <span>{isSpanish ? macro.name.es : macro.name.en}</span>
+                                <span>{macro.percentage}%</span>
+                              </div>
+                              <div className="w-full bg-orange-900/40 h-2 rounded-full overflow-hidden">
+                                <div
+                                  className={`${macro.color} h-full rounded-full transition-all duration-500`}
+                                  style={{ width: `${macro.percentage}%` }}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Right Card: Testimonial & Ratings (Dark Backdrop) */}
+            <div className="w-full md:w-[55%] bg-[#141416]/80 rounded-3xl p-8 md:p-10 text-white shadow-2xl relative z-20 border border-gray-800/80 min-h-[420px]">
+              {(() => {
+                const currentProfile = athleticNutritionProfiles[activeProfileIndex];
+                return (
+                  <div className="flex flex-col justify-center h-full space-y-6">
+                    {/* Testimonial Quote */}
+                    <div className="text-center flex-grow flex items-center justify-center">
+                      <T.H3 className="text-2xl md:text-3xl font-serif italic text-white leading-relaxed">
+                        {isSpanish ? currentProfile.quote.es : currentProfile.quote.en}
+                      </T.H3>
+                    </div>
+
+                    {/* Profile Name & Title */}
+                    <div className="text-center mb-6">
+                      <p className="font-extrabold text-lg text-orange-400 tracking-wide">
+                        {currentProfile.name}
+                      </p>
+                      <p className="text-sm text-gray-400">
+                        {isSpanish ? currentProfile.title.es : currentProfile.title.en}
+                      </p>
+                    </div>
+
+                    {/* App Ratings */}
+                    <div className="mt-auto pt-6 border-t border-gray-800/60 flex flex-col sm:flex-row justify-around items-center gap-6">
+                      {/* Apple Rating */}
+                      <div className="text-center">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-white/80 mb-1 flex items-center justify-center gap-1">
+                          76,000+ {isSpanish ? 'opiniones en' : 'ratings on'}
+                          <IconBrandApple size={14} className="text-white" /> Apple App Store
+                        </p>
+                        <div className="flex items-center justify-center gap-1">
+                          <div className="flex text-white">
+                            <IconStar size={18} fill="currentColor" strokeWidth={0} />
+                            <IconStar size={18} fill="currentColor" strokeWidth={0} />
+                            <IconStar size={18} fill="currentColor" strokeWidth={0} />
+                            <IconStar size={18} fill="currentColor" strokeWidth={0} />
+                            <IconStar size={18} fill="currentColor" strokeWidth={0} />
+                          </div>
+                          <span className="text-base font-black ml-2">4.9</span>
+                        </div>
+                      </div>
+
+                      {/* Google Play Rating */}
+                      <div className="text-center">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-white/80 mb-1 flex items-center justify-center gap-1">
+                          17,000+ {isSpanish ? 'opiniones en' : 'ratings on'}
+                          <IconBrandGooglePlay size={14} className="text-white" /> Google Play Store
+                        </p>
+                        <div className="flex items-center justify-center gap-1">
+                          <div className="flex text-white">
+                            <IconStar size={18} fill="currentColor" strokeWidth={0} />
+                            <IconStar size={18} fill="currentColor" strokeWidth={0} />
+                            <IconStar size={18} fill="currentColor" strokeWidth={0} />
+                            <IconStar size={18} fill="currentColor" strokeWidth={0} />
+                            <IconStar size={18} fill="currentColor" strokeWidth={0} />
+                          </div>
+                          <span className="text-base font-black ml-2">4.7</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
           </div>
         </div>
       </section>
