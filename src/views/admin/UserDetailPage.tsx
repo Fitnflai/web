@@ -706,7 +706,7 @@ export function UserDetailPage() {
         <div className="space-y-5">
           {/* Card 1: Ficha de Usuario */}
           <div className="card-base p-5 bg-surface-card border border-surface-border rounded-xl">
-            <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <span>Ficha de Usuario</span>
               {isTabLoading && (
                 <span className="text-[10px] text-brand-orange animate-pulse font-semibold">
@@ -882,7 +882,7 @@ export function UserDetailPage() {
 
           {/* Card 3: Datos Físicos y Antropométricos */}
           <div className="card-base p-5 bg-surface-card border border-surface-border rounded-xl">
-            <h3 className="text-sm font-bold text-white mb-4">Datos Físicos y Antropométricos</h3>
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Datos Físicos y Antropométricos</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               <div>
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">PESO ({currentUser.unidad_peso || 'kg'})</label>
@@ -968,7 +968,7 @@ export function UserDetailPage() {
 
           {/* Card 4: Planificación, Objetivos y Suscripción */}
           <div className="card-base p-5 bg-surface-card border border-surface-border rounded-xl">
-            <h3 className="text-sm font-bold text-white mb-4">Planificación, Objetivos y Suscripción</h3>
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Planificación, Objetivos y Suscripción</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               <div>
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">DISCIPLINA / DEPORTE</label>
@@ -1078,7 +1078,7 @@ export function UserDetailPage() {
 
           {/* Card 5: Preferencias, Reportes y Notificaciones */}
           <div className="card-base p-5 bg-surface-card border border-surface-border rounded-xl">
-            <h3 className="text-sm font-bold text-white mb-4">Preferencias, Reportes y Notificaciones</h3>
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Preferencias, Reportes y Notificaciones</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               <div>
                 <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">ESTILO DE COMUNICACIÓN</label>
@@ -1227,7 +1227,7 @@ export function UserDetailPage() {
           {/* Card 7: Historial Deportivo */}
           <div className="card-base p-5 bg-surface-card border border-surface-border rounded-xl">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold text-white">Historial Deportivo</h3>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">Historial Deportivo</h3>
               {isEditing && (
                 <button
                   onClick={() => {

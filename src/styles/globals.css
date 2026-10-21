@@ -36,6 +36,9 @@
     font-family: 'Outfit', sans-serif;
     font-weight: 400;
   }
+  input, textarea, select {
+    color: inherit;
+  }
   * { @apply box-border; }
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { @apply bg-surface-panel; }

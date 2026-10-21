@@ -74,7 +74,7 @@ const PerfilTab = ({ u }: { u: User }) => (
   <div className="space-y-5">
     {/* Card 1: Ficha de Usuario */}
     <div className="card-base p-5 bg-surface-card border border-surface-border rounded-xl text-left">
-      <h3 className="text-sm font-bold text-white mb-4">Ficha de Usuario</h3>
+      <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Ficha de Usuario</h3>
       <div className="flex flex-col md:flex-row gap-5 items-start mb-5">
         {/* Left: Avatar */}
         <div className="flex flex-col items-center justify-center shrink-0">
@@ -84,7 +84,7 @@ const PerfilTab = ({ u }: { u: User }) => (
         {/* Middle: Objetivo Principal */}
         <div className="flex-1 w-full">
           <label className="form-label block text-[10px] text-surface-muted uppercase tracking-[0.6px] mb-1">OBJETIVO PRINCIPAL</label>
-          <div className="bg-brand-orange/5 border-l-4 border-brand-orange rounded-r-xl p-4 text-[13px] text-white leading-relaxed italic">
+          <div className="bg-brand-orange/5 border-l-4 border-brand-orange rounded-r-xl p-4 text-[13px] text-gray-900 dark:text-white leading-relaxed italic">
             "{u.objetivo_principal || 'Sin objetivo principal registrado'}"
           </div>
         </div>
@@ -94,39 +94,39 @@ const PerfilTab = ({ u }: { u: User }) => (
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 border-t border-surface-border pt-4">
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Nombre Completo</span>
-          <span className="text-[13px] font-medium text-white">{u.nombre || '—'}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.nombre || '—'}</span>
         </div>
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">EMAIL</span>
-          <span className="text-[13px] font-medium text-white">{u.email || '—'}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.email || '—'}</span>
         </div>
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">APODO</span>
-          <span className="text-[13px] font-medium text-white">{u.apodo || '—'}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.apodo || '—'}</span>
         </div>
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">GÉNERO</span>
-          <span className="text-[13px] font-medium text-white">{u.genero || '—'}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.genero || '—'}</span>
         </div>
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Fecha de Nacimiento</span>
-          <span className="text-[13px] font-medium text-white">{u.fecha_nacimiento ? u.fecha_nacimiento.substring(0, 10) : '—'}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.fecha_nacimiento ? u.fecha_nacimiento.substring(0, 10) : '—'}</span>
         </div>
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Edad</span>
-          <span className="text-[13px] font-medium text-white">{u.edad || '—'}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.edad || '—'}</span>
         </div>
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Ciudad</span>
-          <span className="text-[13px] font-medium text-white">{u.ciudad || '—'}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.ciudad || '—'}</span>
         </div>
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Altitud (M)</span>
-          <span className="text-[13px] font-medium text-white">{u.altitud ? `${u.altitud} m` : '—'}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.altitud ? `${u.altitud} m` : '—'}</span>
         </div>
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Idioma</span>
-          <span className="text-[13px] font-medium text-white">{u.idioma || '—'}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.idioma || '—'}</span>
         </div>
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Estado de Cuenta</span>
@@ -145,70 +145,70 @@ const PerfilTab = ({ u }: { u: User }) => (
 
     {/* Card 2: Datos Físicos y Antropométricos */}
     <div className="card-base p-5 bg-surface-card border border-surface-border rounded-xl text-left">
-      <h3 className="text-sm font-bold text-white mb-4">Datos Físicos y Antropométricos</h3>
+      <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Datos Físicos y Antropométricos</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Peso</span>
-          <span className="text-[13px] font-medium text-white">{u.peso ? `${u.peso} ${u.unidad_peso || 'kg'}` : '—'}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.peso ? `${u.peso} ${u.unidad_peso || 'kg'}` : '—'}</span>
         </div>
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Altura</span>
-          <span className="text-[13px] font-medium text-white">{u.altura ? `${u.altura} ${u.unidad_altura || 'cm'}` : '—'}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.altura ? `${u.altura} ${u.unidad_altura || 'cm'}` : '—'}</span>
         </div>
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Nivel de Actividad (1-5)</span>
-          <span className="text-[13px] font-medium text-white">{u.nivel_actividad || '—'}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.nivel_actividad || '—'}</span>
         </div>
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Nivel Motor Actual (1-5)</span>
-          <span className="text-[13px] font-medium text-white">{u.nivel_motor_actual || '—'}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.nivel_motor_actual || '—'}</span>
         </div>
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Clasificación Motor</span>
-          <span className="text-[13px] font-medium text-white">{u.clasificacion_visible_actual || '—'}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.clasificacion_visible_actual || '—'}</span>
         </div>
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Tiempo Sin Entrenar</span>
-          <span className="text-[13px] font-medium text-white">{u.tiempo_sin_entrenar || '—'}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.tiempo_sin_entrenar || '—'}</span>
         </div>
       </div>
     </div>
 
     {/* Card 3: Planificación, Objetivos y Suscripción */}
     <div className="card-base p-5 bg-surface-card border border-surface-border rounded-xl text-left">
-      <h3 className="text-sm font-bold text-white mb-4">Planificación, Objetivos y Suscripción</h3>
+      <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Planificación, Objetivos y Suscripción</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Disciplina / Deporte</span>
-          <span className="text-[13px] font-medium text-white">{u.nombre_disciplina || '—'}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.nombre_disciplina || '—'}</span>
         </div>
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Duración Objetivo (Semanas)</span>
-          <span className="text-[13px] font-medium text-white">{u.duracion_semanas_objetivo || '—'}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.duracion_semanas_objetivo || '—'}</span>
         </div>
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Fecha Inicio Preferida</span>
-          <span className="text-[13px] font-medium text-white">{u.fecha_inicio_preferida || '—'}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.fecha_inicio_preferida || '—'}</span>
         </div>
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Próxima Competencia</span>
-          <span className="text-[13px] font-medium text-white">{u.proxima_competencia ? u.proxima_competencia.substring(0, 10) : '—'}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.proxima_competencia ? u.proxima_competencia.substring(0, 10) : '—'}</span>
         </div>
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Alimentación</span>
-          <span className="text-[13px] font-medium text-white">{u.alimentacion || '—'}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.alimentacion || '—'}</span>
         </div>
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Plan Activo</span>
-          <span className="text-[13px] font-medium text-white">{u.nombre_plan_activo || PLAN_NAMES[u.plan_idx] || 'Essential'}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.nombre_plan_activo || PLAN_NAMES[u.plan_idx] || 'Essential'}</span>
         </div>
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Estado Suscripción</span>
-          <span className="text-[13px] font-medium text-white">{u.estado_suscripcion || (u.tiene_plan_activo ? 'Activa' : 'Inactiva')}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.estado_suscripcion || (u.tiene_plan_activo ? 'Activa' : 'Inactiva')}</span>
         </div>
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Fin Suscripción</span>
-          <span className="text-[13px] font-medium text-white">{u.fecha_fin_suscripcion ? u.fecha_fin_suscripcion.substring(0, 10) : '—'}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.fecha_fin_suscripcion ? u.fecha_fin_suscripcion.substring(0, 10) : '—'}</span>
         </div>
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">¿Tiene Plan Activo?</span>
@@ -223,27 +223,27 @@ const PerfilTab = ({ u }: { u: User }) => (
 
     {/* Card 4: Preferencias, Reportes y Notificaciones */}
     <div className="card-base p-5 bg-surface-card border border-surface-border rounded-xl text-left">
-      <h3 className="text-sm font-bold text-white mb-4">Preferencias, Reportes y Notificaciones</h3>
+      <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Preferencias, Reportes y Notificaciones</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Estilo de Comunicación</span>
-          <span className="text-[13px] font-medium text-white">{u.estilo_comunicacion || '—'}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.estilo_comunicacion || '—'}</span>
         </div>
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Intensidad Notificaciones</span>
-          <span className="text-[13px] font-medium text-white">{u.intensidad_notificaciones || '—'}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.intensidad_notificaciones || '—'}</span>
         </div>
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Día de Reporte</span>
-          <span className="text-[13px] font-medium text-white">{u.dia_reporte || '—'}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.dia_reporte || '—'}</span>
         </div>
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Hora de Reporte</span>
-          <span className="text-[13px] font-medium text-white">{u.hora_reporte || '—'}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.hora_reporte || '—'}</span>
         </div>
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Hora de Notificación</span>
-          <span className="text-[13px] font-medium text-white">{u.notification_time || '—'}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.notification_time || '—'}</span>
         </div>
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Onboarding Completo</span>
@@ -265,7 +265,7 @@ const PerfilTab = ({ u }: { u: User }) => (
 
     {/* Card 6: Historial Deportivo */}
     <div className="card-base p-5 bg-surface-card border border-surface-border rounded-xl text-left">
-      <h3 className="text-sm font-bold text-white mb-4">Historial Deportivo</h3>
+      <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Historial Deportivo</h3>
       {(!u.tray || u.tray.length === 0) ? (
         <div className="text-center py-6 text-surface-muted text-[12px]">Sin logros o trayectoria registrada.</div>
       ) : (
@@ -2691,7 +2691,7 @@ type Tab = 'perfil' | 'plan' | 'nutricion' | 'reporte-clinico' | 'notificaciones
     <div className="space-y-6">
       {/* Sección de Envío de Notificaciones */}
       <div className="card-base p-5 bg-surface-card border border-surface-border rounded-xl text-left">
-        <h3 className="text-sm font-bold text-white mb-4">Enviar Nueva Notificación</h3>
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Enviar Nueva Notificación</h3>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
             label="Título de la Notificación"
@@ -2727,7 +2727,7 @@ type Tab = 'perfil' | 'plan' | 'nutricion' | 'reporte-clinico' | 'notificaciones
 
       {/* Historial de Notificaciones Enviadas */}
       <div className="card-base p-5 bg-surface-card border border-surface-border rounded-xl text-left">
-        <h3 className="text-sm font-bold text-white mb-4">Historial de Notificaciones Enviadas</h3>
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Historial de Notificaciones Enviadas</h3>
         {isLoadingNotifications ? (
           <div className="text-center py-6 text-surface-muted text-[12px] animate-pulse">Cargando historial...</div>
         ) : isErrorNotifications ? (
