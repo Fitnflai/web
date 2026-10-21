@@ -97,4 +97,9 @@
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
   }
+  
+  /* Light mode theme color reset to prevent hardcoded text-white/opacity from becoming invisible */
+  html:not(.dark) [class*="text-white"]:not(button, a, .badge, .btn, .nav-item.active, [class*="bg-brand-"], [class*="bg-orange"], [class*="bg-emerald"], [class*="bg-red"]) {
+    color: rgba(var(--color-text), 1) !important;
+  }
 }
