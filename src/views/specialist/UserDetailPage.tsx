@@ -1469,42 +1469,40 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
 
       {/* Multi-session selector if there are workouts on this day */}
       {dayWorkouts.length > 0 && (
-        <div className="flex items-center justify-between bg-surface-card border border-surface-border rounded-xl p-2.5">
-          <div className="flex items-center gap-2 overflow-x-auto">
-            <span className="text-[11px] font-bold text-surface-muted uppercase tracking-wider mr-1">
-              Sesiones del día:
-            </span>
-            {dayWorkouts.map((w, idx) => {
-              const isSelected = w.id_entrenamiento === activeWorkout?.id_entrenamiento
-              return (
-                <button
-                  key={w.id_entrenamiento}
-                  type="button"
-                  onClick={() => setSelectedWorkoutId(w.id_entrenamiento)}
-                  className={cn(
-                    'px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all flex items-center gap-1.5 cursor-pointer',
-                    isSelected
-                      ? 'bg-brand-orange text-white shadow-sm'
-                      : 'bg-surface-card2 text-surface-muted hover:text-white border border-surface-border'
-                  )}
-                >
-                  <span>Sesión {idx + 1}</span>
-                  <span className="text-[10px] opacity-80">({w.tipo || 'Fuerza'})</span>
-                  {w.ejercicios_asociados?.length > 0 && (
-                    <span className={cn('text-[9px] px-1.5 py-0.2 rounded-full', isSelected ? 'bg-black/30 text-white' : 'bg-surface-border text-surface-muted')}>
-                      {w.ejercicios_asociados.length}
-                    </span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
+        <div className="flex items-center gap-2 overflow-x-auto bg-surface-card border border-surface-border rounded-xl p-2.5">
+          <span className="text-[11px] font-bold text-surface-muted uppercase tracking-wider mr-1 shrink-0">
+            Sesiones del día:
+          </span>
+          {dayWorkouts.map((w, idx) => {
+            const isSelected = w.id_entrenamiento === activeWorkout?.id_entrenamiento
+            return (
+              <button
+                key={w.id_entrenamiento}
+                type="button"
+                onClick={() => setSelectedWorkoutId(w.id_entrenamiento)}
+                className={cn(
+                  'px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all flex items-center gap-1.5 cursor-pointer shrink-0',
+                  isSelected
+                    ? 'bg-brand-orange text-white shadow-sm'
+                    : 'bg-surface-card2 text-surface-muted hover:text-white border border-surface-border'
+                )}
+              >
+                <span>Sesión {idx + 1}</span>
+                <span className="text-[10px] opacity-80">({w.tipo || 'Fuerza'})</span>
+                {w.ejercicios_asociados?.length > 0 && (
+                  <span className={cn('text-[9px] px-1.5 py-0.2 rounded-full', isSelected ? 'bg-black/30 text-white' : 'bg-surface-border text-surface-muted')}>
+                    {w.ejercicios_asociados.length}
+                  </span>
+                )}
+              </button>
+            )
+          })}
 
           {!readOnly && dayWorkouts.length < 3 && (
             <button
               type="button"
               onClick={() => handleAddWorkoutSession(selectedDateStr)}
-              className="text-[11px] font-bold text-brand-orange hover:text-brand-orange/80 transition-colors flex items-center gap-1 px-3 py-1.5 rounded-lg border border-dashed border-brand-orange/40 hover:border-brand-orange bg-brand-orange/5 cursor-pointer ml-2 whitespace-nowrap"
+              className="text-[11px] font-bold text-brand-orange hover:text-brand-orange/80 transition-colors flex items-center gap-1 px-3 py-1.5 rounded-lg border border-dashed border-brand-orange/40 hover:border-brand-orange bg-brand-orange/5 cursor-pointer whitespace-nowrap shrink-0"
             >
               <span>+ Agregar Sesión ({dayWorkouts.length + 1}/3)</span>
             </button>
