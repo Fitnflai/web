@@ -1,8 +1,9 @@
 import {
   LayoutDashboard, Users, IdCard,
   Crown, Bell, Settings, HelpCircle, CalendarDays,
-  UserCircle, ClipboardList, MessageSquare, DollarSign
+  UserCircle, ClipboardList, MessageSquare, DollarSign, LogOut
 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/store/useAppStore'
 import { cn } from '@/utils'
 import type { NavPage } from '@/types'
@@ -15,7 +16,15 @@ import { specialistsService } from '@/services/endpoints/specialists'
 interface NavItem { id: NavPage; labelKey: string; icon: React.ElementType; badge?: number }
 
 export function Sidebar() {
+  const navigate = useNavigate()
   const { currentPage, setPage, userRole } = useAppStore()
+
+  const handleLogout = () => {
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('fitnflai_user_role')
+    localStorage.removeItem('fitnflai_current_page')
+    navigate('/login', { replace: true })
+  }
   const { t } = useTranslation()
   const activeBase = (currentPage as string).replace('-detalle', '') as NavPage
 
@@ -117,8 +126,15 @@ export function Sidebar() {
           </div>
         ))}
       </nav>
-      <div className="p-3 border-t border-surface-border">
+      <div className="p-3 border-t border-surface-border space-y-1">
         <button className="nav-item w-full text-left"><HelpCircle size={16} /><span>{t('sidebar.support')}</span></button>
+        <button
+          onClick={handleLogout}
+          className="nav-item w-full text-left text-brand-red hover:text-brand-red hover:bg-brand-red/10 transition-colors"
+        >
+          <LogOut size={16} className="text-brand-red flex-shrink-0" />
+          <span>{t('sidebar.logout' as any) || 'Cerrar Sesión'}</span>
+        </button>
       </div>
     </aside>
   )

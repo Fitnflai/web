@@ -1,10 +1,19 @@
-import { Bell, RefreshCw, UserCircle, Sun, Moon, Globe } from 'lucide-react'
+import { Bell, RefreshCw, UserCircle, Sun, Moon, Globe, LogOut } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/store/useAppStore'
 import { NAV_TITLES } from '@/constants'
 import { useTranslation } from '@/i18n/useTranslation'
 
 export function Topbar() {
+  const navigate = useNavigate()
   const { currentPage, userRole, setUserRole, setPage, language, setLanguage, isDarkMode, toggleDarkMode } = useAppStore()
+
+  const handleLogout = () => {
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('fitnflai_user_role')
+    localStorage.removeItem('fitnflai_current_page')
+    navigate('/login', { replace: true })
+  }
   const { t } = useTranslation()
   const title = NAV_TITLES[currentPage] ?? 'Fitnflai Admin'
 
@@ -69,6 +78,17 @@ export function Topbar() {
 
       {/* Profile */}
       <div className="w-8 h-8 rounded-full bg-brand-orange flex items-center justify-center text-[11px] font-bold text-white">AD</div>
+
+      {/* Logout */}
+      <button
+        onClick={handleLogout}
+        aria-label="Cerrar Sesión"
+        title={language === 'ES' ? 'Cerrar Sesión' : 'Log Out'}
+        className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] bg-surface-card border border-surface-border rounded-lg hover:border-brand-red hover:text-brand-red text-surface-muted cursor-pointer transition-colors"
+      >
+        <LogOut size={12} className="text-brand-red" />
+        <span className="hidden sm:inline font-medium">{language === 'ES' ? 'Salir' : 'Salir'}</span>
+      </button>
     </header>
   )
 }

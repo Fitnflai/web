@@ -19,10 +19,15 @@ const getInitialTheme = (): boolean => {
   return saved !== 'false'; // defaults to true if not set
 };
 
+const getInitialUserRole = (): 'admin' | 'specialist' => {
+  const saved = localStorage.getItem('fitnflai_user_role');
+  return saved === 'specialist' ? 'specialist' : 'admin';
+};
+
 export const createUISlice: StateCreator<UIState> = (set) => ({
   isDarkMode: getInitialTheme(),
   language: getInitialLanguage(),
-  userRole: 'admin',
+  userRole: getInitialUserRole(),
   toggleDarkMode: () => set((state) => {
     const nextMode = !state.isDarkMode;
     localStorage.setItem('fitnflai_theme', String(nextMode));
@@ -32,5 +37,8 @@ export const createUISlice: StateCreator<UIState> = (set) => ({
     localStorage.setItem('fitnflai_language', language);
     return { language };
   }),
-  setUserRole: (role) => set({ userRole: role }),
+  setUserRole: (role) => set(() => {
+    localStorage.setItem('fitnflai_user_role', role);
+    return { userRole: role };
+  }),
 });

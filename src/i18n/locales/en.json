@@ -11,7 +11,8 @@
     "configuration": "My Profile",
     "support": "Support",
     "patients": "My Patients",
-    "transactions": "Transactions"
+    "transactions": "Transactions",
+    "logout": "Log Out"
   },
   "dashboard": {
     "welcome": "Hello, {name}!",

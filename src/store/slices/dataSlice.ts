@@ -14,9 +14,19 @@ export interface DataState {
   setDetailOrigin: (origin: 'usuarios' | 'pacientes') => void;
 }
 
+const getInitialPage = (): NavPage => {
+  const savedPage = localStorage.getItem('fitnflai_current_page') as NavPage;
+  if (savedPage) return savedPage;
+  const role = localStorage.getItem('fitnflai_user_role');
+  return role === 'specialist' ? 'dashboard-especialista' : 'dashboard';
+};
+
 export const createDataSlice: StateCreator<DataState> = (set) => ({
-  currentPage: 'dashboard',
-  setPage: (page) => set({ currentPage: page }),
+  currentPage: getInitialPage(),
+  setPage: (page) => {
+    localStorage.setItem('fitnflai_current_page', page);
+    set({ currentPage: page });
+  },
   selectedUser: null,
   setSelectedUser: (user) => set({ selectedUser: user }),
   selectedPatient: null,

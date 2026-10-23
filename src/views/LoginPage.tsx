@@ -17,10 +17,13 @@ export function LoginPage() {
   const [autoDetected, setAutoDetected] = useState<boolean>(false)
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
 
-  // Ensure clean authentication state on page load (removes ghost/stale sessions)
+  // Preserve active session: if token exists, navigate directly to portal
   useEffect(() => {
-    localStorage.removeItem('access_token')
-  }, [])
+    const token = localStorage.getItem('access_token')
+    if (token) {
+      navigate('/portal', { replace: true })
+    }
+  }, [navigate])
 
   // Auto-detect role based on email input
   useEffect(() => {
@@ -60,8 +63,9 @@ export function LoginPage() {
       // Call live login API
       const res = await authService.login(email, password)
 
-      // Store live JWT token
+      // Store live JWT token and user role
       localStorage.setItem('access_token', res.token.access_token)
+      localStorage.setItem('fitnflai_user_role', selectedRole)
       setUserRole(selectedRole)
       setPage(selectedRole === 'admin' ? 'dashboard' : 'dashboard-especialista')
 
