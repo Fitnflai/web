@@ -80,11 +80,19 @@ export function Sidebar() {
 
   return (
     <aside className="w-[220px] bg-surface-panel border-r border-surface-border flex flex-col flex-shrink-0 sticky top-0 h-screen overflow-y-auto">
-      <div className="p-4 border-b border-surface-border flex items-center gap-2.5">
-        <div className="w-8 h-8 bg-brand-orange rounded-lg flex items-center justify-center text-sm font-extrabold text-white flex-shrink-0">F</div>
-        <div>
-          <div className="text-sm font-bold">Fitnflai</div>
-          <div className="text-[9px] text-brand-orange uppercase tracking-widest">{userRole}</div>
+      <div className="p-4 border-b border-surface-border flex flex-col gap-1.5">
+        <div
+          onClick={() => setPage(userRole === 'admin' ? 'dashboard' : 'dashboard-especialista')}
+          className="flex items-center cursor-pointer select-none group"
+        >
+          <img
+            src="/images/logo.png"
+            alt="Fitnflai Logo"
+            className="h-7 w-auto object-contain transform group-hover:scale-105 transition-transform duration-200"
+          />
+        </div>
+        <div className="text-[9px] text-brand-orange uppercase tracking-widest font-bold pl-0.5">
+          {userRole}
         </div>
       </div>
       <nav className="flex-1 py-2">
