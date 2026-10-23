@@ -745,9 +745,38 @@ export const specialistsService = {
   getExercisesByType: async (tipo?: string | null, nombre?: string | null): Promise<ExerciseListItem[]> => {
     if (USE_MOCK) {
       const mockList: ExerciseListItem[] = [
-        { id_ejercicio: 'ex-001', nombre: 'Sentadillas', tipo: 'Fuerza' },
-        { id_ejercicio: 'ex-002', nombre: 'Peso Muerto', tipo: 'Fuerza' },
-        { id_ejercicio: 'ex-003', nombre: 'Press de Banca', tipo: 'Fuerza' },
+        // Fuerza - Piernas
+        { id_ejercicio: 'ex-001', nombre: 'Sentadillas con barra (Piernas)', tipo: 'Fuerza' },
+        { id_ejercicio: 'ex-002', nombre: 'Peso Muerto Rumano (Piernas/Glúteos)', tipo: 'Fuerza' },
+        { id_ejercicio: 'ex-006', nombre: 'Prensa Inclinada 45° (Piernas)', tipo: 'Fuerza' },
+        { id_ejercicio: 'ex-007', nombre: 'Zancadas Búlgaras con Mancuernas (Piernas)', tipo: 'Fuerza' },
+        // Fuerza - Pantorrillas
+        { id_ejercicio: 'ex-008', nombre: 'Elevación de Talones de Pie (Pantorrillas)', tipo: 'Fuerza' },
+        { id_ejercicio: 'ex-009', nombre: 'Elevación de Talones Sentado (Pantorrillas/Sóleo)', tipo: 'Fuerza' },
+        // Fuerza - Pecho
+        { id_ejercicio: 'ex-003', nombre: 'Press de Banca Plano (Pecho)', tipo: 'Fuerza' },
+        { id_ejercicio: 'ex-010', nombre: 'Press Inclinado con Mancuernas (Pecho)', tipo: 'Fuerza' },
+        { id_ejercicio: 'ex-011', nombre: 'Flexiones de Pecho / Push-ups (Pecho)', tipo: 'Fuerza' },
+        { id_ejercicio: 'ex-012', nombre: 'Aperturas con Mancuernas (Pecho)', tipo: 'Fuerza' },
+        // Fuerza - Espalda
+        { id_ejercicio: 'ex-013', nombre: 'Remo con Barra Prono (Espalda)', tipo: 'Fuerza' },
+        { id_ejercicio: 'ex-014', nombre: 'Dominadas Pronas (Espalda)', tipo: 'Fuerza' },
+        { id_ejercicio: 'ex-015', nombre: 'Jalón al Pecho en Polea (Espalda)', tipo: 'Fuerza' },
+        { id_ejercicio: 'ex-016', nombre: 'Remo Unilateral con Mancuerna (Espalda)', tipo: 'Fuerza' },
+        // Fuerza - Bíceps
+        { id_ejercicio: 'ex-017', nombre: 'Curl de Bíceps con Barra Z', tipo: 'Fuerza' },
+        { id_ejercicio: 'ex-018', nombre: 'Curl Martillo con Mancuernas (Bíceps)', tipo: 'Fuerza' },
+        { id_ejercicio: 'ex-019', nombre: 'Curl Concentrado en Banco (Bíceps)', tipo: 'Fuerza' },
+        // Fuerza - Tríceps
+        { id_ejercicio: 'ex-020', nombre: 'Fondos en Paralelas (Tríceps)', tipo: 'Fuerza' },
+        { id_ejercicio: 'ex-021', nombre: 'Extensión de Tríceps en Polea Alta', tipo: 'Fuerza' },
+        { id_ejercicio: 'ex-022', nombre: 'Press Francés con Mancuernas (Tríceps)', tipo: 'Fuerza' },
+        // Fuerza - Core
+        { id_ejercicio: 'ex-023', nombre: 'Plancha Frontal Isométrica (Core)', tipo: 'Fuerza' },
+        { id_ejercicio: 'ex-024', nombre: 'Rueda Abdominal (Core)', tipo: 'Fuerza' },
+        { id_ejercicio: 'ex-025', nombre: 'Elevación de Piernas Colgado (Core)', tipo: 'Fuerza' },
+        { id_ejercicio: 'ex-026', nombre: 'Pallof Press con Banda (Core)', tipo: 'Fuerza' },
+        // Cardio y otros
         { id_ejercicio: 'ex-004', nombre: 'Carrera Continua', tipo: 'Cardio' },
         { id_ejercicio: 'ex-005', nombre: 'Estiramientos Activos', tipo: 'Estiramiento' },
       ];

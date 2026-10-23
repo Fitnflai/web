@@ -28,4 +28,5 @@ export interface IWorkoutRepository {
   saveWorkout(workout: Workout): Promise<void>;
   saveRestDay(restDay: RestDay): Promise<void>;
   deletePlanItemByDate(date: string): Promise<void>;
+  deleteWorkoutById?(workoutId: string): Promise<void>;
 }

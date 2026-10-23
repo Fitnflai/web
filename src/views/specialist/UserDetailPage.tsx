@@ -334,6 +334,17 @@ interface ExerciseModalProps {
   specialistSpecialty?: string;
 }
 
+const FUERZA_BODY_PARTS = [
+  { id: 'todos', label: 'Todos', keywords: [] },
+  { id: 'biceps', label: 'Bíceps', keywords: ['bícep', 'bicep', 'curl'] },
+  { id: 'triceps', label: 'Tríceps', keywords: ['trícep', 'tricep', 'fondo', 'copa', 'francés', 'frances', 'extensión', 'extension'] },
+  { id: 'core', label: 'Core', keywords: ['core', 'plancha', 'abdom', 'crunch', 'lumbar', 'oblicuo', 'rueda', 'pallof', 'hollow'] },
+  { id: 'espalda', label: 'Espalda', keywords: ['espalda', 'dorsal', 'remo', 'dominada', 'jalon', 'jalón', 'pull', 'trapecio'] },
+  { id: 'pecho', label: 'Pecho', keywords: ['pecho', 'pectoral', 'press banca', 'press plano', 'press inclinado', 'apertura', 'push-up', 'push up', 'flexion', 'flexión'] },
+  { id: 'piernas', label: 'Piernas', keywords: ['pierna', 'cuadric', 'cuádric', 'isquio', 'femoral', 'sentadilla', 'prensa', 'zancada', 'estocada', 'gluteo', 'glúteo', 'hip thrust'] },
+  { id: 'pantorrillas', label: 'Pantorrillas', keywords: ['pantorrilla', 'gemelo', 'soleo', 'sóleo', 'talon', 'talón'] },
+] as const;
+
 function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = false, gender, idioma, specialistName = 'Especialista', specialistSpecialty = 'Pro' }: ExerciseModalProps) {
   const repos = useRepositories()
   const [localExercise, setLocalExercise] = useState<WorkoutExercise | null>(null)
@@ -342,6 +353,7 @@ function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = fal
   
   const [types, setTypes] = useState<string[]>([])
   const [exercisesList, setExercisesList] = useState<{ id_ejercicio: string, nombre: string }[]>([])
+  const [selectedBodyPart, setSelectedBodyPart] = useState<string>('todos')
 
   // Local exercise comments state
   const [comments, setComments] = useState<Comment[]>([])
@@ -465,8 +477,17 @@ function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = fal
     }
   }
 
+  const isFuerza = localExercise?.ejercicio?.tipo?.toLowerCase() === 'fuerza';
+  const activeBodyPart = isFuerza ? FUERZA_BODY_PARTS.find(p => p.id === selectedBodyPart) : null;
+  const filteredExercises = (activeBodyPart && activeBodyPart.id !== 'todos')
+    ? exercisesList.filter(ex => {
+        const name = ex.nombre.toLowerCase();
+        return activeBodyPart.keywords.some(kw => name.includes(kw));
+      })
+    : exercisesList;
+
   const selectOptions = useMemo(() => {
-    const list = exercisesList.map(ex => ({
+    const list = filteredExercises.map(ex => ({
       value: ex.id_ejercicio,
       label: ex.nombre
     }))
@@ -479,7 +500,7 @@ function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = fal
       })
     }
     return list
-  }, [exercisesList, localExercise?.ejercicio?.id_ejercicio, localExercise?.ejercicio?.nombre])
+  }, [filteredExercises, localExercise?.ejercicio?.id_ejercicio, localExercise?.ejercicio?.nombre])
 
   if (!localExercise) return null
 
@@ -582,6 +603,46 @@ function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = fal
                   ))}
                 </select>
               </div>
+
+              {/* Selector de Parte del Cuerpo / Grupo Muscular (para ejercicios de Fuerza) */}
+              {localExercise.ejercicio.tipo?.toLowerCase() === 'fuerza' && (
+                <div className="flex flex-col gap-1.5 w-full text-left pt-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">
+                      Parte del Cuerpo / Grupo Muscular:
+                    </span>
+                    {selectedBodyPart !== 'todos' && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBodyPart('todos')}
+                        className="text-[10px] text-brand-orange hover:underline font-medium cursor-pointer"
+                      >
+                        Ver todos
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {FUERZA_BODY_PARTS.map(part => {
+                      const isSelected = selectedBodyPart === part.id;
+                      return (
+                        <button
+                          key={part.id}
+                          type="button"
+                          onClick={() => setSelectedBodyPart(part.id)}
+                          className={cn(
+                            'px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer border',
+                            isSelected
+                              ? 'bg-brand-orange text-white border-brand-orange shadow-sm'
+                              : 'bg-surface-card2 text-surface-muted border-surface-border hover:text-white hover:border-surface-muted/50'
+                          )}
+                        >
+                          {part.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* 2. Nombre del Ejercicio (Select with Search!) */}
               <div className="text-left">
@@ -986,10 +1047,28 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
     }
   }, [planData, userId, repos.workouts])
 
-  // Get active Workout or Rest Day for the selected date
-  const activeWorkout = useMemo(() => {
-    return planItems.find(item => 'id_entrenamiento' in item && item.fecha_programada === selectedDateStr) as Workout | undefined
+  // Get all workouts scheduled for selectedDateStr (supports multiple sessions per day)
+  const dayWorkouts = useMemo(() => {
+    return planItems.filter(item => 'id_entrenamiento' in item && item.fecha_programada === selectedDateStr) as Workout[]
   }, [planItems, selectedDateStr])
+
+  const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(null)
+
+  // Ensure active workout tracks selected or defaults to first available
+  useEffect(() => {
+    if (dayWorkouts.length > 0) {
+      if (!selectedWorkoutId || !dayWorkouts.some(w => w.id_entrenamiento === selectedWorkoutId)) {
+        setSelectedWorkoutId(dayWorkouts[0].id_entrenamiento)
+      }
+    } else {
+      setSelectedWorkoutId(null)
+    }
+  }, [dayWorkouts, selectedWorkoutId])
+
+  const activeWorkout = useMemo(() => {
+    if (!dayWorkouts.length) return undefined
+    return dayWorkouts.find(w => w.id_entrenamiento === selectedWorkoutId) || dayWorkouts[0]
+  }, [dayWorkouts, selectedWorkoutId])
 
   const activeRestDay = useMemo(() => {
     return planItems.find(item => 'id_descanso' in item && item.fecha_programada === selectedDateStr) as RestDay | undefined
@@ -1061,15 +1140,28 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
 
   // Delete active Workout or Rest Day on the selected date
   const handleDeleteActiveWorkoutOrRestDay = () => {
-    if (selectedDateStr) {
-      repos.workouts.deletePlanItemByDate(selectedDateStr).then(() => {
+    if (activeWorkout) {
+      if (repos.workouts.deleteWorkoutById) {
+        repos.workouts.deleteWorkoutById(activeWorkout.id_entrenamiento).then(() => {
+          setPlanItems(prev => prev.filter(item => !('id_entrenamiento' in item) || item.id_entrenamiento !== activeWorkout.id_entrenamiento))
+          setUpdateTick(t => t + 1)
+          toast.show('Sesión de entrenamiento eliminada', 'error')
+        })
+      } else {
+        setPlanItems(prev => prev.filter(item => !('id_entrenamiento' in item) || item.id_entrenamiento !== activeWorkout.id_entrenamiento))
         setUpdateTick(t => t + 1)
-        toast.show('Eliminado con éxito', 'error')
+        toast.show('Sesión de entrenamiento eliminada', 'error')
+      }
+    } else if (activeRestDay && selectedDateStr) {
+      repos.workouts.deletePlanItemByDate(selectedDateStr).then(() => {
+        setPlanItems(prev => prev.filter(item => item.fecha_programada !== selectedDateStr))
+        setUpdateTick(t => t + 1)
+        toast.show('Día de descanso eliminado', 'error')
       })
     }
   }
 
-  // Create empty Workout dynamically on the selected date
+  // Create empty Workout dynamically on the selected date (Session 1)
   const handleCreateWorkout = (dateStr: string) => {
     repos.workouts.deletePlanItemByDate(dateStr).then(() => {
       const newWorkout: Workout = {
@@ -1077,8 +1169,8 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
         tipo: 'FUERZA',
         fecha_programada: dateStr,
         estado: 'Pendiente',
-        descripcion: 'Nueva sesión de entrenamiento planificada.',
-        titulo_entrenamiento: 'Nuevo Entrenamiento',
+        descripcion: 'Sesión 1 de entrenamiento planificada.',
+        titulo_entrenamiento: 'Sesión 1 - Fuerza',
         ejercicios_asociados: [],
         zona_esfuerzo: 'RPE 7-8',
         macros_objetivo_kcal: 0,
@@ -1087,10 +1179,38 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
         macros_objetivo_grasas: 0
       }
       repos.workouts.saveWorkout(newWorkout).then(() => {
+        setPlanItems(prev => [...prev.filter(item => item.fecha_programada !== dateStr), newWorkout])
         setSelectedDateStr(dateStr)
+        setSelectedWorkoutId(newWorkout.id_entrenamiento)
         setUpdateTick(t => t + 1)
         toast.show('Entrenamiento programado', 'success')
       })
+    })
+  }
+
+  // Add another Workout session to the selected date (supports up to 3 sessions per day)
+  const handleAddWorkoutSession = (dateStr: string) => {
+    const sessionNumber = dayWorkouts.length + 1
+    const nextTipo = sessionNumber === 2 ? 'Ciclismo' : sessionNumber === 3 ? 'Natación' : 'Fuerza'
+    const newWorkout: Workout = {
+      id_entrenamiento: `wk-${Date.now()}`,
+      tipo: nextTipo,
+      fecha_programada: dateStr,
+      estado: 'Pendiente',
+      descripcion: `Sesión ${sessionNumber} (${nextTipo}) planificada para el día.`,
+      titulo_entrenamiento: `Sesión ${sessionNumber} - ${nextTipo}`,
+      ejercicios_asociados: [],
+      zona_esfuerzo: 'RPE 7-8',
+      macros_objetivo_kcal: 0,
+      macros_objetivo_ch: 0,
+      macros_objetivo_proteina: 0,
+      macros_objetivo_grasas: 0
+    }
+    repos.workouts.saveWorkout(newWorkout).then(() => {
+      setPlanItems(prev => [...prev, newWorkout])
+      setSelectedWorkoutId(newWorkout.id_entrenamiento)
+      setUpdateTick(t => t + 1)
+      toast.show(`Sesión ${sessionNumber} añadida con éxito`, 'success')
     })
   }
 
@@ -1108,6 +1228,7 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
         sueno: 'Asegura dormir 7-9 horas'
       }
       repos.workouts.saveRestDay(newRestDay).then(() => {
+        setPlanItems(prev => [...prev.filter(item => item.fecha_programada !== dateStr), newRestDay])
         setSelectedDateStr(dateStr)
         setUpdateTick(t => t + 1)
         toast.show('Día de descanso programado', 'success')
@@ -1314,7 +1435,8 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
           const isToday = dateStr === formatDateISO(new Date())
 
           // Check if there is a Workout or RestDay to display indicators
-          const hasWorkout = planItems.some(item => 'id_entrenamiento' in item && item.fecha_programada === dateStr)
+          const dayWorkoutsCount = planItems.filter(item => 'id_entrenamiento' in item && item.fecha_programada === dateStr).length
+          const hasWorkout = dayWorkoutsCount > 0
           const hasRestDay = planItems.some(item => 'id_descanso' in item && item.fecha_programada === dateStr)
 
           return (
@@ -1331,13 +1453,64 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
               
               {/* Dynamic indicators for scheduled events */}
               <div className="absolute bottom-1.5 flex gap-1 justify-center w-full">
-                {hasWorkout && <span className="w-1.5 h-1.5 rounded-full bg-brand-orange" title="Entrenamiento planificado" />}
+                {hasWorkout && (
+                  <div className="flex gap-0.5 items-center">
+                    {Array.from({ length: Math.min(dayWorkoutsCount, 3) }).map((_, i) => (
+                      <span key={i} className="w-1.5 h-1.5 rounded-full bg-brand-orange" title={`Sesión ${i + 1} planificada`} />
+                    ))}
+                  </div>
+                )}
                 {hasRestDay && <span className="w-1.5 h-1.5 rounded-full bg-brand-green" title="Día de descanso" />}
               </div>
             </button>
           )
         })}
       </div>
+
+      {/* Multi-session selector if there are workouts on this day */}
+      {dayWorkouts.length > 0 && (
+        <div className="flex items-center justify-between bg-surface-card border border-surface-border rounded-xl p-2.5">
+          <div className="flex items-center gap-2 overflow-x-auto">
+            <span className="text-[11px] font-bold text-surface-muted uppercase tracking-wider mr-1">
+              Sesiones del día:
+            </span>
+            {dayWorkouts.map((w, idx) => {
+              const isSelected = w.id_entrenamiento === activeWorkout?.id_entrenamiento
+              return (
+                <button
+                  key={w.id_entrenamiento}
+                  type="button"
+                  onClick={() => setSelectedWorkoutId(w.id_entrenamiento)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all flex items-center gap-1.5 cursor-pointer',
+                    isSelected
+                      ? 'bg-brand-orange text-white shadow-sm'
+                      : 'bg-surface-card2 text-surface-muted hover:text-white border border-surface-border'
+                  )}
+                >
+                  <span>Sesión {idx + 1}</span>
+                  <span className="text-[10px] opacity-80">({w.tipo || 'Fuerza'})</span>
+                  {w.ejercicios_asociados?.length > 0 && (
+                    <span className={cn('text-[9px] px-1.5 py-0.2 rounded-full', isSelected ? 'bg-black/30 text-white' : 'bg-surface-border text-surface-muted')}>
+                      {w.ejercicios_asociados.length}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+
+          {!readOnly && dayWorkouts.length < 3 && (
+            <button
+              type="button"
+              onClick={() => handleAddWorkoutSession(selectedDateStr)}
+              className="text-[11px] font-bold text-brand-orange hover:text-brand-orange/80 transition-colors flex items-center gap-1 px-3 py-1.5 rounded-lg border border-dashed border-brand-orange/40 hover:border-brand-orange bg-brand-orange/5 cursor-pointer ml-2 whitespace-nowrap"
+            >
+              <span>+ Agregar Sesión ({dayWorkouts.length + 1}/3)</span>
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Detail Block below dates picker */}
       {activeWorkout ? (

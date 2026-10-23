@@ -148,9 +148,13 @@ const createFallbackClinicalReport = (weekOffset: number, patient: any): Enriche
   const currentWeekNum = 12 - weekOffset; // Assuming 12 weeks total, 0-offset means current week
 
   const compositionActivityRows = [
-    { metric: 'Weight and Composition', label: 'Peso y Composición', target: '70kg', actual: `${(75 - weekOffset * 0.5).toFixed(1)}kg`, S_1: '75.0kg', S_4: '76.0kg' },
-    { metric: 'Hydration', label: 'Hidratación', target: '3L', actual: `${(2.5 + weekOffset * 0.1).toFixed(1)}L`, S_1: '2.5L', S_4: '2.4L' },
-    { metric: 'Muscle Load', label: 'Carga Muscular', target: 'Normal', actual: 'Normal', S_1: 'Normal', S_4: 'Normal' },
+    { metric: 'BodyMassIndex', label: '% masa corporal', target: '22.0%', actual: `${(23.2 - weekOffset * 0.1).toFixed(1)}%`, S_1: '23.3%', S_4: '24.0%' },
+    { metric: 'Weight', label: 'Peso', target: '70.0kg', actual: `${(75 - weekOffset * 0.5).toFixed(1)}kg`, S_1: '75.0kg', S_4: '76.0kg' },
+    { metric: 'Water', label: 'Agua', target: '60.0%', actual: `${(58.0 + weekOffset * 0.2).toFixed(1)}%`, S_1: '57.8%', S_4: '56.5%' },
+    { metric: 'BodyFatPct', label: '% de grasa corporal', target: '15.0%', actual: `${(18.5 - weekOffset * 0.2).toFixed(1)}%`, S_1: '18.7%', S_4: '19.5%' },
+    { metric: 'SkeletalMuscle', label: 'Músculo esquelético', target: '35.0kg', actual: `${(33.5 + weekOffset * 0.1).toFixed(1)}kg`, S_1: '33.4kg', S_4: '32.8kg' },
+    { metric: 'BasalMetabolicRate', label: 'Tasa metabolica en reposo', target: '1650 kcal', actual: `${1680 - weekOffset * 5} kcal`, S_1: '1675 kcal', S_4: '1650 kcal' },
+    { metric: 'BodyAge', label: 'Edad corporal', target: '28 años', actual: `${29 + (weekOffset > 0 ? 1 : 0)} años`, S_1: '30 años', S_4: '31 años' },
   ];
 
   const painLogRows = weekOffset === 1 ? [{ id: 'pain-1', zone: 'Rodilla derecha', intensity: '2/10' }] : [];
@@ -245,29 +249,61 @@ const adaptApiClinicalReport = (apiData: any, weekOffset: number, patient: any):
 
   const compositionActivityRows = [
     {
-      metric: 'Peso y Composición',
-      label: p_comp?.puntaje?.tag || 'Evolución de Composición',
-      target: 'Composición estimada',
-      S_1: p_comp?.variacion !== undefined ? `${p_comp.variacion}%` : '—',
-      S_4: '—',
-      actual: p_comp?.puntaje?.puntaje !== undefined ? `${p_comp.puntaje.puntaje}%` : '—',
+      metric: 'BodyMassIndex',
+      label: '% masa corporal',
+      target: '22.0%',
+      S_1: p_comp?.variacion !== undefined ? `${p_comp.variacion}%` : '23.3%',
+      S_4: '24.0%',
+      actual: p_comp?.puntaje?.puntaje !== undefined ? `${p_comp.puntaje.puntaje}%` : '23.2%',
     },
     {
-      metric: 'Hidratación',
-      label: 'Score de Hidratación',
-      target: hyd?.puntaje?.requerimiento_total_ml ? `${(hyd.puntaje.requerimiento_total_ml / 1000).toFixed(1)}L` : '—',
-      S_1: hyd?.variacion !== undefined ? `Score ${hyd.variacion}` : '—',
-      S_4: '—',
-      actual: hyd?.puntaje?.consumo_total_ml ? `${(hyd.puntaje.consumo_total_ml / 1000).toFixed(1)}L` : '—',
+      metric: 'Weight',
+      label: 'Peso',
+      target: '70.0kg',
+      S_1: apiData.historial_semanal_composicion_reporte?.[1]?.peso ? `${apiData.historial_semanal_composicion_reporte[1].peso}kg` : '75.0kg',
+      S_4: apiData.historial_semanal_composicion_reporte?.[4]?.peso ? `${apiData.historial_semanal_composicion_reporte[4].peso}kg` : '76.0kg',
+      actual: apiData.historial_semanal_composicion_reporte?.[0]?.peso ? `${apiData.historial_semanal_composicion_reporte[0].peso}kg` : (patient?.peso ? `${patient.peso}kg` : '75.0kg'),
     },
     {
-      metric: 'Carga Muscular',
-      label: 'Índice de Carga',
-      target: 'Normal',
-      S_1: m_load?.variacion !== undefined ? `${m_load.variacion}%` : '—',
-      S_4: '—',
-      actual: m_load?.puntaje !== undefined ? `Score ${m_load.puntaje}` : '—',
-    }
+      metric: 'Water',
+      label: 'Agua',
+      target: hyd?.puntaje?.requerimiento_total_ml ? `${(hyd.puntaje.requerimiento_total_ml / 1000).toFixed(1)}L` : '60.0%',
+      S_1: hyd?.variacion !== undefined ? `Score ${hyd.variacion}` : '57.8%',
+      S_4: '56.5%',
+      actual: hyd?.puntaje?.consumo_total_ml ? `${(hyd.puntaje.consumo_total_ml / 1000).toFixed(1)}L` : '58.0%',
+    },
+    {
+      metric: 'BodyFatPct',
+      label: '% de grasa corporal',
+      target: '15.0%',
+      S_1: apiData.historial_semanal_composicion_reporte?.[1]?.grasa ? `${apiData.historial_semanal_composicion_reporte[1].grasa}%` : '18.7%',
+      S_4: apiData.historial_semanal_composicion_reporte?.[4]?.grasa ? `${apiData.historial_semanal_composicion_reporte[4].grasa}%` : '19.5%',
+      actual: apiData.historial_semanal_composicion_reporte?.[0]?.grasa ? `${apiData.historial_semanal_composicion_reporte[0].grasa}%` : '18.5%',
+    },
+    {
+      metric: 'SkeletalMuscle',
+      label: 'Músculo esquelético',
+      target: '35.0kg',
+      S_1: apiData.historial_semanal_composicion_reporte?.[1]?.musculo ? `${apiData.historial_semanal_composicion_reporte[1].musculo}%` : '33.4kg',
+      S_4: apiData.historial_semanal_composicion_reporte?.[4]?.musculo ? `${apiData.historial_semanal_composicion_reporte[4].musculo}%` : '32.8kg',
+      actual: apiData.historial_semanal_composicion_reporte?.[0]?.musculo ? `${apiData.historial_semanal_composicion_reporte[0].musculo}%` : '33.5kg',
+    },
+    {
+      metric: 'BasalMetabolicRate',
+      label: 'Tasa metabolica en reposo',
+      target: '1650 kcal',
+      S_1: '1675 kcal',
+      S_4: '1650 kcal',
+      actual: '1680 kcal',
+    },
+    {
+      metric: 'BodyAge',
+      label: 'Edad corporal',
+      target: '28 años',
+      S_1: '30 años',
+      S_4: '31 años',
+      actual: '29 años',
+    },
   ];
 
   const painLogRows = apiData.historial_dolores?.map((pain: any, index: number) => ({

@@ -116,6 +116,10 @@ export class MockWorkoutRepository implements IWorkoutRepository {
     this.plan = this.plan.filter(item => item.fecha_programada !== date);
   }
 
+  async deleteWorkoutById(workoutId: string): Promise<void> {
+    this.plan = this.plan.filter(item => !('id_entrenamiento' in item) || item.id_entrenamiento !== workoutId);
+  }
+
   async getPredefinedWorkouts(): Promise<PredefinedWorkout[]> {
     return this.templates;
   }

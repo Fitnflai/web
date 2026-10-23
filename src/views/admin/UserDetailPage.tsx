@@ -1610,9 +1610,26 @@ export function AdminPlanTab({ userId }: { userId: string }) {
 
   // Synchronized initial date logic
 
-  const activeWorkout = useMemo(() => {
-    return planItems.find(item => 'id_entrenamiento' in item && item.fecha_programada === selectedDateStr) as Workout | undefined
+  const dayWorkouts = useMemo(() => {
+    return planItems.filter(item => 'id_entrenamiento' in item && item.fecha_programada === selectedDateStr) as Workout[]
   }, [planItems, selectedDateStr])
+
+  const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (dayWorkouts.length > 0) {
+      if (!selectedWorkoutId || !dayWorkouts.some(w => w.id_entrenamiento === selectedWorkoutId)) {
+        setSelectedWorkoutId(dayWorkouts[0].id_entrenamiento)
+      }
+    } else {
+      setSelectedWorkoutId(null)
+    }
+  }, [dayWorkouts, selectedWorkoutId])
+
+  const activeWorkout = useMemo(() => {
+    if (!dayWorkouts.length) return undefined
+    return dayWorkouts.find(w => w.id_entrenamiento === selectedWorkoutId) || dayWorkouts[0]
+  }, [dayWorkouts, selectedWorkoutId])
 
   if (isPlanLoading) {
     return (
@@ -1669,6 +1686,39 @@ export function AdminPlanTab({ userId }: { userId: string }) {
           )
         })}
       </div>
+
+      {/* Multi-session selector if there are multiple workouts on this day */}
+      {dayWorkouts.length > 1 && (
+        <div className="flex items-center gap-2 bg-surface-card border border-surface-border rounded-xl p-2.5">
+          <span className="text-[11px] font-bold text-surface-muted uppercase tracking-wider mr-1">
+            Sesiones del día:
+          </span>
+          {dayWorkouts.map((w, idx) => {
+            const isSelected = w.id_entrenamiento === activeWorkout?.id_entrenamiento
+            return (
+              <button
+                key={w.id_entrenamiento}
+                type="button"
+                onClick={() => setSelectedWorkoutId(w.id_entrenamiento)}
+                className={cn(
+                  'px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all flex items-center gap-1.5 cursor-pointer',
+                  isSelected
+                    ? 'bg-brand-orange text-white shadow-sm'
+                    : 'bg-surface-card2 text-surface-muted hover:text-white border border-surface-border'
+                )}
+              >
+                <span>Sesión {idx + 1}</span>
+                <span className="text-[10px] opacity-80">({w.tipo || 'Fuerza'})</span>
+                {w.ejercicios_asociados?.length > 0 && (
+                  <span className={cn('text-[9px] px-1.5 py-0.2 rounded-full', isSelected ? 'bg-black/30 text-white' : 'bg-surface-border text-surface-muted')}>
+                    {w.ejercicios_asociados.length}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       {/* Detail Block */}
       {activeWorkout ? (
