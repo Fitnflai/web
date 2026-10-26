@@ -20,4 +20,7 @@ export const NAV_TITLES: Record<string, string> = {
   membresias:      'Membresías',
   notificaciones:  'Notificaciones',
   configuracion:   'Configuración',
+  glosario:        'Glosario',
+  transacciones:   'Transacciones',
+  blog:            'Blog & SEO',
 }

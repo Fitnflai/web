@@ -7,6 +7,8 @@ import { MembresíasPage }      from '@/views/admin/MembresíasPage'
 import { NotificacionesPage }  from '@/views/admin/NotificacionesPage'
 import { ConfiguracionPage }   from '@/views/admin/ConfiguracionPage'
 import { TransaccionesPage }   from '@/views/admin/TransaccionesPage'
+import { GlosarioPage }        from '@/views/admin/GlosarioPage'
+import { BlogAdminPage }       from '@/views/admin/BlogAdminPage'
 import { NotificacionesRecibidasPage as AdminNotificacionesRecibidasPage } from '@/views/admin/NotificacionesRecibidasPage'
 import { AgendaPage }          from '@/views/shared/AgendaPage'
 import { LandingPage }         from '@/views/LandingPage'
@@ -51,6 +53,8 @@ export function AdminApp() {
     case 'configuracion':   return <ConfiguracionPage />
     case 'agenda':          return <AgendaPage />
     case 'transacciones':   return <TransaccionesPage />
+    case 'glosario':        return <GlosarioPage />
+    case 'blog':            return <BlogAdminPage />
 
     case 'landing':         return <LandingPage />
     case 'politica-privacidad': return <PoliticaPrivacidadPage />

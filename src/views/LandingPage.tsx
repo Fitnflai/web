@@ -4,6 +4,7 @@ import { useAppStore } from '@/store/useAppStore'
 import { useTranslation } from '@/i18n/useTranslation'
 import { T } from '@/components/ui/Typography'
 import { Footer } from '@/components/layout/Footer'
+import { SupportForm } from '@/components/support/SupportForm'
 import { IconBrandApple, IconBrandGooglePlay, IconRun, IconBike, IconSwimming, IconMountain, IconDeviceWatch, IconRoute, IconStar, IconCheck, IconUsers, IconGift, IconCompass, IconMessageCircle, IconChevronDown, IconChevronUp, IconChevronLeft, IconChevronRight, IconMail, IconHeart, IconBrandFacebook, IconBrandX, IconBrandInstagram, IconBrandTiktok, IconBrandYoutube } from '@tabler/icons-react'
 
 // Glossy Red Shield Badge helper replicating the exact Runna 3D logo shield
@@ -318,10 +319,9 @@ export function LandingPage() {
     <div className="min-h-screen text-white font-sans antialiased relative overflow-hidden">
       {/* Background Image Watermark */}
       <div
-        className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-[0.12] bg-cover bg-center z-0"
+        className="hidden md:block fixed inset-0 pointer-events-none opacity-[0.14] bg-contain bg-center bg-no-repeat z-0"
         style={{
-                    backgroundImage: "url('/images/home-bg.png')",
-          backgroundAttachment: 'fixed'
+          backgroundImage: "url('/images/home-bg.png')"
         }}
       />
       {/* Sticky Header */}
@@ -377,6 +377,7 @@ export function LandingPage() {
             <button onClick={handlePricingClick} className="text-gray-300 hover:text-orange-400 transition duration-300 font-semibold">{t('landing.header.pricing')}</button>
             <button onClick={() => navigate('/caracteristicas')} className="text-gray-300 hover:text-orange-400 transition duration-300 font-semibold">{t('landing.header.features')}</button>
             <button onClick={() => navigate('/coaches')} className="text-gray-300 hover:text-orange-400 transition duration-300 font-semibold">{t('landing.header.coaches')}</button>
+            <button onClick={() => navigate('/blog')} className="text-gray-300 hover:text-orange-400 transition duration-300 font-semibold">Blog</button>
             <button onClick={() => handleNavClick('soporte')} className="text-gray-300 hover:text-orange-400 transition duration-300 font-semibold">{t('landing.header.support')}</button>
           </div>
 
@@ -503,6 +504,15 @@ export function LandingPage() {
             <button 
               onClick={() => {
                 setIsMobileMenuOpen(false)
+                navigate('/blog')
+              }}
+              className="block w-full text-left font-semibold text-sm text-gray-300 hover:text-orange-400 py-2 transition cursor-pointer"
+            >
+              Blog
+            </button>
+            <button 
+              onClick={() => {
+                setIsMobileMenuOpen(false)
                 handleNavClick('soporte')
               }}
               className="block w-full text-left font-semibold text-sm text-gray-300 hover:text-orange-400 py-2 transition cursor-pointer"
@@ -582,13 +592,13 @@ export function LandingPage() {
             </div>
 
              {/* Phone 1 (Far Left): Categorías */}
-            <div className="absolute left-[2%] lg:left-[8%] w-40 md:w-56 h-[330px] md:h-[450px] transform -rotate-12 z-10 flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity duration-300">
+            <div className="absolute left-[2%] lg:left-[8%] w-40 md:w-56 h-[330px] md:h-[450px] transform -rotate-12 z-10 hidden sm:flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity duration-300">
               <div className="relative w-full h-full bg-gray-950 rounded-[1.8rem] md:rounded-[2.4rem] border-[5px] md:border-[8px] border-neutral-800 shadow-2xl overflow-hidden">
                 {/* Notch */}
                 <div className="absolute top-1 md:top-2 left-1/2 -translate-x-1/2 w-12 md:w-16 h-2 md:h-3.5 bg-black rounded-full z-40 flex items-center justify-center">
                   <div className="w-1 h-1 bg-neutral-900 rounded-full"></div>
                 </div>
-                <img src="/images/mockup_09.jpeg" alt="Mockup 9" className="w-full h-full object-cover rounded-[1.2rem] md:rounded-[1.8rem]" />
+                <img src="/images/mockup_09.jpeg" alt="Mockup 9" loading="lazy" decoding="async" className="w-full h-full object-cover rounded-[1.2rem] md:rounded-[1.8rem]" />
               </div>
             </div>
 
@@ -599,7 +609,7 @@ export function LandingPage() {
                 <div className="absolute top-1 md:top-2 left-1/2 -translate-x-1/2 w-12 md:w-16 h-2 md:h-3.5 bg-black rounded-full z-40 flex items-center justify-center">
                   <div className="w-1 h-1 bg-neutral-900 rounded-full"></div>
                 </div>
-                <img src="/images/mockup_10.jpeg" alt="Mockup 10" className="w-full h-full object-cover rounded-[1.2rem] md:rounded-[1.8rem]" />
+                <img src="/images/mockup_10.jpeg" alt="Mockup 10" loading="lazy" decoding="async" className="w-full h-full object-cover rounded-[1.2rem] md:rounded-[1.8rem]" />
               </div>
             </div>
 
@@ -610,7 +620,7 @@ export function LandingPage() {
                 <div className="absolute top-1 md:top-2 left-1/2 -translate-x-1/2 w-12 md:w-16 h-2 md:h-3.5 bg-black rounded-full z-40 flex items-center justify-center">
                   <div className="w-1 h-1 bg-neutral-900 rounded-full"></div>
                 </div>
-                <img src="/images/mockup_11.jpeg" alt="Mockup 11" className="w-full h-full object-cover rounded-[1.2rem] md:rounded-[1.8rem]" />
+                <img src="/images/mockup_11.jpeg" alt="Mockup 11" loading="eager" decoding="async" className="w-full h-full object-cover rounded-[1.2rem] md:rounded-[1.8rem]" />
               </div>
             </div>
 
@@ -621,13 +631,13 @@ export function LandingPage() {
                 <div className="absolute top-1 md:top-2 left-1/2 -translate-x-1/2 w-12 md:w-16 h-2 md:h-3.5 bg-black rounded-full z-40 flex items-center justify-center">
                   <div className="w-1 h-1 bg-neutral-900 rounded-full"></div>
                 </div>
-                <img src="/images/mockup_12.jpeg" alt="Mockup 12" className="w-full h-full object-cover rounded-[1.2rem] md:rounded-[1.8rem]" />
+                <img src="/images/mockup_12.jpeg" alt="Mockup 12" loading="lazy" decoding="async" className="w-full h-full object-cover rounded-[1.2rem] md:rounded-[1.8rem]" />
               </div>
             </div>
 
             {/* Phone 5 (Far Right): Comunidad & Soporte */}
-            <div className="absolute right-[2%] lg:right-[8%] w-40 md:w-56 h-[330px] md:h-[450px] transform rotate-12 z-10 flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity duration-300">
-              <img src="/images/mockup_13.png" alt="Mockup 13" className="max-w-full max-h-full object-contain filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.3)]" />
+            <div className="absolute right-[2%] lg:right-[8%] w-40 md:w-56 h-[330px] md:h-[450px] transform rotate-12 z-10 hidden sm:flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity duration-300">
+              <img src="/images/mockup_13.png" alt="Mockup 13" loading="lazy" decoding="async" className="max-w-full max-h-full object-contain filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.3)]" />
             </div>
 
             {/* Right Watch: Apple Style */}
@@ -1394,9 +1404,12 @@ export function LandingPage() {
                       className={`absolute w-[280px] sm:w-[310px] h-[380px] bg-[#141416]/80 border ${isCenter ? '' : 'border-gray-800/60'} rounded-3xl p-6 flex flex-col justify-between items-center text-center cursor-pointer backface-hidden`}
                     >
                       {/* Artistic Card Line-Art Background with rounded corners aligned to top */}
-                      <div 
-                        className="absolute inset-0 pointer-events-none opacity-[0.22] bg-top bg-no-repeat bg-contain mix-blend-screen z-0 rounded-t-3xl"
-                        style={{ backgroundImage: `url("/images/${p.route}-bg.png")` }}
+                      <img 
+                        src={`/images/${p.route}-bg.png`}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        className="absolute inset-0 w-full h-full object-cover pointer-events-none opacity-[0.22] mix-blend-screen z-0 rounded-t-3xl"
                       />
                       <div className="flex flex-col items-center w-full z-10">
                         {/* Glowing Custom Shield Image */}
@@ -1813,6 +1826,10 @@ export function LandingPage() {
               );
             })}
           </div>
+        </div>
+              {/* Support Contact Form to info@fitnflai.com */}
+        <div className="container mx-auto px-6 max-w-5xl mt-16 pt-12 border-t border-gray-800/80">
+          <SupportForm />
         </div>
       </section>
 

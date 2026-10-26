@@ -50,6 +50,12 @@ export function Footer() {
           </T.P>
           <div className="flex flex-wrap justify-center lg:justify-end gap-4 lg:gap-6 text-sm">
             <button
+              onClick={() => navigate('/blog')}
+              className="text-gray-400 hover:text-orange-400 transition cursor-pointer font-semibold"
+            >
+              Blog
+            </button>
+            <button
               onClick={() => navigate('/terminos-condiciones')}
               className="text-gray-400 hover:text-orange-400 transition cursor-pointer font-semibold"
             >

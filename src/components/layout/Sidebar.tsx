@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Users, IdCard,
   Crown, Bell, Settings, HelpCircle, CalendarDays,
-  UserCircle, ClipboardList, MessageSquare, DollarSign, LogOut
+  UserCircle, ClipboardList, MessageSquare, DollarSign, LogOut, BookOpen, Newspaper
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/store/useAppStore'
@@ -68,6 +68,10 @@ export function Sidebar() {
     { title: t('sidebar.membership'), items: [
       { id: 'membresias',     labelKey: 'sidebar.membership',     icon: Crown },
       { id: 'transacciones',  labelKey: 'sidebar.transactions',   icon: DollarSign },
+    ]},
+    { title: t('sidebar.content' as any) || 'Contenido', items: [
+      { id: 'glosario', labelKey: 'sidebar.glossary', icon: BookOpen },
+      { id: 'blog',     labelKey: 'sidebar.blog',     icon: Newspaper },
     ]},
     { title: t('sidebar.configuration'), items: [      { id: 'notificaciones-recibidas', labelKey: 'sidebar.receivedNotifications', icon: Bell, badge: unreadCount }, { id: 'configuracion', labelKey: 'sidebar.configuration', icon: Settings }] },
   ]

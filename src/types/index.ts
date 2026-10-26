@@ -251,7 +251,7 @@ export type NavPage =
   | 'usuario-detalle' | 'paciente-detalle' | 'prof-detalle'
   | 'dashboard-especialista' | 'mis-pacientes' | 'perfil-especialista'
   | 'enviar-notificaciones' | 'notificaciones-recibidas'
-  | 'transacciones' | 'login'
+  | 'transacciones' | 'login' | 'glosario' | 'blog'
 
 // ─── Agenda ───────────────────────────────────────────────────────
 export type AppointmentStatus = 'confirmada' | 'pendiente' | 'cancelada' | 'completada'
@@ -517,3 +517,5 @@ export interface SpecialistPatientCabeceraResponse {
   nombre_disciplina?: string
   registro_activo?: boolean
 }
+
+export * from '@/services/endpoints/glossary'

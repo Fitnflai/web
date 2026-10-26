@@ -12,6 +12,9 @@
     "support": "Support",
     "patients": "My Patients",
     "transactions": "Transactions",
+    "content": "Content",
+    "glossary": "Glossary",
+    "blog": "Blog & SEO",
     "logout": "Log Out"
   },
   "dashboard": {
