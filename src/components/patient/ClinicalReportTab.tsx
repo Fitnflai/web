@@ -96,6 +96,15 @@ interface ApiClinicalReport {
     detalle: string;
   };
   mensaje_ia: string;
+  composicion_actividad?: {
+    porcentaje_masa_corporal?: number;
+    peso_kg?: number;
+    agua?: number;
+    porcentaje_grasa?: number;
+    musculo_esqueletico?: number;
+    tasa_metabolica_reposo?: number;
+    edad_corporal?: number;
+  };
   detalle_factor_peso_composicion?: {
     actual: string;
     historico: {
@@ -246,6 +255,7 @@ const adaptApiClinicalReport = (apiData: any, weekOffset: number, patient: any):
   const hyd = apiData.detalle_factor_hidratacion;
   const m_load = apiData.detalle_factor_carga_muscular;
   const mov = apiData.detalle_factor_movimiento;
+  const ca = apiData.composicion_actividad;
 
   const compositionActivityRows = [
     {
@@ -254,7 +264,9 @@ const adaptApiClinicalReport = (apiData: any, weekOffset: number, patient: any):
       target: '22.0%',
       S_1: p_comp?.variacion !== undefined ? `${p_comp.variacion}%` : '23.3%',
       S_4: '24.0%',
-      actual: p_comp?.puntaje?.puntaje !== undefined ? `${p_comp.puntaje.puntaje}%` : '23.2%',
+      actual: ca?.porcentaje_masa_corporal != null
+        ? `${ca.porcentaje_masa_corporal}%`
+        : (p_comp?.puntaje?.puntaje !== undefined ? `${p_comp.puntaje.puntaje}%` : '23.2%'),
     },
     {
       metric: 'Weight',
@@ -262,7 +274,9 @@ const adaptApiClinicalReport = (apiData: any, weekOffset: number, patient: any):
       target: '70.0kg',
       S_1: apiData.historial_semanal_composicion_reporte?.[1]?.peso ? `${apiData.historial_semanal_composicion_reporte[1].peso}kg` : '75.0kg',
       S_4: apiData.historial_semanal_composicion_reporte?.[4]?.peso ? `${apiData.historial_semanal_composicion_reporte[4].peso}kg` : '76.0kg',
-      actual: apiData.historial_semanal_composicion_reporte?.[0]?.peso ? `${apiData.historial_semanal_composicion_reporte[0].peso}kg` : (patient?.peso ? `${patient.peso}kg` : '75.0kg'),
+      actual: ca?.peso_kg != null
+        ? `${ca.peso_kg}kg`
+        : (apiData.historial_semanal_composicion_reporte?.[0]?.peso ? `${apiData.historial_semanal_composicion_reporte[0].peso}kg` : (patient?.peso ? `${patient.peso}kg` : '75.0kg')),
     },
     {
       metric: 'Water',
@@ -270,7 +284,9 @@ const adaptApiClinicalReport = (apiData: any, weekOffset: number, patient: any):
       target: hyd?.puntaje?.requerimiento_total_ml ? `${(hyd.puntaje.requerimiento_total_ml / 1000).toFixed(1)}L` : '60.0%',
       S_1: hyd?.variacion !== undefined ? `Score ${hyd.variacion}` : '57.8%',
       S_4: '56.5%',
-      actual: hyd?.puntaje?.consumo_total_ml ? `${(hyd.puntaje.consumo_total_ml / 1000).toFixed(1)}L` : '58.0%',
+      actual: ca?.agua != null
+        ? `${ca.agua}%`
+        : (hyd?.puntaje?.consumo_total_ml ? `${(hyd.puntaje.consumo_total_ml / 1000).toFixed(1)}L` : '58.0%'),
     },
     {
       metric: 'BodyFatPct',
@@ -278,7 +294,9 @@ const adaptApiClinicalReport = (apiData: any, weekOffset: number, patient: any):
       target: '15.0%',
       S_1: apiData.historial_semanal_composicion_reporte?.[1]?.grasa ? `${apiData.historial_semanal_composicion_reporte[1].grasa}%` : '18.7%',
       S_4: apiData.historial_semanal_composicion_reporte?.[4]?.grasa ? `${apiData.historial_semanal_composicion_reporte[4].grasa}%` : '19.5%',
-      actual: apiData.historial_semanal_composicion_reporte?.[0]?.grasa ? `${apiData.historial_semanal_composicion_reporte[0].grasa}%` : '18.5%',
+      actual: ca?.porcentaje_grasa != null
+        ? `${ca.porcentaje_grasa}%`
+        : (apiData.historial_semanal_composicion_reporte?.[0]?.grasa ? `${apiData.historial_semanal_composicion_reporte[0].grasa}%` : '18.5%'),
     },
     {
       metric: 'SkeletalMuscle',
@@ -286,7 +304,11 @@ const adaptApiClinicalReport = (apiData: any, weekOffset: number, patient: any):
       target: '35.0kg',
       S_1: apiData.historial_semanal_composicion_reporte?.[1]?.musculo ? `${apiData.historial_semanal_composicion_reporte[1].musculo}%` : '33.4kg',
       S_4: apiData.historial_semanal_composicion_reporte?.[4]?.musculo ? `${apiData.historial_semanal_composicion_reporte[4].musculo}%` : '32.8kg',
-      actual: apiData.historial_semanal_composicion_reporte?.[0]?.musculo ? `${apiData.historial_semanal_composicion_reporte[0].musculo}%` : '33.5kg',
+      actual: ca?.musculo_esqueletico != null
+        ? (typeof ca.musculo_esqueletico === 'string' && (ca.musculo_esqueletico.includes('%') || ca.musculo_esqueletico.includes('kg'))
+            ? ca.musculo_esqueletico
+            : `${ca.musculo_esqueletico}%`)
+        : (apiData.historial_semanal_composicion_reporte?.[0]?.musculo ? `${apiData.historial_semanal_composicion_reporte[0].musculo}%` : '33.5kg'),
     },
     {
       metric: 'BasalMetabolicRate',
@@ -294,7 +316,9 @@ const adaptApiClinicalReport = (apiData: any, weekOffset: number, patient: any):
       target: '1650 kcal',
       S_1: '1675 kcal',
       S_4: '1650 kcal',
-      actual: '1680 kcal',
+      actual: ca?.tasa_metabolica_reposo != null
+        ? `${ca.tasa_metabolica_reposo} kcal`
+        : '1680 kcal',
     },
     {
       metric: 'BodyAge',
@@ -302,7 +326,9 @@ const adaptApiClinicalReport = (apiData: any, weekOffset: number, patient: any):
       target: '28 años',
       S_1: '30 años',
       S_4: '31 años',
-      actual: '29 años',
+      actual: ca?.edad_corporal != null
+        ? `${ca.edad_corporal} años`
+        : '29 años',
     },
   ];
 
