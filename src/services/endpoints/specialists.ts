@@ -132,6 +132,7 @@ export interface ExerciseListItem {
   id_ejercicio: string;
   nombre: string;
   tipo: string;
+  grupo_muscular?: string;
 }
 
 export interface ExerciseInstructions {
@@ -146,8 +147,10 @@ export interface ExerciseDetailResponse {
   id_ejercicio: string;
   nombre: string;
   tipo: string;
+  grupo_muscular?: string;
   descripcion: string;
   multimedia_url: string;
+  multimedia_url_femenino?: string;
   instrucciones: ExerciseInstructions;
   necesita_mapa: boolean;
 }
@@ -158,6 +161,7 @@ export interface AddExerciseToWorkoutPayload {
   series: number;
   descanso_segundos: number;
   repeticiones: number;
+  distancia_metros?: number;
   peso_objetivo: number;
   duracion_segundos: number;
   comentario: string;
@@ -165,6 +169,8 @@ export interface AddExerciseToWorkoutPayload {
 }
 
 export interface UpdateWorkoutParametersPayload {
+  nombre?: string;
+  numero_sesion?: string;
   tipo_entrenamiento: string;
   zona_esfuerzo: string;
   fecha_programada: string;
@@ -175,6 +181,23 @@ export interface UpdateWorkoutParametersPayload {
 
 export interface UpdateWorkoutCommentPayload {
   texto: string;
+}
+
+export interface AddWorkoutSessionPayload {
+  id_plan_entrenamiento?: string;
+  fecha_programada: string;
+  tipo: string;
+  nombre: string;
+  numero_sesion: string | number;
+  descripcion?: string;
+  zona_esfuerzo?: string;
+  calorias_objetivo?: number;
+  nivel?: string;
+}
+
+export interface DeleteWorkoutSessionResponse {
+  message: string;
+  id_entrenamiento: string;
 }
 
 export interface RegisterNewExercisePayload {
@@ -218,6 +241,7 @@ export interface UpdateExerciseInWorkoutPayload {
   series: number;
   descanso_segundos: number;
   repeticiones: number;
+  distancia_metros?: number;
   peso_objetivo: number;
   duracion_segundos: number;
   comentario: string;
@@ -569,6 +593,31 @@ export const specialistsService = {
     return data;
   },
 
+  addWorkoutSession: async (id_usuario: string, payload: AddWorkoutSessionPayload): Promise<any> => {
+    if (USE_MOCK) {
+      console.log('MOCK: Adding workout session for user:', id_usuario, payload);
+      return {
+        id_entrenamiento: `wk-${Date.now()}`,
+        ...payload,
+        message: 'Sesión agregada correctamente'
+      };
+    }
+    const { data } = await apiClient.post(`/specialist/specialist/pacientes/agregar-entrenamiento/${id_usuario}`, payload);
+    return data;
+  },
+
+  deleteWorkoutSession: async (id_entrenamiento: string): Promise<DeleteWorkoutSessionResponse> => {
+    if (USE_MOCK) {
+      console.log('MOCK: Deleting workout session:', id_entrenamiento);
+      return {
+        message: 'Sesión de entrenamiento eliminada correctamente',
+        id_entrenamiento
+      };
+    }
+    const { data } = await apiClient.delete<DeleteWorkoutSessionResponse>(`/specialist/specialist/pacientes/eliminar-entrenamiento/${id_entrenamiento}`);
+    return data;
+  },
+
   deleteWorkoutExercise: async (id_entrenamiento_ejercicio: string): Promise<any> => {
     if (USE_MOCK) {
       return new Promise((resolve) => {
@@ -742,40 +791,52 @@ export const specialistsService = {
     return data;
   },
 
-  getExercisesByType: async (tipo?: string | null, nombre?: string | null): Promise<ExerciseListItem[]> => {
+  getMuscleGroups: async (tipo?: string | null): Promise<string[]> => {
+    if (USE_MOCK) {
+      return ["Bíceps", "Tríceps", "Core", "Espalda", "Pecho", "Piernas", "Pantorrillas"];
+    }
+    const params: { tipo?: string } = {};
+    if (tipo) params.tipo = tipo;
+    const { data } = await apiClient.get<string[]>('/specialist/specialist/pacientes/agregar-ejercicio-en-entrenamiento/grupos-musculares', {
+      params
+    });
+    return data;
+  },
+
+  getExercisesByType: async (tipo?: string | null, nombre?: string | null, grupo_muscular?: string | null): Promise<ExerciseListItem[]> => {
     if (USE_MOCK) {
       const mockList: ExerciseListItem[] = [
         // Fuerza - Piernas
-        { id_ejercicio: 'ex-001', nombre: 'Sentadillas con barra (Piernas)', tipo: 'Fuerza' },
-        { id_ejercicio: 'ex-002', nombre: 'Peso Muerto Rumano (Piernas/Glúteos)', tipo: 'Fuerza' },
-        { id_ejercicio: 'ex-006', nombre: 'Prensa Inclinada 45° (Piernas)', tipo: 'Fuerza' },
-        { id_ejercicio: 'ex-007', nombre: 'Zancadas Búlgaras con Mancuernas (Piernas)', tipo: 'Fuerza' },
+        { id_ejercicio: 'ex-001', nombre: 'Sentadillas con barra (Piernas)', tipo: 'Fuerza', grupo_muscular: 'Piernas' },
+        { id_ejercicio: 'ex-002', nombre: 'Peso Muerto Rumano (Piernas/Glúteos)', tipo: 'Fuerza', grupo_muscular: 'Piernas' },
+        { id_ejercicio: 'ex-006', nombre: 'Prensa Inclinada 45° (Piernas)', tipo: 'Fuerza', grupo_muscular: 'Piernas' },
+        { id_ejercicio: 'ex-007', nombre: 'Zancadas Búlgaras con Mancuernas (Piernas)', tipo: 'Fuerza', grupo_muscular: 'Piernas' },
         // Fuerza - Pantorrillas
-        { id_ejercicio: 'ex-008', nombre: 'Elevación de Talones de Pie (Pantorrillas)', tipo: 'Fuerza' },
-        { id_ejercicio: 'ex-009', nombre: 'Elevación de Talones Sentado (Pantorrillas/Sóleo)', tipo: 'Fuerza' },
+        { id_ejercicio: 'ex-008', nombre: 'Elevación de Talones de Pie (Pantorrillas)', tipo: 'Fuerza', grupo_muscular: 'Pantorrillas' },
+        { id_ejercicio: 'ex-009', nombre: 'Elevación de Talones Sentado (Pantorrillas/Sóleo)', tipo: 'Fuerza', grupo_muscular: 'Pantorrillas' },
         // Fuerza - Pecho
-        { id_ejercicio: 'ex-003', nombre: 'Press de Banca Plano (Pecho)', tipo: 'Fuerza' },
-        { id_ejercicio: 'ex-010', nombre: 'Press Inclinado con Mancuernas (Pecho)', tipo: 'Fuerza' },
-        { id_ejercicio: 'ex-011', nombre: 'Flexiones de Pecho / Push-ups (Pecho)', tipo: 'Fuerza' },
-        { id_ejercicio: 'ex-012', nombre: 'Aperturas con Mancuernas (Pecho)', tipo: 'Fuerza' },
+        { id_ejercicio: 'ex-003', nombre: 'Press de Banca Plano (Pecho)', tipo: 'Fuerza', grupo_muscular: 'Pecho' },
+        { id_ejercicio: 'ex-010', nombre: 'Press Inclinado con Mancuernas (Pecho)', tipo: 'Fuerza', grupo_muscular: 'Pecho' },
+        { id_ejercicio: 'ex-011', nombre: 'Flexiones de Pecho / Push-ups (Pecho)', tipo: 'Fuerza', grupo_muscular: 'Pecho' },
+        { id_ejercicio: 'ex-012', nombre: 'Aperturas con Mancuernas (Pecho)', tipo: 'Fuerza', grupo_muscular: 'Pecho' },
         // Fuerza - Espalda
-        { id_ejercicio: 'ex-013', nombre: 'Remo con Barra Prono (Espalda)', tipo: 'Fuerza' },
-        { id_ejercicio: 'ex-014', nombre: 'Dominadas Pronas (Espalda)', tipo: 'Fuerza' },
-        { id_ejercicio: 'ex-015', nombre: 'Jalón al Pecho en Polea (Espalda)', tipo: 'Fuerza' },
-        { id_ejercicio: 'ex-016', nombre: 'Remo Unilateral con Mancuerna (Espalda)', tipo: 'Fuerza' },
+        { id_ejercicio: 'ex-013', nombre: 'Remo con Barra Prono (Espalda)', tipo: 'Fuerza', grupo_muscular: 'Espalda' },
+        { id_ejercicio: 'ex-014', nombre: 'Dominadas Pronas (Espalda)', tipo: 'Fuerza', grupo_muscular: 'Espalda' },
+        { id_ejercicio: 'ex-015', nombre: 'Jalón al Pecho en Polea (Espalda)', tipo: 'Fuerza', grupo_muscular: 'Espalda' },
+        { id_ejercicio: 'ex-016', nombre: 'Remo Unilateral con Mancuerna (Espalda)', tipo: 'Fuerza', grupo_muscular: 'Espalda' },
         // Fuerza - Bíceps
-        { id_ejercicio: 'ex-017', nombre: 'Curl de Bíceps con Barra Z', tipo: 'Fuerza' },
-        { id_ejercicio: 'ex-018', nombre: 'Curl Martillo con Mancuernas (Bíceps)', tipo: 'Fuerza' },
-        { id_ejercicio: 'ex-019', nombre: 'Curl Concentrado en Banco (Bíceps)', tipo: 'Fuerza' },
+        { id_ejercicio: 'ex-017', nombre: 'Curl de Bíceps con Barra Z', tipo: 'Fuerza', grupo_muscular: 'Bíceps' },
+        { id_ejercicio: 'ex-018', nombre: 'Curl Martillo con Mancuernas (Bíceps)', tipo: 'Fuerza', grupo_muscular: 'Bíceps' },
+        { id_ejercicio: 'ex-019', nombre: 'Curl Concentrado en Banco (Bíceps)', tipo: 'Fuerza', grupo_muscular: 'Bíceps' },
         // Fuerza - Tríceps
-        { id_ejercicio: 'ex-020', nombre: 'Fondos en Paralelas (Tríceps)', tipo: 'Fuerza' },
-        { id_ejercicio: 'ex-021', nombre: 'Extensión de Tríceps en Polea Alta', tipo: 'Fuerza' },
-        { id_ejercicio: 'ex-022', nombre: 'Press Francés con Mancuernas (Tríceps)', tipo: 'Fuerza' },
+        { id_ejercicio: 'ex-020', nombre: 'Fondos en Paralelas (Tríceps)', tipo: 'Fuerza', grupo_muscular: 'Tríceps' },
+        { id_ejercicio: 'ex-021', nombre: 'Extensión de Tríceps en Polea Alta', tipo: 'Fuerza', grupo_muscular: 'Tríceps' },
+        { id_ejercicio: 'ex-022', nombre: 'Press Francés con Mancuernas (Tríceps)', tipo: 'Fuerza', grupo_muscular: 'Tríceps' },
         // Fuerza - Core
-        { id_ejercicio: 'ex-023', nombre: 'Plancha Frontal Isométrica (Core)', tipo: 'Fuerza' },
-        { id_ejercicio: 'ex-024', nombre: 'Rueda Abdominal (Core)', tipo: 'Fuerza' },
-        { id_ejercicio: 'ex-025', nombre: 'Elevación de Piernas Colgado (Core)', tipo: 'Fuerza' },
-        { id_ejercicio: 'ex-026', nombre: 'Pallof Press con Banda (Core)', tipo: 'Fuerza' },
+        { id_ejercicio: 'ex-023', nombre: 'Plancha Frontal Isométrica (Core)', tipo: 'Fuerza', grupo_muscular: 'Core' },
+        { id_ejercicio: 'ex-024', nombre: 'Rueda Abdominal (Core)', tipo: 'Fuerza', grupo_muscular: 'Core' },
+        { id_ejercicio: 'ex-025', nombre: 'Elevación de Piernas Colgado (Core)', tipo: 'Fuerza', grupo_muscular: 'Core' },
+        { id_ejercicio: 'ex-026', nombre: 'Pallof Press con Banda (Core)', tipo: 'Fuerza', grupo_muscular: 'Core' },
         // Cardio y otros
         { id_ejercicio: 'ex-004', nombre: 'Carrera Continua', tipo: 'Cardio' },
         { id_ejercicio: 'ex-005', nombre: 'Estiramientos Activos', tipo: 'Estiramiento' },
@@ -783,12 +844,14 @@ export const specialistsService = {
       return mockList.filter(item => {
         if (tipo && item.tipo.toLowerCase() !== tipo.toLowerCase()) return false;
         if (nombre && !item.nombre.toLowerCase().includes(nombre.toLowerCase())) return false;
+        if (grupo_muscular && item.grupo_muscular && item.grupo_muscular.toLowerCase() !== grupo_muscular.toLowerCase()) return false;
         return true;
       });
     }
-    const params: { tipo?: string; nombre?: string } = {};
+    const params: { tipo?: string; nombre?: string; grupo_muscular?: string } = {};
     if (tipo) params.tipo = tipo;
     if (nombre) params.nombre = nombre;
+    if (grupo_muscular) params.grupo_muscular = grupo_muscular;
     const { data } = await apiClient.get<ExerciseListItem[]>('/specialist/specialist/pacientes/agregar-ejercicio-en-entrenamiento/ejercicios-segun-tipo', {
       params
     });
@@ -801,8 +864,10 @@ export const specialistsService = {
         id_ejercicio,
         nombre: 'Sentadillas',
         tipo: 'Fuerza',
+        grupo_muscular: 'Piernas',
         descripcion: 'Ejercicio multiarticular de fuerza inferior.',
         multimedia_url: '',
+        multimedia_url_femenino: '',
         instrucciones: {
           objetivo: 'Desarrollar fuerza en cuádriceps y glúteos.',
           posicion_inicial: 'De pie con pies a ancho de hombros.',
@@ -826,13 +891,23 @@ export const specialistsService = {
     return data;
   },
 
-  registerNewExercise: async (payload: RegisterNewExercisePayload): Promise<string> => {
+  registerNewExercise: async (payload: RegisterNewExercisePayload, files?: { multimedia_masculino?: File; multimedia_femenino?: File }): Promise<string> => {
     if (USE_MOCK) {
       console.log('MOCK: Creating new exercise:', payload);
       return 'new-exercise-uuid';
     }
-    const { data } = await apiClient.post<string>('/specialist/specialist/pacientes/registrar-nuevo-ejercicio', payload);
-    return data;
+    const formData = new FormData();
+    formData.append('data', JSON.stringify(payload));
+    if (files?.multimedia_masculino) {
+      formData.append('multimedia_masculino', files.multimedia_masculino);
+    }
+    if (files?.multimedia_femenino) {
+      formData.append('multimedia_femenino', files.multimedia_femenino);
+    }
+    const { data } = await apiClient.post<any>('/specialist/specialist/pacientes/registrar-nuevo-ejercicio', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return typeof data === 'string' ? data : data?.id_ejercicio || data?.id || '';
   },
 
   getAdminAvailability: async (id_especialista: number, fecha_inicio: string, fecha_fin: string): Promise<AdminAvailabilitySlot[]> => {

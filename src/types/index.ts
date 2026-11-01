@@ -194,6 +194,9 @@ export interface Workout {
   macros_objetivo_grasas?: number
   comentario?: string | null
   tipo_entrenamiento?: string
+  nombre?: string
+  numero_sesion?: string
+  nivel?: string
 }
 
 export interface RestDay {

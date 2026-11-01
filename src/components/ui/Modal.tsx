@@ -52,12 +52,12 @@ export function Modal({
       {/* Modal Card */}
       <div
         className={cn(
-          'relative bg-surface-panel border border-surface-border rounded-2xl p-5 w-full max-w-md max-h-[85vh] overflow-y-auto shadow-2xl transition-all dark:bg-surface-panel dark:border-surface-border dark:text-white',
+          'relative bg-surface-panel border border-surface-border rounded-2xl p-5 w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden shadow-2xl transition-all dark:bg-surface-panel dark:border-surface-border dark:text-white',
           className
         )}
         style={{ zIndex: zIndexContent }}
       >
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 shrink-0">
           <span className="text-[14px] font-bold">{title}</span>
           <button
             onClick={onClose}

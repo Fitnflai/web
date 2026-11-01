@@ -17,7 +17,7 @@ import { PLAN_NAMES } from '@/constants'
 import { toast } from '@/components/ui/Toast'
 import type { PredefinedWorkout, Comment, DailyNutritionHydrationLog, Comida, BiometricEntry } from '@/core/domain/types'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { specialistsService } from '@/services/endpoints/specialists'
+import { specialistsService, AddWorkoutSessionPayload } from '@/services/endpoints/specialists'
 
 interface MealModalProps {
   isOpen: boolean;
@@ -352,7 +352,8 @@ function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = fal
   const isEnglish = idioma?.toUpperCase() === 'EN' || idioma?.toUpperCase() === 'ENGLISH';
   
   const [types, setTypes] = useState<string[]>([])
-  const [exercisesList, setExercisesList] = useState<{ id_ejercicio: string, nombre: string }[]>([])
+  const [muscleGroups, setMuscleGroups] = useState<string[]>([])
+  const [exercisesList, setExercisesList] = useState<{ id_ejercicio: string, nombre: string, grupo_muscular?: string }[]>([])
   const [selectedBodyPart, setSelectedBodyPart] = useState<string>('todos')
 
   // Local exercise comments state
@@ -360,6 +361,7 @@ function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = fal
   const [newCommentText, setNewCommentText] = useState('')
   const [updateTick, setUpdateTick] = useState(0)
   const [imageError, setImageError] = useState(false)
+  const [isSavingExercise, setIsSavingExercise] = useState(false)
 
   // Reset image error state when exercise or previewUrl changes
   useEffect(() => {
@@ -398,14 +400,26 @@ function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = fal
   }, [isOpen])
 
   useEffect(() => {
+    if (isOpen) {
+      specialistsService.getMuscleGroups(localExercise?.ejercicio?.tipo || null)
+        .then(groups => setMuscleGroups(groups || []))
+        .catch(err => {
+          console.error('Failed to load muscle groups:', err)
+          setMuscleGroups(['Bíceps', 'Tríceps', 'Core', 'Espalda', 'Pecho', 'Piernas', 'Pantorrillas'])
+        })
+    }
+  }, [isOpen, localExercise?.ejercicio?.tipo])
+
+  useEffect(() => {
     if (isOpen && localExercise?.ejercicio?.tipo) {
-      specialistsService.getExercisesByType(localExercise.ejercicio.tipo)
+      const grupo = selectedBodyPart !== 'todos' ? selectedBodyPart : undefined
+      specialistsService.getExercisesByType(localExercise.ejercicio.tipo, undefined, grupo)
         .then(setExercisesList)
         .catch(err => {
           console.error('Failed to load exercises for type:', localExercise.ejercicio.tipo, err)
         })
     }
-  }, [isOpen, localExercise?.ejercicio?.tipo])
+  }, [isOpen, localExercise?.ejercicio?.tipo, selectedBodyPart])
 
 
   // Fetch comments specific to this exercise
@@ -477,14 +491,15 @@ function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = fal
     }
   }
 
-  const isFuerza = localExercise?.ejercicio?.tipo?.toLowerCase() === 'fuerza';
-  const activeBodyPart = isFuerza ? FUERZA_BODY_PARTS.find(p => p.id === selectedBodyPart) : null;
-  const filteredExercises = (activeBodyPart && activeBodyPart.id !== 'todos')
-    ? exercisesList.filter(ex => {
-        const name = ex.nombre.toLowerCase();
-        return activeBodyPart.keywords.some(kw => name.includes(kw));
-      })
-    : exercisesList;
+  const filteredExercises = useMemo(() => {
+    if (selectedBodyPart === 'todos') return exercisesList;
+    return exercisesList.filter(ex => {
+      if (ex.grupo_muscular) {
+        return ex.grupo_muscular.toLowerCase() === selectedBodyPart.toLowerCase();
+      }
+      return ex.nombre.toLowerCase().includes(selectedBodyPart.toLowerCase());
+    });
+  }, [exercisesList, selectedBodyPart]);
 
   const selectOptions = useMemo(() => {
     const list = filteredExercises.map(ex => ({
@@ -567,19 +582,24 @@ function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = fal
     setUpdateTick(t => t + 1)
   }
 
-  const handleSaveClick = () => {
-    onSave(localExercise)
+  const handleSaveClick = async () => {
+    setIsSavingExercise(true)
+    try {
+      await onSave(localExercise)
+    } finally {
+      setIsSavingExercise(false)
+    }
   }
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Detalle del Ejercicio: ${localExercise.ejercicio.nombre}`}
+      title={isCreatingNewExercise ? 'Nuevo Ejercicio: Crear y Asignar' : `Detalle del Ejercicio: ${localExercise.ejercicio.nombre}`}
       depth={1} // Renders layered over Workout Modal (Workout depth is 0)
       className="max-w-5xl"
     >
-      <div className="max-h-[75vh] overflow-y-auto pr-1 space-y-4">
+      <div className="flex-1 overflow-y-auto pr-2 space-y-4 min-h-0">
         
         {/* Top Section: 2 Columns (Left: Parameters, Right: Instructions) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -604,43 +624,21 @@ function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = fal
                 </select>
               </div>
 
-              {/* Selector de Parte del Cuerpo / Grupo Muscular (para ejercicios de Fuerza) */}
-              {localExercise.ejercicio.tipo?.toLowerCase() === 'fuerza' && (
-                <div className="flex flex-col gap-1.5 w-full text-left pt-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">
-                      Parte del Cuerpo / Grupo Muscular:
-                    </span>
-                    {selectedBodyPart !== 'todos' && (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedBodyPart('todos')}
-                        className="text-[10px] text-brand-orange hover:underline font-medium cursor-pointer"
-                      >
-                        Ver todos
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {FUERZA_BODY_PARTS.map(part => {
-                      const isSelected = selectedBodyPart === part.id;
-                      return (
-                        <button
-                          key={part.id}
-                          type="button"
-                          onClick={() => setSelectedBodyPart(part.id)}
-                          className={cn(
-                            'px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer border',
-                            isSelected
-                              ? 'bg-brand-orange text-white border-brand-orange shadow-sm'
-                              : 'bg-surface-card2 text-surface-muted border-surface-border hover:text-white hover:border-surface-muted/50'
-                          )}
-                        >
-                          {part.label}
-                        </button>
-                      );
-                    })}
-                  </div>
+              {/* Selector de Parte del Cuerpo / Grupo Muscular */}
+              {muscleGroups.length > 0 && (
+                <div className="flex flex-col gap-1 w-full text-left">
+                  <span className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Parte del Cuerpo / Grupo Muscular</span>
+                  <select
+                    value={selectedBodyPart}
+                    onChange={(e) => setSelectedBodyPart(e.target.value)}
+                    className="form-input text-[12px] py-2 bg-surface-card2 border border-surface-border font-semibold text-white outline-none focus:border-brand-orange transition-colors"
+                    disabled={readOnly}
+                  >
+                    <option value="todos">Todos los grupos musculares</option>
+                    {muscleGroups.map(group => (
+                      <option key={group} value={group}>{group}</option>
+                    ))}
+                  </select>
                 </div>
               )}
 
@@ -938,9 +936,20 @@ disabled={readOnly}
 
       </div>
 
-      <div className="flex gap-2 justify-end mt-4 pt-3 border-t border-surface-border">
-        <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-        {!readOnly && <Button variant="primary" onClick={handleSaveClick}>Guardar Ejercicio</Button>}
+      <div className="flex gap-2 justify-end pt-3 mt-3 border-t border-surface-border shrink-0">
+        <Button variant="ghost" onClick={onClose} disabled={isSavingExercise}>Cancelar</Button>
+        {!readOnly && (
+          <Button
+            variant="primary"
+            onClick={handleSaveClick}
+            disabled={isSavingExercise}
+            className="gap-1.5 font-semibold"
+          >
+            {isSavingExercise
+              ? (isCreatingNewExercise ? 'Registrando en catálogo...' : 'Guardando...')
+              : (isCreatingNewExercise ? 'Registrar y Asignar Ejercicio' : 'Guardar Ejercicio')}
+          </Button>
+        )}
       </div>
     </Modal>
   )
@@ -961,7 +970,10 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
   const specialistName = specialistProfile?.nombre || 'Especialista';
   const specialistSpecialty = specialistProfile?.especialidad || 'Pro';
   const repos = useRepositories()
+  const queryClient = useQueryClient()
   const [weekOffset, setWeekOffset] = useState(0)
+  const [isSavingWorkout, setIsSavingWorkout] = useState(false)
+  const [isDeletingWorkout, setIsDeletingWorkout] = useState(false)
 
   const queryWeekDates = useMemo(() => getWeekDates(weekOffset), [weekOffset])
   const startDate = useMemo(() => formatDateISO(queryWeekDates[0]), [queryWeekDates])
@@ -981,6 +993,12 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
     queryKey: ['userPlanTab', userId, startDate, endDate],
     queryFn: () => usersService.getUserTabDetalle(userId, 'plan', startDate, endDate),
     enabled: !!userId,
+  })
+
+  const { data: availableExerciseTypes = [] } = useQuery<string[]>({
+    queryKey: ['exerciseTypes'],
+    queryFn: () => specialistsService.getExerciseTypes(),
+    staleTime: 1000 * 60 * 10,
   })
 
   // Set weekDates dynamically from the active weekOffset, matching the Admin panel and preventing double offsets
@@ -1108,24 +1126,77 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
 
   // Save Workout
   const handleSaveActiveWorkout = async () => {
-    if (activeWorkout) {
-      try {
+    if (!activeWorkout) return
+    setIsSavingWorkout(true)
+    try {
+      const isDraft = activeWorkout.id_entrenamiento.startsWith('draft-') ||
+                      activeWorkout.id_entrenamiento.startsWith('temp-') ||
+                      activeWorkout.id_entrenamiento.startsWith('wk-')
+
+      if (isDraft) {
+        const sessionIdx = dayWorkouts.findIndex(w => w.id_entrenamiento === activeWorkout.id_entrenamiento)
+        const sessionNumber = activeWorkout.numero_sesion || String(sessionIdx >= 0 ? sessionIdx + 1 : dayWorkouts.length)
+        const planId = (planData as any)?.id_plan_entrenamiento || (planData as any)?.id_plan || (planItems.find(p => (p as any).id_plan_entrenamiento) as any)?.id_plan_entrenamiento
+
+        const payload: AddWorkoutSessionPayload = {
+          id_plan_entrenamiento: planId,
+          fecha_programada: activeWorkout.fecha_programada,
+          tipo: activeWorkout.tipo || activeWorkout.tipo_entrenamiento || 'Fuerza',
+          nombre: activeWorkout.nombre || activeWorkout.titulo_entrenamiento || activeWorkout.tipo || `Sesión ${sessionNumber}`,
+          numero_sesion: String(sessionNumber),
+          descripcion: activeWorkout.descripcion || '',
+          zona_esfuerzo: activeWorkout.zona_esfuerzo || '',
+          calorias_objetivo: Number(activeWorkout.macros_objetivo_kcal ?? (activeWorkout as any).calorias_objetivo ?? 0),
+          nivel: activeWorkout.nivel || 'Intermedio'
+        }
+
+        console.log('[DEBUG WorkoutSession] Creating session:', { userId, planId, planData, payload })
+
+        const res = await specialistsService.addWorkoutSession(userId, payload)
+        const newId = res?.id_entrenamiento || res?.id || res?.data?.id_entrenamiento
+        if (newId) {
+          activeWorkout.id_entrenamiento = newId
+          setSelectedWorkoutId(newId)
+        }
+        await repos.workouts.saveWorkout(activeWorkout)
+        toast.show('Sesión creada con éxito', 'success')
+      } else {
+        const sessionIdx = dayWorkouts.findIndex(w => w.id_entrenamiento === activeWorkout.id_entrenamiento)
+        const sessionNumber = sessionIdx >= 0 ? sessionIdx + 1 : 1
         const payload = {
+          nombre: activeWorkout.titulo_entrenamiento || activeWorkout.tipo || `Sesión ${sessionNumber}`,
+          numero_sesion: String(sessionNumber),
           tipo_entrenamiento: activeWorkout.tipo || activeWorkout.tipo_entrenamiento || 'Fuerza',
           zona_esfuerzo: activeWorkout.zona_esfuerzo || '',
           fecha_programada: activeWorkout.fecha_programada,
-          calorias_objetivo: activeWorkout.macros_objetivo_kcal ?? (activeWorkout as any).calorias_objetivo ?? 0,
-            descripcion: activeWorkout.descripcion || '',
-            estado: (activeWorkout.estado || 'pendiente').toLowerCase()
-          };
-        await specialistsService.updateWorkoutParameters(activeWorkout.id_entrenamiento, payload);
-      } catch (apiErr) {
-        console.error('Failed to update workout parameters on backend:', apiErr);
+          calorias_objetivo: Number(activeWorkout.macros_objetivo_kcal ?? (activeWorkout as any).calorias_objetivo ?? 0),
+          descripcion: activeWorkout.descripcion || '',
+          estado: (activeWorkout.estado || 'pendiente').toLowerCase()
+        }
+        console.log('[DEBUG WorkoutSession] Updating session:', { id: activeWorkout.id_entrenamiento, payload })
+        await specialistsService.updateWorkoutParameters(activeWorkout.id_entrenamiento, payload)
+        await repos.workouts.saveWorkout(activeWorkout)
+        toast.show('Sesión guardada con éxito', 'success')
       }
 
-      await repos.workouts.saveWorkout(activeWorkout)
-      toast.show('Entrenamiento guardado con éxito', 'success')
+      queryClient.invalidateQueries({ queryKey: ['userPlanTab', userId] })
       setUpdateTick(t => t + 1)
+    } catch (err: any) {
+      console.error('Failed to save workout session:', err, err?.response)
+      const detail = err?.response?.data?.detail
+      let errorMsg = 'Error al guardar la sesión'
+      if (typeof detail === 'string') {
+        errorMsg = detail
+      } else if (Array.isArray(detail)) {
+        errorMsg = detail.map((d: any) => `${d.loc ? d.loc.slice(1).join('.') : ''}: ${d.msg}`).join(', ')
+      } else if (err?.response?.data?.message) {
+        errorMsg = err.response.data.message
+      } else if (err?.message) {
+        errorMsg = err.message
+      }
+      toast.show(errorMsg, 'error')
+    } finally {
+      setIsSavingWorkout(false)
     }
   }
 
@@ -1139,25 +1210,34 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
   }
 
   // Delete active Workout or Rest Day on the selected date
-  const handleDeleteActiveWorkoutOrRestDay = () => {
+  const handleDeleteActiveWorkoutOrRestDay = async () => {
     if (activeWorkout) {
-      if (repos.workouts.deleteWorkoutById) {
-        repos.workouts.deleteWorkoutById(activeWorkout.id_entrenamiento).then(() => {
-          setPlanItems(prev => prev.filter(item => !('id_entrenamiento' in item) || item.id_entrenamiento !== activeWorkout.id_entrenamiento))
-          setUpdateTick(t => t + 1)
-          toast.show('Sesión de entrenamiento eliminada', 'error')
-        })
-      } else {
+      const isDraft = activeWorkout.id_entrenamiento.startsWith('draft-') ||
+                      activeWorkout.id_entrenamiento.startsWith('temp-')
+      setIsDeletingWorkout(true)
+      try {
+        if (!isDraft) {
+          await specialistsService.deleteWorkoutSession(activeWorkout.id_entrenamiento)
+        }
+        if (repos.workouts.deleteWorkoutById) {
+          await repos.workouts.deleteWorkoutById(activeWorkout.id_entrenamiento)
+        }
         setPlanItems(prev => prev.filter(item => !('id_entrenamiento' in item) || item.id_entrenamiento !== activeWorkout.id_entrenamiento))
         setUpdateTick(t => t + 1)
-        toast.show('Sesión de entrenamiento eliminada', 'error')
+        queryClient.invalidateQueries({ queryKey: ['userPlanTab', userId] })
+        toast.show('Sesión de entrenamiento eliminada', 'success')
+      } catch (err: any) {
+        console.error('Failed to delete workout session:', err)
+        toast.show(err?.response?.data?.detail || err?.message || 'Error al eliminar la sesión', 'error')
+      } finally {
+        setIsDeletingWorkout(false)
       }
     } else if (activeRestDay && selectedDateStr) {
-      repos.workouts.deletePlanItemByDate(selectedDateStr).then(() => {
-        setPlanItems(prev => prev.filter(item => item.fecha_programada !== selectedDateStr))
-        setUpdateTick(t => t + 1)
-        toast.show('Día de descanso eliminado', 'error')
-      })
+      await repos.workouts.deletePlanItemByDate(selectedDateStr)
+      setPlanItems(prev => prev.filter(item => item.fecha_programada !== selectedDateStr))
+      setUpdateTick(t => t + 1)
+      queryClient.invalidateQueries({ queryKey: ['userPlanTab', userId] })
+      toast.show('Día de descanso eliminado', 'error')
     }
   }
 
@@ -1165,8 +1245,8 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
   const handleCreateWorkout = (dateStr: string) => {
     repos.workouts.deletePlanItemByDate(dateStr).then(() => {
       const newWorkout: Workout = {
-        id_entrenamiento: `wk-${Date.now()}`,
-        tipo: 'FUERZA',
+        id_entrenamiento: `draft-${Date.now()}`,
+        tipo: 'Fuerza',
         fecha_programada: dateStr,
         estado: 'Pendiente',
         descripcion: 'Sesión 1 de entrenamiento planificada.',
@@ -1183,7 +1263,7 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
         setSelectedDateStr(dateStr)
         setSelectedWorkoutId(newWorkout.id_entrenamiento)
         setUpdateTick(t => t + 1)
-        toast.show('Entrenamiento programado', 'success')
+        toast.show('Sesión lista en borrador. Configura y haz clic en "Guardar Sesión".', 'info')
       })
     })
   }
@@ -1193,7 +1273,7 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
     const sessionNumber = dayWorkouts.length + 1
     const nextTipo = sessionNumber === 2 ? 'Ciclismo' : sessionNumber === 3 ? 'Natación' : 'Fuerza'
     const newWorkout: Workout = {
-      id_entrenamiento: `wk-${Date.now()}`,
+      id_entrenamiento: `draft-${Date.now()}`,
       tipo: nextTipo,
       fecha_programada: dateStr,
       estado: 'Pendiente',
@@ -1210,7 +1290,7 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
       setPlanItems(prev => [...prev, newWorkout])
       setSelectedWorkoutId(newWorkout.id_entrenamiento)
       setUpdateTick(t => t + 1)
-      toast.show(`Sesión ${sessionNumber} añadida con éxito`, 'success')
+      toast.show(`Sesión ${sessionNumber} agregada en borrador. Haz clic en "Guardar Sesión" para persistirla.`, 'info')
     })
   }
 
@@ -1507,6 +1587,30 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
               <span>+ Agregar Sesión ({dayWorkouts.length + 1}/3)</span>
             </button>
           )}
+
+          {!readOnly && activeWorkout && (
+            <div className="ml-auto flex items-center gap-2 shrink-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDeleteActiveWorkoutOrRestDay}
+                disabled={isSavingWorkout || isDeletingWorkout}
+                className="gap-1.5 border-brand-red/20 text-brand-red hover:bg-brand-red/5 hover:border-brand-red/40 text-[12px] py-1.5 px-3"
+              >
+                <Trash2 size={13} /> {isDeletingWorkout ? 'Eliminando...' : 'Eliminar Sesión'}
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                style={{ background: '#4CAF82', borderColor: '#4CAF82' }}
+                onClick={handleSaveActiveWorkout}
+                disabled={isSavingWorkout || isDeletingWorkout}
+                className="gap-1.5 text-[12px] py-1.5 px-3 font-semibold"
+              >
+                <Save size={13} /> {isSavingWorkout ? 'Guardando...' : (activeWorkout.id_entrenamiento.startsWith('draft-') || activeWorkout.id_entrenamiento.startsWith('temp-') || activeWorkout.id_entrenamiento.startsWith('wk-')) ? 'Crear Sesión' : 'Guardar Sesión'}
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
@@ -1522,20 +1626,94 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
               <div className="text-[12px] font-bold text-brand-orange uppercase tracking-wider mb-2">Entrenamiento: Parámetros del Día</div>
               <div className="grid grid-cols-2 gap-2">
                 <Input
-                  label="Tipo de Entrenamiento"
-                  value={activeWorkout.tipo}
+                  label="Nombre del Entrenamiento"
+                  value={activeWorkout.nombre ?? activeWorkout.titulo_entrenamiento ?? ''}
                   onChange={(e) => {
-                    activeWorkout.tipo = e.target.value
-                    activeWorkout.titulo_entrenamiento = e.target.value // keep title in sync with tipo!
+                    activeWorkout.nombre = e.target.value
+                    activeWorkout.titulo_entrenamiento = e.target.value
                     setUpdateTick(t => t + 1)
                   }}
                   disabled={readOnly}
+                  placeholder="Ej: Ejemplo Fuerza"
                 />
+                <div className="flex flex-col gap-1 w-full text-left">
+                  <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Tipo de Entrenamiento</label>
+                  <select
+                    value={activeWorkout.tipo || activeWorkout.tipo_entrenamiento || ''}
+                    onChange={(e) => {
+                      activeWorkout.tipo = e.target.value
+                      activeWorkout.tipo_entrenamiento = e.target.value
+                      setUpdateTick(t => t + 1)
+                    }}
+                    className="form-input text-[12px] py-2 bg-surface-card border border-surface-border font-semibold text-white outline-none transition-colors focus:border-brand-orange"
+                    disabled={readOnly}
+                  >
+                    {(!availableExerciseTypes.includes(activeWorkout.tipo) && activeWorkout.tipo) && (
+                      <option value={activeWorkout.tipo}>{activeWorkout.tipo}</option>
+                    )}
+                    {availableExerciseTypes.map((t: string) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                    {availableExerciseTypes.length === 0 && (
+                      <>
+                        <option value="Fuerza">Fuerza</option>
+                        <option value="Cardio">Cardio</option>
+                        <option value="Resistencia">Resistencia</option>
+                        <option value="Flexibilidad">Flexibilidad</option>
+                        <option value="Técnica">Técnica</option>
+                        <option value="Recuperación">Recuperación</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1 w-full text-left">
+                  <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Número de Sesión</label>
+                  <select
+                    value={activeWorkout.numero_sesion || String(dayWorkouts.findIndex(w => w.id_entrenamiento === activeWorkout.id_entrenamiento) + 1 || '1')}
+                    onChange={(e) => {
+                      activeWorkout.numero_sesion = e.target.value
+                      setUpdateTick(t => t + 1)
+                    }}
+                    className="form-input text-[12px] py-2 bg-surface-card border border-surface-border font-semibold text-white outline-none transition-colors focus:border-brand-orange"
+                    disabled={readOnly}
+                  >
+                    <option value="1">Sesión 1</option>
+                    <option value="2">Sesión 2</option>
+                    <option value="3">Sesión 3</option>
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1 w-full text-left">
+                  <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Nivel</label>
+                  <select
+                    value={activeWorkout.nivel || 'Intermedio'}
+                    onChange={(e) => {
+                      activeWorkout.nivel = e.target.value
+                      setUpdateTick(t => t + 1)
+                    }}
+                    className="form-input text-[12px] py-2 bg-surface-card border border-surface-border font-semibold text-white outline-none transition-colors focus:border-brand-orange"
+                    disabled={readOnly}
+                  >
+                    <option value="Principiante">Principiante</option>
+                    <option value="Intermedio">Intermedio</option>
+                    <option value="Avanzado">Avanzado</option>
+                  </select>
+                </div>
                 <Input
-                  label="Zona de Esfuerzo (ej: RPE 7-8)"
+                  label="Zona de Esfuerzo (ej: RPE 7-8 / Z1)"
                   value={activeWorkout.zona_esfuerzo || ''}
                   onChange={(e) => {
                     activeWorkout.zona_esfuerzo = e.target.value
+                    setUpdateTick(t => t + 1)
+                  }}
+                  disabled={readOnly}
+                  placeholder="Ej: RPE 7-8"
+                />
+                <Input
+                  label="Calorías Objetivo (kcal)"
+                  type="number"
+                  value={activeWorkout.macros_objetivo_kcal || 0}
+                  onChange={(e) => {
+                    activeWorkout.macros_objetivo_kcal = Number(e.target.value)
                     setUpdateTick(t => t + 1)
                   }}
                   disabled={readOnly}
@@ -1562,17 +1740,6 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
                     <option value="completado">Completado</option>
                   </select>
                 </div>
-                <Input
-                  label="Calorías Objetivo (kcal)"
-                  type="number"
-                  value={activeWorkout.macros_objetivo_kcal || 0}
-                  onChange={(e) => {
-                    activeWorkout.macros_objetivo_kcal = Number(e.target.value)
-                    setUpdateTick(t => t + 1)
-                  }}
-                  containerClassName="col-span-2"
-                  disabled={readOnly}
-                />
                 <div className="col-span-2 flex flex-col gap-1 w-full">
                   <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Descripción del Entrenamiento</label>
                   <textarea
@@ -1588,26 +1755,6 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
                   />
                 </div>
               </div>
-
-              {!readOnly && (
-                <div className="pt-2 border-t border-surface-border/30 flex justify-between gap-2">
-                  <Button
-                    variant="ghost"
-                    onClick={handleDeleteActiveWorkoutOrRestDay}
-                    className="gap-1.5 border-brand-red/20 text-brand-red hover:bg-brand-red/5 hover:border-brand-red/40"
-                  >
-                    <Trash2 size={13} /> Eliminar Entrenamiento
-                  </Button>
-                  <Button
-                    variant="primary"
-                    style={{ background: '#4CAF82', borderColor: '#4CAF82' }}
-                    onClick={handleSaveActiveWorkout}
-                    className="gap-1.5"
-                  >
-                    <Save size={13} /> Guardar Parámetros
-                  </Button>
-                </div>
-              )}
             </div>
 
             {renderCommentsCard('workout')}
@@ -1821,6 +1968,7 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
                     series: updated.series || 4,
                     descanso_segundos: updated.descanso_segundos || 60,
                     repeticiones: parseInt(String(updated.repeticiones)) || 0,
+                    distancia_metros: (updated as any).distancia_metros || 0,
                     peso_objetivo: updated.peso_objetivo || 0,
                     duracion_segundos: updated.duracion_segundos || 0,
                     comentario: updated.comentario || '',
@@ -1836,6 +1984,7 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
                     series: updated.series || 4,
                     descanso_segundos: updated.descanso_segundos || 60,
                     repeticiones: parseInt(String(updated.repeticiones)) || 0,
+                    distancia_metros: (updated as any).distancia_metros || 0,
                     peso_objetivo: updated.peso_objetivo || 0,
                     duracion_segundos: updated.duracion_segundos || 0,
                     comentario: updated.comentario || '',
@@ -1921,7 +2070,7 @@ function MealDetailModal({ isOpen, onClose, meal, onSave, readOnly = false, onDe
       depth={1}
       className="max-w-md"
     >
-      <div className="max-h-[70vh] overflow-y-auto pr-1 space-y-4">
+      <div className="flex-1 overflow-y-auto pr-1 space-y-4 min-h-0">
         {/* Form inputs */}
         <div className="bg-surface-card2 rounded-xl p-3.5 border border-surface-border space-y-3">
           <div className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">Parámetros de la Comida</div>
@@ -2008,7 +2157,7 @@ function MealDetailModal({ isOpen, onClose, meal, onSave, readOnly = false, onDe
         </div>
       </div>
 
-      <div className="flex gap-2 justify-end mt-4 pt-3 border-t border-surface-border">
+      <div className="flex gap-2 justify-end pt-3 mt-3 border-t border-surface-border shrink-0">
         {onDelete && !readOnly && localMeal.id_comida && !localMeal.id_comida.startsWith("meal-temp") && !localMeal.id_comida.startsWith("temp-") && (
           <Button
             variant="ghost"
