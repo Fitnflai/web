@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   User,
@@ -18,8 +18,10 @@ import {
   ChevronLeft,
   Sparkles,
   HeartPulse,
-  Info
+  Info,
+  Loader2
 } from 'lucide-react';
+import { searchCitiesGeocoding, GeocodingResult } from '@/services/api/geocoding';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -140,6 +142,76 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<RegisterPatientPayload>(initialPayload);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [cityQuery, setCityQuery] = useState(formData.ciudad || '');
+  const [cityResults, setCityResults] = useState<GeocodingResult[]>([]);
+  const [isSearchingCity, setIsSearchingCity] = useState(false);
+  const [showCityDropdown, setShowCityDropdown] = useState(false);
+  const cityContainerRef = useRef<HTMLDivElement>(null);
+
+  const timezoneOptions = useMemo(() => {
+    if (formData.timezone && !TIMEZONES.some(tz => tz.value === formData.timezone)) {
+      return [{ value: formData.timezone, label: formData.timezone }, ...TIMEZONES];
+    }
+    return TIMEZONES;
+  }, [formData.timezone]);
+
+  useEffect(() => {
+    if (!cityQuery || cityQuery.trim().length < 2) {
+      setCityResults([]);
+      setIsSearchingCity(false);
+      return;
+    }
+
+    if (cityQuery === formData.ciudad) {
+      return;
+    }
+
+    const controller = new AbortController();
+    setIsSearchingCity(true);
+
+    const timer = setTimeout(async () => {
+      try {
+        const results = await searchCitiesGeocoding(cityQuery, controller.signal);
+        setCityResults(results);
+        setShowCityDropdown(true);
+      } catch (err) {
+        console.error('Error fetching cities:', err);
+      } finally {
+        setIsSearchingCity(false);
+      }
+    }, 350);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [cityQuery, formData.ciudad]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (cityContainerRef.current && !cityContainerRef.current.contains(event.target as Node)) {
+        setShowCityDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelectCityResult = (item: GeocodingResult) => {
+    const formattedCity = [item.name, item.admin1, item.country].filter(Boolean).join(', ');
+    const altitude = item.elevation !== undefined ? Math.round(item.elevation) : 0;
+    const timezone = item.timezone || 'America/Guayaquil';
+
+    setFormData(prev => ({
+      ...prev,
+      ciudad: formattedCity,
+      altitud_msnm: altitude,
+      timezone: timezone,
+    }));
+    setCityQuery(formattedCity);
+    setShowCityDropdown(false);
+    toast.show(`Altitud (${altitude} msnm) y zona horaria (${timezone}) autocompletadas`, 'info');
+  };
 
   // Injury form temporary state
   const [injuryForm, setInjuryForm] = useState<DetalleLesion>({
@@ -166,6 +238,9 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
 
   const handleClose = () => {
     setFormData(initialPayload);
+    setCityQuery('');
+    setCityResults([]);
+    setShowCityDropdown(false);
     setErrors({});
     setStep(1);
     setShowAddInjury(false);
@@ -465,13 +540,57 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Input
-                  label="Ciudad"
-                  placeholder="Ej: Quito, Bogotá, etc."
-                  value={formData.ciudad || ''}
-                  onChange={e => updateField('ciudad', e.target.value)}
-                  iconPrefix={<MapPin size={14} />}
-                />
+                <div className="relative" ref={cityContainerRef}>
+                  <Input
+                    label="Ciudad (Buscador mundial)"
+                    placeholder="Escribe una ciudad (ej: Bogotá, Quito, Chía...)"
+                    value={cityQuery}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setCityQuery(val);
+                      updateField('ciudad', val);
+                      if (val.trim().length >= 2) setShowCityDropdown(true);
+                    }}
+                    onFocus={() => {
+                      if (cityResults.length > 0) setShowCityDropdown(true);
+                    }}
+                    iconPrefix={<MapPin size={14} />}
+                    iconSuffix={isSearchingCity ? <Loader2 size={13} className="animate-spin text-purple-400" /> : undefined}
+                    autoComplete="off"
+                  />
+                  {showCityDropdown && cityResults.length > 0 && (
+                    <div className="absolute top-[100%] left-0 w-full mt-1 bg-surface-panel border border-surface-border rounded-lg shadow-2xl z-50 flex flex-col p-1.5 max-h-[220px] overflow-y-auto scrollbar-thin">
+                      <div className="px-2 py-1 text-[9px] uppercase tracking-wider text-surface-muted font-bold border-b border-surface-border mb-1 flex items-center justify-between">
+                        <span>Ciudades encontradas</span>
+                        <span className="text-[9px] text-purple-400 font-normal">Open-Meteo Geocoding</span>
+                      </div>
+                      {cityResults.map(item => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onMouseDown={() => handleSelectCityResult(item)}
+                          className="flex items-center justify-between p-2 rounded-md hover:bg-surface-card transition-colors text-left group cursor-pointer"
+                        >
+                          <div className="flex flex-col pr-2">
+                            <span className="text-xs font-semibold text-white group-hover:text-purple-400 transition-colors">
+                              {item.name}
+                            </span>
+                            <span className="text-[10px] text-surface-muted truncate">
+                              {[item.admin1, item.country].filter(Boolean).join(', ')}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0 text-right">
+                            {item.elevation !== undefined && (
+                              <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-surface-card border border-surface-border text-purple-300">
+                                {Math.round(item.elevation).toLocaleString()} msnm
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <Input
                   label="Altitud (msnm)"
                   type="number"
@@ -483,7 +602,7 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
 
               <Select
                 label="Zona Horaria (Timezone)"
-                options={TIMEZONES}
+                options={timezoneOptions}
                 value={formData.timezone || 'America/Guayaquil'}
                 onChange={val => updateField('timezone', val)}
               />
