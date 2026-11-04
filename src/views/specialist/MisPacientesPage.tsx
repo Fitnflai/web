@@ -6,10 +6,12 @@ import { useAppStore } from '@/store/useAppStore'
 import { useQuery } from '@tanstack/react-query'
 import { specialistsService } from '@/services/endpoints/specialists'
 import type { User, Patient, SpecialistPatientsResponse } from '@/types'
+import { RegisterPatientModal } from './RegisterPatientModal'
 
 export function MisPacientesPage() {
   const { setPage, setSelectedUser, setDetailOrigin } = useAppStore()
   const [activeTab, setActiveTab] = useState<'Todos' | 'Nuevos' | 'Pendientes' | 'Revisión' | 'Inactivos'>('Todos')
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false)
 
   // Helper to get initials
   const getInitials = (name: string): string => {
@@ -152,7 +154,13 @@ export function MisPacientesPage() {
         </div>
         <div className="flex gap-2">
           <button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] rounded-lg bg-surface-card border border-surface-border text-white font-medium"><Download size={13}/>Exportar</button>
-          <button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] rounded-lg text-white font-medium" style={{background:'#9B59B6'}}><Plus size={13}/>Nuevo paciente</button>
+          <button 
+            onClick={() => setIsRegisterModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-[7px] text-[12px] rounded-lg text-white font-medium transition-opacity hover:opacity-95 cursor-pointer" 
+            style={{background:'#9B59B6'}}
+          >
+            <Plus size={13}/>Nuevo paciente
+          </button>
         </div>
       </div>
 
@@ -212,6 +220,11 @@ export function MisPacientesPage() {
           onPageChange={() => {}} 
         />
       )}
+
+      <RegisterPatientModal
+        isOpen={isRegisterModalOpen}
+        onClose={() => setIsRegisterModalOpen(false)}
+      />
     </div>
   )
 }

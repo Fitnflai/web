@@ -325,6 +325,49 @@ export interface SpecialistReceivedNotification {
   tiempo_transcurrido: string;
 }
 
+export interface DetallesObjetivo {
+  nombre_competencia?: string;
+  fecha_competencia?: string;
+  distancia_objetivo?: number;
+  unidad_distancia?: string;
+  desnivel_m?: number;
+  altitud_destino_m?: number;
+}
+
+export interface DetalleLesion {
+  zona_afectada: string;
+  descripcion_molestia: string;
+  nivel_dolor_eva: number;
+  tipo_lesion: string;
+}
+
+export interface RegisterPatientPayload {
+  nombre: string;
+  email: string;
+  apodo?: string;
+  telefono?: string;
+  genero?: string;
+  fecha_nacimiento?: string;
+  peso?: number;
+  unidad_peso?: string;
+  altura?: number;
+  unidad_altura?: string;
+  ciudad?: string;
+  altitud_msnm?: number;
+  timezone?: string;
+  id_disciplina?: number;
+  nivel_dificultad?: string;
+  fecha_inicio_deseada?: string;
+  tiempo_por_sesion?: number;
+  dias_disponibles?: string[];
+  equipamiento_ids?: number[];
+  id_objetivo?: number;
+  detalles_objetivo?: DetallesObjetivo;
+  detalles_lesiones?: DetalleLesion[];
+  adaptacion_ciclo_menstrual?: boolean;
+  notas?: string;
+}
+
 export const specialistsService = {
   getPatients: async (filtro: string): Promise<SpecialistPatientsResponse> => {
     const { data } = await apiClient.get<SpecialistPatientsResponse>('/specialist/specialist/pacientes', {
@@ -1010,6 +1053,23 @@ export const specialistsService = {
         'Content-Type': 'multipart/form-data',
       },
     });
+    return data;
+  },
+
+  registerPatient: async (payload: RegisterPatientPayload): Promise<any> => {
+    if (USE_MOCK) {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve({
+            success: true,
+            message: 'Paciente registrado exitosamente',
+            id_usuario: 'pac-' + Date.now(),
+            ...payload
+          });
+        }, 500);
+      });
+    }
+    const { data } = await apiClient.post('/specialist/specialist/pacientes/registrar', payload);
     return data;
   },
 
