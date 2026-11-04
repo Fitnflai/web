@@ -348,6 +348,12 @@ export interface DisciplinaItem {
   imagen_url?: string;
 }
 
+export interface EquipmentItem {
+  id_implemento: number;
+  nombre: string;
+  imagen_url?: string;
+}
+
 export interface RegisterPatientPayload {
   nombre: string;
   email: string;
@@ -1092,6 +1098,23 @@ export const specialistsService = {
       ];
     }
     const { data } = await apiClient.get<DisciplinaItem[]>('/onboarding/obtener-disciplinas');
+    return data;
+  },
+
+  getEquipments: async (): Promise<EquipmentItem[]> => {
+    if (USE_MOCK) {
+      return [
+        { id_implemento: 1, nombre: 'Cuerda para saltar' },
+        { id_implemento: 2, nombre: 'Bandas de resistencia' },
+        { id_implemento: 3, nombre: 'Pesa rusa (Kettlebell)' },
+        { id_implemento: 4, nombre: 'Colchoneta de Yoga' },
+        { id_implemento: 5, nombre: 'Rodillo de espuma (Foam roller)' },
+        { id_implemento: 6, nombre: 'Mancuernas' },
+        { id_implemento: 7, nombre: 'Barra y discos' },
+        { id_implemento: 8, nombre: 'Bicicleta estática / Rodillo' },
+      ];
+    }
+    const { data } = await apiClient.get<EquipmentItem[]>('/onboarding/equipments');
     return data;
   },
 

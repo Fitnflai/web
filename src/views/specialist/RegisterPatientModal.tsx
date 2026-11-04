@@ -34,6 +34,7 @@ import {
   DetalleLesion,
   DetallesObjetivo,
   DisciplinaItem,
+  EquipmentItem,
 } from '@/services/endpoints/specialists';
 
 interface RegisterPatientModalProps {
@@ -52,15 +53,15 @@ const DAYS_OF_WEEK = [
   { id: 'domingo', label: 'Dom', full: 'Domingo' },
 ];
 
-const AVAILABLE_EQUIPMENT = [
-  { id: 1, name: 'Cuerda para saltar' },
-  { id: 2, name: 'Bandas de resistencia' },
-  { id: 3, name: 'Pesa rusa (Kettlebell)' },
-  { id: 4, name: 'Colchoneta de Yoga' },
-  { id: 5, name: 'Rodillo de espuma (Foam roller)' },
-  { id: 6, name: 'Mancuernas' },
-  { id: 7, name: 'Barra y discos' },
-  { id: 8, name: 'Bicicleta estática / Rodillo' },
+const AVAILABLE_EQUIPMENT_FALLBACK: EquipmentItem[] = [
+  { id_implemento: 1, nombre: 'Cuerda para saltar' },
+  { id_implemento: 2, nombre: 'Bandas de resistencia' },
+  { id_implemento: 3, nombre: 'Pesa rusa (Kettlebell)' },
+  { id_implemento: 4, nombre: 'Colchoneta de Yoga' },
+  { id_implemento: 5, nombre: 'Rodillo de espuma (Foam roller)' },
+  { id_implemento: 6, nombre: 'Mancuernas' },
+  { id_implemento: 7, nombre: 'Barra y discos' },
+  { id_implemento: 8, nombre: 'Bicicleta estática / Rodillo' },
 ];
 
 const DISCIPLINES_FALLBACK: SelectOption[] = [
@@ -177,6 +178,19 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
       setFormData(prev => ({ ...prev, id_disciplina: Number(disciplineOptions[0].value) }));
     }
   }, [disciplineOptions, formData.id_disciplina]);
+
+  const { data: equipmentsData, isLoading: isLoadingEquipments } = useQuery<EquipmentItem[]>({
+    queryKey: ['onboardingEquipments'],
+    queryFn: () => specialistsService.getEquipments(),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const availableEquipments = useMemo(() => {
+    if (!equipmentsData || equipmentsData.length === 0) {
+      return AVAILABLE_EQUIPMENT_FALLBACK;
+    }
+    return equipmentsData;
+  }, [equipmentsData]);
 
   useEffect(() => {
     if (isCitySelectedRef.current) {
@@ -719,17 +733,24 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
 
               {/* Equipamiento disponible */}
               <div>
-                <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider block mb-1.5">
-                  Equipamiento / Implementos Disponibles
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                  {AVAILABLE_EQUIPMENT.map(eq => {
-                    const isChecked = (formData.equipamiento_ids || []).includes(eq.id);
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider block">
+                    Equipamiento / Implementos Disponibles
+                  </label>
+                  {isLoadingEquipments && (
+                    <span className="text-[10px] text-surface-muted flex items-center gap-1">
+                      <Loader2 size={10} className="animate-spin text-purple-400" /> Cargando catálogo...
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-[190px] overflow-y-auto scrollbar-thin pr-1">
+                  {availableEquipments.map(eq => {
+                    const isChecked = (formData.equipamiento_ids || []).includes(eq.id_implemento);
                     return (
                       <button
-                        key={eq.id}
+                        key={eq.id_implemento}
                         type="button"
-                        onClick={() => toggleEquipment(eq.id)}
+                        onClick={() => toggleEquipment(eq.id_implemento)}
                         className={`flex items-center gap-2 p-2 rounded-lg text-left text-xs border transition-all ${
                           isChecked
                             ? 'bg-purple-950/20 border-purple-500/40 text-white'
@@ -746,7 +767,7 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
                         >
                           {isChecked && <Check size={11} />}
                         </div>
-                        <span className="truncate">{eq.name}</span>
+                        <span className="truncate">{eq.nombre}</span>
                       </button>
                     );
                   })}
