@@ -27,22 +27,22 @@ export function Input({
       )}
       <div className="relative flex items-center w-full">
         {iconPrefix && (
-          <div className="absolute left-3 flex items-center justify-center text-surface-muted">
+          <div className="absolute left-3 flex items-center justify-center text-surface-muted pointer-events-none z-10">
             {iconPrefix}
           </div>
         )}
         <input
           className={cn(
             'form-input w-full text-[12px] bg-surface-card border border-surface-border rounded-lg py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-orange focus:border-brand-orange disabled:opacity-50 dark:bg-surface-card dark:border-surface-border dark:text-white',
-            iconPrefix ? 'pl-9' : 'px-3',
-            iconSuffix ? 'pr-9' : 'px-3',
+            iconPrefix ? '!pl-10' : 'px-3',
+            iconSuffix ? '!pr-10' : 'px-3',
             error ? 'border-brand-red focus:ring-brand-red focus:border-brand-red' : 'border-surface-border',
             className
           )}
           {...props}
         />
         {iconSuffix && (
-          <div className="absolute right-3 flex items-center justify-center text-surface-muted">
+          <div className="absolute right-3 flex items-center justify-center text-surface-muted pointer-events-none z-10">
             {iconSuffix}
           </div>
         )}

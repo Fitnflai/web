@@ -106,7 +106,7 @@ const initialPayload: RegisterPatientPayload = {
   email: '',
   apodo: '',
   telefono: '',
-  genero: 'Masculino',
+  genero: '',
   fecha_nacimiento: '',
   peso: 70,
   unidad_peso: 'kg',
@@ -239,6 +239,12 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
         newErrors.email = 'El email es obligatorio';
       } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
         newErrors.email = 'Formato de email inválido';
+      }
+      if (!formData.genero || !formData.genero.trim()) {
+        newErrors.genero = 'El género es obligatorio';
+      }
+      if (!formData.fecha_nacimiento || !formData.fecha_nacimiento.trim()) {
+        newErrors.fecha_nacimiento = 'La fecha de nacimiento es obligatoria';
       }
     }
 
@@ -384,17 +390,21 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <Select
-                  label="Género"
+                  label="Género *"
+                  placeholder="Selecciona un género..."
                   options={GENDER_OPTIONS}
-                  value={formData.genero || 'Masculino'}
+                  value={formData.genero || ''}
                   onChange={val => updateField('genero', val)}
+                  error={errors.genero}
                 />
                 <Input
-                  label="Fecha de Nacimiento"
+                  label="Fecha de Nacimiento *"
                   type="date"
                   value={formData.fecha_nacimiento || ''}
                   onChange={e => updateField('fecha_nacimiento', e.target.value)}
                   iconPrefix={<Calendar size={14} />}
+                  error={errors.fecha_nacimiento}
+                  required
                 />
               </div>
             </div>

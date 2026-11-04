@@ -15,6 +15,7 @@ interface SelectProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  error?: string;
 }
 
 export function Select({
@@ -25,6 +26,7 @@ export function Select({
   placeholder = 'Select an option...',
   disabled = false,
   className,
+  error,
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -63,13 +65,22 @@ export function Select({
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between w-full text-[12px] bg-surface-card border border-surface-border rounded-lg px-3 py-1.5 text-left text-white focus:outline-none focus:ring-1 focus:ring-brand-orange focus:border-brand-orange disabled:opacity-50 disabled:cursor-not-allowed"
+        className={cn(
+          "flex items-center justify-between w-full text-[12px] bg-surface-card border rounded-lg px-3 py-1.5 text-left text-white focus:outline-none focus:ring-1 focus:ring-brand-orange focus:border-brand-orange disabled:opacity-50 disabled:cursor-not-allowed",
+          error ? "border-brand-red focus:ring-brand-red focus:border-brand-red" : "border-surface-border"
+        )}
       >
         <span className={cn('truncate', !selectedOption && 'text-surface-muted')}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
         <ChevronDown size={14} className="text-surface-muted shrink-0 ml-2" />
       </button>
+
+      {error && (
+        <span className="text-[10px] font-semibold text-brand-red dark:text-brand-red/90 pl-1">
+          {error}
+        </span>
+      )}
 
       {isOpen && (
         <div className="absolute top-[100%] left-0 w-full mt-1 bg-surface-panel border border-surface-border rounded-lg shadow-lg z-[100] flex flex-col p-1.5 max-h-[220px] overflow-hidden">
