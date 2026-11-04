@@ -35,6 +35,7 @@ import {
   DetallesObjetivo,
   DisciplinaItem,
   EquipmentItem,
+  ObjectiveItem,
 } from '@/services/endpoints/specialists';
 
 interface RegisterPatientModalProps {
@@ -73,7 +74,7 @@ const DISCIPLINES_FALLBACK: SelectOption[] = [
   { value: '6', label: 'Fuerza / Funcional' },
 ];
 
-const OBJECTIVES: SelectOption[] = [
+const OBJECTIVES_FALLBACK: SelectOption[] = [
   { value: '1', label: 'Preparación para competencia' },
   { value: '2', label: 'Rendimiento y resistencia aeróbica' },
   { value: '3', label: 'Pérdida de grasa / Composición corporal' },
@@ -125,7 +126,7 @@ const initialPayload: RegisterPatientPayload = {
   tiempo_por_sesion: 60,
   dias_disponibles: ['lunes', 'miercoles', 'viernes'],
   equipamiento_ids: [1, 2],
-  id_objetivo: 1,
+  id_objetivo: '1',
   detalles_objetivo: {
     nombre_competencia: '',
     fecha_competencia: '',
@@ -191,6 +192,34 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
     }
     return equipmentsData;
   }, [equipmentsData]);
+
+  const { data: objectivesData, isLoading: isLoadingObjectives } = useQuery<ObjectiveItem[]>({
+    queryKey: ['onboardingObjectives'],
+    queryFn: () => specialistsService.getObjectives(),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const [customObjectiveText, setCustomObjectiveText] = useState('');
+
+  const objectiveOptions: SelectOption[] = useMemo(() => {
+    const list: SelectOption[] = (!objectivesData || objectivesData.length === 0)
+      ? OBJECTIVES_FALLBACK
+      : objectivesData.map(o => ({
+          value: String(o.id_objetivo),
+          label: o.nombre,
+        }));
+
+    if (!list.some(opt => opt.value === 'otro' || opt.label.toLowerCase() === 'otro')) {
+      return [...list, { value: 'otro', label: 'Otro' }];
+    }
+    return list;
+  }, [objectivesData]);
+
+  useEffect(() => {
+    if (objectiveOptions.length > 0 && !formData.id_objetivo) {
+      setFormData(prev => ({ ...prev, id_objetivo: objectiveOptions[0].value }));
+    }
+  }, [objectiveOptions, formData.id_objetivo]);
 
   useEffect(() => {
     if (isCitySelectedRef.current) {
@@ -281,6 +310,7 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
     setFormData(initialPayload);
     setCityResults([]);
     setShowCityDropdown(false);
+    setCustomObjectiveText('');
     setErrors({});
     setStep(1);
     setShowAddInjury(false);
@@ -793,12 +823,31 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
           {/* STEP 4: OBJETIVO, LESIONES Y NOTAS */}
           {step === 4 && (
             <div className="space-y-4 animate-fadeIn">
-              <Select
-                label="Objetivo Principal"
-                options={OBJECTIVES}
-                value={formData.id_objetivo ? String(formData.id_objetivo) : '1'}
-                onChange={val => updateField('id_objetivo', parseInt(val))}
-              />
+              <div className="space-y-2">
+                <Select
+                  label="Objetivo Principal"
+                  options={objectiveOptions}
+                  value={formData.id_objetivo !== undefined ? String(formData.id_objetivo) : (objectiveOptions[0]?.value || '1')}
+                  onChange={val => updateField('id_objetivo', val)}
+                  placeholder={isLoadingObjectives ? 'Cargando objetivos...' : 'Selecciona un objetivo...'}
+                />
+
+                {String(formData.id_objetivo) === 'otro' && (
+                  <div className="animate-fadeIn">
+                    <Input
+                      label="Especificar Otro Objetivo *"
+                      placeholder="Describe el objetivo personalizado del paciente..."
+                      value={customObjectiveText}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setCustomObjectiveText(val);
+                        updateDetalleObjetivo('nombre_competencia', val);
+                      }}
+                      required
+                    />
+                  </div>
+                )}
+              </div>
 
               {/* Detalles de objetivo / competencia */}
               <div className="p-3 rounded-lg bg-surface-card border border-surface-border space-y-3">

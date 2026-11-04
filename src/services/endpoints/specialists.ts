@@ -354,6 +354,13 @@ export interface EquipmentItem {
   imagen_url?: string;
 }
 
+export interface ObjectiveItem {
+  id_objetivo: string | number;
+  nombre: string;
+  descripcion?: string;
+  imagen_url?: string;
+}
+
 export interface RegisterPatientPayload {
   nombre: string;
   email: string;
@@ -374,7 +381,7 @@ export interface RegisterPatientPayload {
   tiempo_por_sesion?: number;
   dias_disponibles?: string[];
   equipamiento_ids?: number[];
-  id_objetivo?: number;
+  id_objetivo?: number | string;
   detalles_objetivo?: DetallesObjetivo;
   detalles_lesiones?: DetalleLesion[];
   adaptacion_ciclo_menstrual?: boolean;
@@ -1115,6 +1122,20 @@ export const specialistsService = {
       ];
     }
     const { data } = await apiClient.get<EquipmentItem[]>('/onboarding/equipments');
+    return data;
+  },
+
+  getObjectives: async (): Promise<ObjectiveItem[]> => {
+    if (USE_MOCK) {
+      return [
+        { id_objetivo: '1', nombre: 'Preparación para competencia', descripcion: 'Entrenamiento enfocado a eventos y carreras' },
+        { id_objetivo: '2', nombre: 'Rendimiento y resistencia aeróbica', descripcion: 'Mejora de capacidad cardiovascular' },
+        { id_objetivo: '3', nombre: 'Pérdida de grasa / Composición corporal', descripcion: 'Optimización de masa grasa y tono' },
+        { id_objetivo: '4', nombre: 'Ganancia muscular y fuerza', descripcion: 'Hipertrofia y fuerza muscular' },
+        { id_objetivo: '5', nombre: 'Readaptación física y prevención', descripcion: 'Movilidad y prevención de lesiones' },
+      ];
+    }
+    const { data } = await apiClient.get<ObjectiveItem[]>('/onboarding/objectives');
     return data;
   },
 
