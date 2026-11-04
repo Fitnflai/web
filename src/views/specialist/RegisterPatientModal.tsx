@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import {
   User,
   Mail,
@@ -33,6 +33,7 @@ import {
   RegisterPatientPayload,
   DetalleLesion,
   DetallesObjetivo,
+  DisciplinaItem,
 } from '@/services/endpoints/specialists';
 
 interface RegisterPatientModalProps {
@@ -62,7 +63,7 @@ const AVAILABLE_EQUIPMENT = [
   { id: 8, name: 'Bicicleta estática / Rodillo' },
 ];
 
-const DISCIPLINES: SelectOption[] = [
+const DISCIPLINES_FALLBACK: SelectOption[] = [
   { value: '1', label: 'Running / Atletismo' },
   { value: '2', label: 'Trail Running' },
   { value: '3', label: 'Ciclismo de Ruta / MTB' },
@@ -154,6 +155,28 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
     }
     return TIMEZONES;
   }, [formData.timezone]);
+
+  const { data: disciplinasData, isLoading: isLoadingDisciplinas } = useQuery<DisciplinaItem[]>({
+    queryKey: ['onboardingDisciplinas'],
+    queryFn: () => specialistsService.getDisciplines(),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const disciplineOptions: SelectOption[] = useMemo(() => {
+    if (!disciplinasData || disciplinasData.length === 0) {
+      return DISCIPLINES_FALLBACK;
+    }
+    return disciplinasData.map(d => ({
+      value: String(d.id_disciplina),
+      label: d.nombre,
+    }));
+  }, [disciplinasData]);
+
+  useEffect(() => {
+    if (disciplineOptions.length > 0 && !formData.id_disciplina) {
+      setFormData(prev => ({ ...prev, id_disciplina: Number(disciplineOptions[0].value) }));
+    }
+  }, [disciplineOptions, formData.id_disciplina]);
 
   useEffect(() => {
     if (isCitySelectedRef.current) {
@@ -636,9 +659,10 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <Select
                   label="Disciplina Deportiva"
-                  options={DISCIPLINES}
-                  value={formData.id_disciplina ? String(formData.id_disciplina) : '1'}
+                  options={disciplineOptions}
+                  value={formData.id_disciplina ? String(formData.id_disciplina) : (disciplineOptions[0]?.value || '1')}
                   onChange={val => updateField('id_disciplina', parseInt(val))}
+                  placeholder={isLoadingDisciplinas ? 'Cargando disciplinas...' : 'Selecciona una disciplina...'}
                 />
                 <Select
                   label="Nivel de Dificultad"

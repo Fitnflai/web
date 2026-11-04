@@ -341,6 +341,13 @@ export interface DetalleLesion {
   tipo_lesion: string;
 }
 
+export interface DisciplinaItem {
+  id_disciplina: number;
+  nombre: string;
+  descripcion: string;
+  imagen_url?: string;
+}
+
 export interface RegisterPatientPayload {
   nombre: string;
   email: string;
@@ -1070,6 +1077,21 @@ export const specialistsService = {
       });
     }
     const { data } = await apiClient.post('/specialist/specialist/pacientes/registrar', payload);
+    return data;
+  },
+
+  getDisciplines: async (): Promise<DisciplinaItem[]> => {
+    if (USE_MOCK) {
+      return [
+        { id_disciplina: 1, nombre: 'Running / Atletismo', descripcion: 'Entrenamiento de carrera y pista' },
+        { id_disciplina: 2, nombre: 'Trail Running', descripcion: 'Carrera de montaña y senderos' },
+        { id_disciplina: 3, nombre: 'Ciclismo de Ruta / MTB', descripcion: 'Ciclismo de ruta y montaña' },
+        { id_disciplina: 4, nombre: 'Triatlón', descripcion: 'Natación, ciclismo y carrera' },
+        { id_disciplina: 5, nombre: 'Natación', descripcion: 'Entrenamiento en piscina y aguas abiertas' },
+        { id_disciplina: 6, nombre: 'Fuerza / Funcional', descripcion: 'Acondicionamiento físico general y fuerza' },
+      ];
+    }
+    const { data } = await apiClient.get<DisciplinaItem[]>('/onboarding/obtener-disciplinas');
     return data;
   },
 
