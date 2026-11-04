@@ -142,11 +142,11 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<RegisterPatientPayload>(initialPayload);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [cityQuery, setCityQuery] = useState(formData.ciudad || '');
   const [cityResults, setCityResults] = useState<GeocodingResult[]>([]);
   const [isSearchingCity, setIsSearchingCity] = useState(false);
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const cityContainerRef = useRef<HTMLDivElement>(null);
+  const isCitySelectedRef = useRef(false);
 
   const timezoneOptions = useMemo(() => {
     if (formData.timezone && !TIMEZONES.some(tz => tz.value === formData.timezone)) {
@@ -156,22 +156,26 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
   }, [formData.timezone]);
 
   useEffect(() => {
-    if (!cityQuery || cityQuery.trim().length < 2) {
-      setCityResults([]);
-      setIsSearchingCity(false);
+    if (isCitySelectedRef.current) {
+      isCitySelectedRef.current = false;
       return;
     }
 
-    if (cityQuery === formData.ciudad) {
+    const trimmed = (formData.ciudad || '').trim();
+    if (trimmed.length < 2) {
+      setCityResults([]);
+      setIsSearchingCity(false);
+      setShowCityDropdown(false);
       return;
     }
 
     const controller = new AbortController();
     setIsSearchingCity(true);
+    setShowCityDropdown(true);
 
     const timer = setTimeout(async () => {
       try {
-        const results = await searchCitiesGeocoding(cityQuery, controller.signal);
+        const results = await searchCitiesGeocoding(trimmed, controller.signal);
         setCityResults(results);
         setShowCityDropdown(true);
       } catch (err) {
@@ -179,13 +183,13 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
       } finally {
         setIsSearchingCity(false);
       }
-    }, 350);
+    }, 300);
 
     return () => {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [cityQuery, formData.ciudad]);
+  }, [formData.ciudad]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -198,6 +202,7 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
   }, []);
 
   const handleSelectCityResult = (item: GeocodingResult) => {
+    isCitySelectedRef.current = true;
     const formattedCity = [item.name, item.admin1, item.country].filter(Boolean).join(', ');
     const altitude = item.elevation !== undefined ? Math.round(item.elevation) : 0;
     const timezone = item.timezone || 'America/Guayaquil';
@@ -208,7 +213,6 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
       altitud_msnm: altitude,
       timezone: timezone,
     }));
-    setCityQuery(formattedCity);
     setShowCityDropdown(false);
     toast.show(`Altitud (${altitude} msnm) y zona horaria (${timezone}) autocompletadas`, 'info');
   };
@@ -238,7 +242,6 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
 
   const handleClose = () => {
     setFormData(initialPayload);
-    setCityQuery('');
     setCityResults([]);
     setShowCityDropdown(false);
     setErrors({});
@@ -544,26 +547,44 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
                   <Input
                     label="Ciudad (Buscador mundial)"
                     placeholder="Escribe una ciudad (ej: Bogotá, Quito, Chía...)"
-                    value={cityQuery}
+                    value={formData.ciudad || ''}
                     onChange={e => {
-                      const val = e.target.value;
-                      setCityQuery(val);
-                      updateField('ciudad', val);
-                      if (val.trim().length >= 2) setShowCityDropdown(true);
+                      isCitySelectedRef.current = false;
+                      updateField('ciudad', e.target.value);
                     }}
                     onFocus={() => {
-                      if (cityResults.length > 0) setShowCityDropdown(true);
+                      if ((formData.ciudad || '').trim().length >= 2) setShowCityDropdown(true);
                     }}
                     iconPrefix={<MapPin size={14} />}
                     iconSuffix={isSearchingCity ? <Loader2 size={13} className="animate-spin text-purple-400" /> : undefined}
                     autoComplete="off"
                   />
-                  {showCityDropdown && cityResults.length > 0 && (
+                  {showCityDropdown && (formData.ciudad || '').trim().length >= 2 && (
                     <div className="absolute top-[100%] left-0 w-full mt-1 bg-surface-panel border border-surface-border rounded-lg shadow-2xl z-50 flex flex-col p-1.5 max-h-[220px] overflow-y-auto scrollbar-thin">
                       <div className="px-2 py-1 text-[9px] uppercase tracking-wider text-surface-muted font-bold border-b border-surface-border mb-1 flex items-center justify-between">
                         <span>Ciudades encontradas</span>
-                        <span className="text-[9px] text-purple-400 font-normal">Open-Meteo Geocoding</span>
+                        {isSearchingCity ? (
+                          <span className="text-[9px] text-purple-400 flex items-center gap-1">
+                            <Loader2 size={10} className="animate-spin" /> Buscando...
+                          </span>
+                        ) : (
+                          <span className="text-[9px] text-surface-muted font-normal">Open-Meteo Geocoding</span>
+                        )}
                       </div>
+
+                      {isSearchingCity && cityResults.length === 0 && (
+                        <div className="p-3 text-xs text-center text-surface-muted flex items-center justify-center gap-2">
+                          <Loader2 size={13} className="animate-spin text-purple-400" />
+                          <span>Buscando ciudades...</span>
+                        </div>
+                      )}
+
+                      {!isSearchingCity && cityResults.length === 0 && (
+                        <div className="p-3 text-xs text-center text-surface-muted">
+                          No se encontraron resultados para "{formData.ciudad}"
+                        </div>
+                      )}
+
                       {cityResults.map(item => (
                         <button
                           key={item.id}
