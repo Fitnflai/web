@@ -13,7 +13,6 @@ import { useAppStore } from '@/store/useAppStore'
 import { useRepositories } from '@/core/repositories'
 import { cn } from '@/utils'
 import type { User, PlanItem, Workout, RestDay, WorkoutExercise, Exercise } from '@/types'
-import { PLAN_NAMES } from '@/constants'
 import { toast } from '@/components/ui/Toast'
 import type { PredefinedWorkout, Comment, DailyNutritionHydrationLog, Comida, BiometricEntry } from '@/core/domain/types'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -3131,6 +3130,7 @@ export function UserDetailPage() {
         ciudad: headerData.ciudad ?? merged.ciudad,
         plan_idx: headerData.plan_idx ?? merged.plan_idx,
         nombre_plan_activo: headerData.nombre_plan_activo ?? merged.nombre_plan_activo,
+        membresia: headerData.membresia ?? merged.membresia,
         // The header data contains nombre_disciplina, which is what we need.
         nombre_disciplina: headerData.nombre_disciplina ?? merged.nombre_disciplina,
         registro_activo: headerData.registro_activo ?? merged.registro_activo,
@@ -3187,8 +3187,13 @@ export function UserDetailPage() {
             <span className="text-[17px] font-bold text-white">
               {isLoadingHeader ? 'Cargando...' : (headerData?.nombre || u.nombre)}
             </span>
-            <Badge variant="yellow">
-              👑 {PLAN_NAMES[isLoadingHeader ? 0 : (headerData?.plan_idx ?? u.plan_idx)]}
+            <Badge variant={(() => {
+              const plan = u.nombre_plan_activo || u.membresia || '';
+              if (plan === 'Coach') return 'purple';
+              if (plan === 'Pro' || plan === 'Elite') return 'yellow';
+              return 'muted';
+            })()}>
+              👑 {u.nombre_plan_activo || u.membresia || 'Coach'}
             </Badge>
           </div>
           <div className="text-[11px] text-surface-muted">
