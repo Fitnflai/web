@@ -184,7 +184,7 @@ export interface UpdateWorkoutCommentPayload {
 }
 
 export interface AddWorkoutSessionPayload {
-  id_plan_entrenamiento?: string;
+  id_plan_entrenamiento?: string | null;
   fecha_programada: string;
   tipo: string;
   nombre: string;

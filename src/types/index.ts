@@ -198,6 +198,7 @@ export interface Workout {
   nombre?: string
   numero_sesion?: string
   nivel?: string
+  id_plan_entrenamiento?: string | null
 }
 
 export interface RestDay {

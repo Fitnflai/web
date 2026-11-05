@@ -1041,6 +1041,7 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
     if (planData && planData.entrenamientos) {
           const mapped: PlanItem[] = planData.entrenamientos.map((item: any) => ({
             ...item,
+            id_plan_entrenamiento: item.id_plan_entrenamiento || planData.id_plan_entrenamiento || null,
             estado: (item.estado || 'pendiente').toLowerCase(),
             tipo: item.tipo || item.tipo_entrenamiento || 'Fuerza',
         macros_objetivo_kcal: item.macros_objetivo_kcal ?? item.calorias_objetivo ?? 0,
@@ -1135,10 +1136,15 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
       if (isDraft) {
         const sessionIdx = dayWorkouts.findIndex(w => w.id_entrenamiento === activeWorkout.id_entrenamiento)
         const sessionNumber = activeWorkout.numero_sesion || String(sessionIdx >= 0 ? sessionIdx + 1 : dayWorkouts.length)
-        const planId = (planData as any)?.id_plan_entrenamiento || (planData as any)?.id_plan || (planItems.find(p => (p as any).id_plan_entrenamiento) as any)?.id_plan_entrenamiento
+        const planId = (planData as any)?.id_plan_entrenamiento ||
+                       (planData as any)?.entrenamientos?.find((e: any) => e?.id_plan_entrenamiento)?.id_plan_entrenamiento ||
+                       (planItems.find(p => (p as any).id_plan_entrenamiento) as any)?.id_plan_entrenamiento ||
+                       (activeWorkout as any).id_plan_entrenamiento ||
+                       (planData as any)?.id_plan ||
+                       null
 
         const payload: AddWorkoutSessionPayload = {
-          id_plan_entrenamiento: planId,
+          id_plan_entrenamiento: planId ?? null,
           fecha_programada: activeWorkout.fecha_programada,
           tipo: activeWorkout.tipo || activeWorkout.tipo_entrenamiento || 'Fuerza',
           nombre: activeWorkout.nombre || activeWorkout.titulo_entrenamiento || activeWorkout.tipo || `Sesión ${sessionNumber}`,
@@ -1156,6 +1162,9 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
         if (newId) {
           activeWorkout.id_entrenamiento = newId
           setSelectedWorkoutId(newId)
+        }
+        if (res?.id_plan_entrenamiento || res?.data?.id_plan_entrenamiento) {
+          activeWorkout.id_plan_entrenamiento = res?.id_plan_entrenamiento || res?.data?.id_plan_entrenamiento
         }
         await repos.workouts.saveWorkout(activeWorkout)
         toast.show('Sesión creada con éxito', 'success')
