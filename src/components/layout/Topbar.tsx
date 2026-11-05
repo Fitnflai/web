@@ -1,54 +1,181 @@
-import { Bell, RefreshCw, UserCircle, Sun, Moon, Globe, LogOut } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState, useRef } from 'react'
+import { Bell, RefreshCw, Sun, Moon, Globe, ChevronDown } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import { useAppStore } from '@/store/useAppStore'
-import { NAV_TITLES } from '@/constants'
-import { useTranslation } from '@/i18n/useTranslation'
+import { profileService } from '@/services/endpoints/users'
+import { specialistsService } from '@/services/endpoints/specialists'
+
+declare global {
+  interface Window {
+    google: any
+  }
+}
+
+const LANGUAGES = [
+  { code: '', label: 'Español', flag: '🇪🇸' },
+  { code: 'en', label: 'English', flag: '🇺🇸' },
+  { code: 'pt', label: 'Português', flag: '🇧🇷' },
+  { code: 'fr', label: 'Français', flag: '🇫🇷' },
+  { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
+  { code: 'it', label: 'Italiano', flag: '🇮🇹' },
+]
+
+function changeGoogleTranslateLanguage(langCode: string) {
+  if (!langCode) {
+    // Revert to original: clear googtrans cookie and reload
+    const domain = window.location.hostname
+    document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
+    document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.${domain};`
+    window.location.reload()
+    return
+  }
+
+  const select = document.querySelector('.goog-te-combo') as HTMLSelectElement | null
+  if (select) {
+    select.value = langCode
+    select.dispatchEvent(new Event('change'))
+  }
+}
 
 export function Topbar() {
-  const navigate = useNavigate()
-  const { currentPage, userRole, setUserRole, setPage, language, setLanguage, isDarkMode, toggleDarkMode } = useAppStore()
+  const { userRole, isDarkMode, toggleDarkMode } = useAppStore()
+  const [langOpen, setLangOpen] = useState(false)
+  const [currentLang, setCurrentLang] = useState(LANGUAGES[0])
+  const [imgError, setImgError] = useState(false)
+  const langRef = useRef<HTMLDivElement>(null)
 
-  const handleLogout = () => {
-    localStorage.removeItem('access_token')
-    localStorage.removeItem('fitnflai_user_role')
-    localStorage.removeItem('fitnflai_current_page')
-    navigate('/login', { replace: true })
-  }
-  const { t } = useTranslation()
-  const title = NAV_TITLES[currentPage] ?? 'Fitnflai Admin'
+  const { data: adminProfile } = useQuery({
+    queryKey: ['adminProfile'],
+    queryFn: () => profileService.getAdminProfile(),
+    enabled: userRole === 'admin',
+    staleTime: 1000 * 60 * 10,
+  })
 
-  const toggleRole = () => {
-    const nextRole = userRole === 'admin' ? 'specialist' : 'admin'
-    setUserRole(nextRole)
-    setPage(nextRole === 'admin' ? 'dashboard' : 'dashboard-especialista')
-  }
+  const { data: specialistProfile } = useQuery({
+    queryKey: ['specialistProfile'],
+    queryFn: specialistsService.getSpecialistProfile,
+    enabled: userRole === 'specialist',
+    staleTime: 1000 * 60 * 10,
+  })
 
-  const toggleLang = () => {
-    setLanguage(language === 'ES' ? 'EN' : 'ES')
+  const userName =
+    (userRole === 'admin' ? adminProfile?.admin?.nombre : specialistProfile?.nombre) ||
+    localStorage.getItem('fitnflai_user_name') ||
+    (userRole === 'admin' ? 'Administrador' : 'Especialista')
+
+  const avatarUrl =
+    userRole === 'admin'
+      ? adminProfile?.admin?.avatar_url
+      : (specialistProfile?.avatar_url || localStorage.getItem('fitnflai_specialist_avatar'))
+
+  const initials = userName
+    ? userName
+        .trim()
+        .split(' ')
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((n) => n[0].toUpperCase())
+        .join('')
+    : 'U'
+
+  // Initialize Google Translate (hidden)
+  useEffect(() => {
+    const initTranslate = () => {
+      const el = document.getElementById('google_translate_element')
+      if (window.google?.translate?.TranslateElement && el && !el.hasChildNodes()) {
+        new window.google.translate.TranslateElement(
+          {
+            pageLanguage: 'es',
+            includedLanguages: 'en,es,pt,fr,de,it',
+            autoDisplay: false,
+          },
+          'google_translate_element'
+        )
+      }
+    }
+
+    initTranslate()
+    const interval = setInterval(() => {
+      if (window.google?.translate?.TranslateElement) {
+        initTranslate()
+        clearInterval(interval)
+      }
+    }, 500)
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (langRef.current && !langRef.current.contains(e.target as Node)) {
+        setLangOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  const selectLanguage = (lang: typeof LANGUAGES[number]) => {
+    setCurrentLang(lang)
+    changeGoogleTranslateLanguage(lang.code)
+    setLangOpen(false)
   }
 
   return (
     <header className="h-[50px] bg-surface-panel border-b border-surface-border flex items-center px-5 gap-3 sticky top-0 z-20 flex-shrink-0 dark:bg-surface-panel dark:border-surface-border">
-      <h1 className="text-sm font-semibold flex-1 truncate dark:text-white">{title}</h1>
-      
-      {/* Role Toggle */}
-      <button 
-        onClick={toggleRole}
-        className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] bg-surface-card border border-surface-border rounded-lg hover:border-brand-orange cursor-pointer transition-colors text-current dark:text-white dark:bg-surface-card dark:border-surface-border"
-      >
-        <UserCircle size={12} />
-        <span>{userRole === 'admin' ? 'Admin' : 'Especialista'}</span>
-      </button>
+      {/* Avatar y Nombre del Usuario conectado a la izquierda */}
+      <div className="flex items-center gap-2.5 flex-1 min-w-0">
+        {avatarUrl && !imgError ? (
+          <img
+            src={avatarUrl}
+            alt={userName}
+            onError={() => setImgError(true)}
+            className="w-8 h-8 rounded-full object-cover border border-surface-border flex-shrink-0"
+          />
+        ) : (
+          <div className="w-8 h-8 rounded-full bg-brand-orange flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0 shadow-sm">
+            {initials}
+          </div>
+        )}
+        <span className="text-sm font-semibold truncate text-current dark:text-white">
+          {userName}
+        </span>
+      </div>
 
-      {/* Language Toggle */}
-      <button 
-        onClick={toggleLang}
-        className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] bg-surface-card border border-surface-border rounded-lg hover:border-brand-orange cursor-pointer transition-colors text-current dark:text-white dark:bg-surface-card dark:border-surface-border"
-        title="Toggle Language / Cambiar Idioma"
-      >
-        <Globe size={12} />
-        <span>{language}</span>
-      </button>
+      {/* Selector de Idioma Custom (Google Translate) */}
+      <div ref={langRef} className="relative">
+        <button
+          onClick={() => setLangOpen(!langOpen)}
+          className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] bg-surface-card border border-surface-border rounded-lg hover:border-brand-orange cursor-pointer transition-colors text-current dark:text-white dark:bg-surface-card dark:border-surface-border"
+        >
+          <Globe size={12} />
+          <span>{currentLang.flag} {currentLang.label}</span>
+          <ChevronDown size={10} className={`transition-transform ${langOpen ? 'rotate-180' : ''}`} />
+        </button>
+
+        {langOpen && (
+          <div className="absolute top-full right-0 mt-1 bg-surface-card border border-surface-border rounded-lg shadow-lg overflow-hidden z-50 min-w-[140px] dark:bg-surface-card dark:border-surface-border">
+            {LANGUAGES.map((lang) => (
+              <button
+                key={lang.code}
+                onClick={() => selectLanguage(lang)}
+                className={`w-full text-left px-3 py-1.5 text-[11px] flex items-center gap-2 hover:bg-brand-orange/10 transition-colors cursor-pointer ${
+                  currentLang.code === lang.code
+                    ? 'text-brand-orange font-semibold'
+                    : 'text-current dark:text-white'
+                }`}
+              >
+                <span>{lang.flag}</span>
+                <span>{lang.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Widget Google Translate oculto */}
+      <div id="google_translate_element" className="!absolute !opacity-0 !pointer-events-none !h-0 !overflow-hidden"></div>
 
       {/* Theme Toggle */}
       <button 
@@ -74,20 +201,6 @@ export function Topbar() {
       {/* Refresh */}
       <button aria-label="Actualizar" className="w-8 h-8 bg-surface-card border border-surface-border rounded-lg flex items-center justify-center text-surface-muted hover:text-white cursor-pointer dark:bg-surface-card dark:border-surface-border">
         <RefreshCw size={15} />
-      </button>
-
-      {/* Profile */}
-      <div className="w-8 h-8 rounded-full bg-brand-orange flex items-center justify-center text-[11px] font-bold text-white">AD</div>
-
-      {/* Logout */}
-      <button
-        onClick={handleLogout}
-        aria-label="Cerrar Sesión"
-        title={language === 'ES' ? 'Cerrar Sesión' : 'Log Out'}
-        className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] bg-surface-card border border-surface-border rounded-lg hover:border-brand-red hover:text-brand-red text-surface-muted cursor-pointer transition-colors"
-      >
-        <LogOut size={12} className="text-brand-red" />
-        <span className="hidden sm:inline font-medium">{language === 'ES' ? 'Salir' : 'Salir'}</span>
       </button>
     </header>
   )

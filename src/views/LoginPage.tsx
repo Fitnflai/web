@@ -66,6 +66,11 @@ export function LoginPage() {
       // Store live JWT token and user role
       localStorage.setItem('access_token', res.token.access_token)
       localStorage.setItem('fitnflai_user_role', selectedRole)
+      if (res.user?.apodo) {
+        localStorage.setItem('fitnflai_user_name', res.user.apodo)
+      } else if (res.user?.email) {
+        localStorage.setItem('fitnflai_user_name', res.user.email.split('@')[0])
+      }
       setUserRole(selectedRole)
       setPage(selectedRole === 'admin' ? 'dashboard' : 'dashboard-especialista')
 

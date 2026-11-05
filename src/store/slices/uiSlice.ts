@@ -10,8 +10,8 @@ export interface UIState {
 }
 
 const getInitialLanguage = (): 'ES' | 'EN' => {
-  const saved = localStorage.getItem('fitnflai_language');
-  return saved === 'EN' ? 'EN' : 'ES';
+  // Google Translate handles all translations — always default to ES
+  return 'ES';
 };
 
 const getInitialTheme = (): boolean => {

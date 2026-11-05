@@ -103,3 +103,9 @@
     color: rgba(var(--color-text), 1) !important;
   }
 }
+
+/* Google Translate — hide default UI, keep functionality */
+.goog-te-banner-frame { display: none !important; }
+body > .skiptranslate { display: none !important; }
+body { top: 0 !important; position: static !important; }
+.goog-te-gadget { font-size: 0 !important; }

@@ -344,6 +344,22 @@ const FUERZA_BODY_PARTS = [
   { id: 'pantorrillas', label: 'Pantorrillas', keywords: ['pantorrilla', 'gemelo', 'soleo', 'sóleo', 'talon', 'talón'] },
 ] as const;
 
+const isUUID = (id: string) => {
+  if (!id) return false;
+  if (
+    id.startsWith('uid-') ||
+    id.startsWith('pro-') ||
+    id.startsWith('esp-') ||
+    id.startsWith('ex-') ||
+    id.startsWith('we-') ||
+    id.startsWith('draft-') ||
+    id.startsWith('temp-') ||
+    id.startsWith('wk-') ||
+    id.length < 10
+  ) return false;
+  return true;
+};
+
 function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = false, gender, idioma, specialistName = 'Especialista', specialistSpecialty = 'Pro' }: ExerciseModalProps) {
   const repos = useRepositories()
   const [localExercise, setLocalExercise] = useState<WorkoutExercise | null>(null)
@@ -458,6 +474,20 @@ function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = fal
         };
       });
       return;
+    }
+    const foundInList = exercisesList.find(e => e.id_ejercicio === idEjercicio);
+    if (foundInList) {
+      setLocalExercise(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          ejercicio: {
+            ...prev.ejercicio,
+            id_ejercicio: foundInList.id_ejercicio,
+            nombre: foundInList.nombre
+          }
+        };
+      });
     }
     try {
       const detail = await specialistsService.getExerciseDetail(idEjercicio)
@@ -649,7 +679,7 @@ function ExerciseDetailModal({ isOpen, onClose, exercise, onSave, readOnly = fal
                   options={selectOptions}
                   value={localExercise.ejercicio.id_ejercicio}
                   onChange={handleExerciseSelect}
-                  disabled={readOnly || isCreatingNewExercise}
+                  disabled={readOnly}
                 />
               </div>
                {isCreatingNewExercise && !isEnglish && (
@@ -954,12 +984,6 @@ disabled={readOnly}
   )
 }
 
-const isUUID = (id: string) => {
-  if (!id) return false
-  if (id.startsWith('uid-') || id.startsWith('pro-') || id.startsWith('esp-') || id.length < 10) return false
-  return true
-}
-
 // ─── Plan Tab (Continuous Calendar with Drag & Drop) ─────────────
 export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: { userId: string; readOnly?: boolean; gender?: string; idioma?: string }) {
   const { data: specialistProfile } = useQuery<any>({
@@ -980,6 +1004,7 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
   const [planItems, setPlanItems] = useState<PlanItem[]>([])
   const [selectedDateStr, setSelectedDateStr] = useState(formatDateISO(new Date()))
   const [updateTick, setUpdateTick] = useState(0)
+  const [hasUnsavedWorkoutChanges, setHasUnsavedWorkoutChanges] = useState(false)
 
   // Isolated Exercise details modal state (nested popup)
   const [selectedExercise, setSelectedExercise] = useState<WorkoutExercise | null>(null)
@@ -1088,6 +1113,25 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
     return dayWorkouts.find(w => w.id_entrenamiento === selectedWorkoutId) || dayWorkouts[0]
   }, [dayWorkouts, selectedWorkoutId])
 
+  useEffect(() => {
+    setHasUnsavedWorkoutChanges(false)
+  }, [selectedWorkoutId, selectedDateStr])
+
+  const isWorkoutDraft = Boolean(
+    activeWorkout && (
+      activeWorkout.id_entrenamiento.startsWith('draft-') ||
+      activeWorkout.id_entrenamiento.startsWith('temp-') ||
+      activeWorkout.id_entrenamiento.startsWith('wk-')
+    )
+  )
+  const canSaveWorkout = !readOnly && Boolean(activeWorkout && (isWorkoutDraft || hasUnsavedWorkoutChanges))
+
+  const updateActiveWorkoutField = (fn: () => void) => {
+    fn()
+    setHasUnsavedWorkoutChanges(true)
+    setUpdateTick(t => t + 1)
+  }
+
   const activeRestDay = useMemo(() => {
     return planItems.find(item => 'id_descanso' in item && item.fecha_programada === selectedDateStr) as RestDay | undefined
   }, [planItems, selectedDateStr])
@@ -1187,6 +1231,7 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
         toast.show('Sesión guardada con éxito', 'success')
       }
 
+      setHasUnsavedWorkoutChanges(false)
       queryClient.invalidateQueries({ queryKey: ['userPlanTab', userId] })
       setUpdateTick(t => t + 1)
     } catch (err: any) {
@@ -1331,7 +1376,7 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
       id_entrenamiento_ejercicio: `we-${Date.now()}`,
       series: 4,
       repeticiones: '12',
-      orden: activeWorkout.ejercicios_asociados.length + 1,
+      orden: (activeWorkout.ejercicios_asociados?.length || 0) + 1,
       descanso_segundos: 60,
       duracion_segundos: 120,
       peso_objetivo: 10,
@@ -1341,9 +1386,10 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
         nombre: 'Nuevo Ejercicio',
         descripcion: 'Escribe la descripción del ejercicio...',
         multimedia_url: '',
-        tipo: 'Fuerza',
+        tipo: activeWorkout.tipo || 'Fuerza',
         necesita_mapa: false,
         instrucciones: {
+          objetivo: 'El objetivo específico de este ejercicio en el plan...',
           posicion_inicial: 'Listo en posición de inicio.',
           ejecucion: 'Ejecuta el movimiento de forma controlada.',
           consejos_tecnicos: ['Mantén la postura erguida'],
@@ -1351,20 +1397,7 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
         }
       }
     }
-    // Immutable update
-    const updatedPlanItems = planItems.map(item => {
-      if ('id_entrenamiento' in item && item.id_entrenamiento === activeWorkout.id_entrenamiento) {
-        return {
-          ...item,
-          ejercicios_asociados: [...(item.ejercicios_asociados || []), newWorkoutExercise]
-        }
-      }
-      return item
-    })
-    
-    setPlanItems(updatedPlanItems)
-    setUpdateTick(t => t + 1)
-    toast.show('Nuevo ejercicio añadido', 'success')
+    setSelectedExercise(newWorkoutExercise)
   }
 
   // Remove Exercise from active Workout
@@ -1607,16 +1640,18 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
               >
                 <Trash2 size={13} /> {isDeletingWorkout ? 'Eliminando...' : 'Eliminar Sesión'}
               </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                style={{ background: '#4CAF82', borderColor: '#4CAF82' }}
-                onClick={handleSaveActiveWorkout}
-                disabled={isSavingWorkout || isDeletingWorkout}
-                className="gap-1.5 text-[12px] py-1.5 px-3 font-semibold"
-              >
-                <Save size={13} /> {isSavingWorkout ? 'Guardando...' : (activeWorkout.id_entrenamiento.startsWith('draft-') || activeWorkout.id_entrenamiento.startsWith('temp-') || activeWorkout.id_entrenamiento.startsWith('wk-')) ? 'Crear Sesión' : 'Guardar Sesión'}
-              </Button>
+              {canSaveWorkout && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  style={{ background: '#4CAF82', borderColor: '#4CAF82' }}
+                  onClick={handleSaveActiveWorkout}
+                  disabled={isSavingWorkout || isDeletingWorkout}
+                  className="gap-1.5 text-[12px] py-1.5 px-3 font-semibold"
+                >
+                  <Save size={13} /> {isSavingWorkout ? 'Guardando...' : 'Guardar Sesión'}
+                </Button>
+              )}
             </div>
           )}
         </div>
@@ -1637,9 +1672,10 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
                   label="Nombre del Entrenamiento"
                   value={activeWorkout.nombre ?? activeWorkout.titulo_entrenamiento ?? ''}
                   onChange={(e) => {
-                    activeWorkout.nombre = e.target.value
-                    activeWorkout.titulo_entrenamiento = e.target.value
-                    setUpdateTick(t => t + 1)
+                    updateActiveWorkoutField(() => {
+                      activeWorkout.nombre = e.target.value
+                      activeWorkout.titulo_entrenamiento = e.target.value
+                    })
                   }}
                   disabled={readOnly}
                   placeholder="Ej: Ejemplo Fuerza"
@@ -1649,9 +1685,10 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
                   <select
                     value={activeWorkout.tipo || activeWorkout.tipo_entrenamiento || ''}
                     onChange={(e) => {
-                      activeWorkout.tipo = e.target.value
-                      activeWorkout.tipo_entrenamiento = e.target.value
-                      setUpdateTick(t => t + 1)
+                      updateActiveWorkoutField(() => {
+                        activeWorkout.tipo = e.target.value
+                        activeWorkout.tipo_entrenamiento = e.target.value
+                      })
                     }}
                     className="form-input text-[12px] py-2 bg-surface-card border border-surface-border font-semibold text-white outline-none transition-colors focus:border-brand-orange"
                     disabled={readOnly}
@@ -1679,8 +1716,9 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
                   <select
                     value={activeWorkout.numero_sesion || String(dayWorkouts.findIndex(w => w.id_entrenamiento === activeWorkout.id_entrenamiento) + 1 || '1')}
                     onChange={(e) => {
-                      activeWorkout.numero_sesion = e.target.value
-                      setUpdateTick(t => t + 1)
+                      updateActiveWorkoutField(() => {
+                        activeWorkout.numero_sesion = e.target.value
+                      })
                     }}
                     className="form-input text-[12px] py-2 bg-surface-card border border-surface-border font-semibold text-white outline-none transition-colors focus:border-brand-orange"
                     disabled={readOnly}
@@ -1695,8 +1733,9 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
                   <select
                     value={activeWorkout.nivel || 'Intermedio'}
                     onChange={(e) => {
-                      activeWorkout.nivel = e.target.value
-                      setUpdateTick(t => t + 1)
+                      updateActiveWorkoutField(() => {
+                        activeWorkout.nivel = e.target.value
+                      })
                     }}
                     className="form-input text-[12px] py-2 bg-surface-card border border-surface-border font-semibold text-white outline-none transition-colors focus:border-brand-orange"
                     disabled={readOnly}
@@ -1710,8 +1749,9 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
                   label="Zona de Esfuerzo (ej: RPE 7-8 / Z1)"
                   value={activeWorkout.zona_esfuerzo || ''}
                   onChange={(e) => {
-                    activeWorkout.zona_esfuerzo = e.target.value
-                    setUpdateTick(t => t + 1)
+                    updateActiveWorkoutField(() => {
+                      activeWorkout.zona_esfuerzo = e.target.value
+                    })
                   }}
                   disabled={readOnly}
                   placeholder="Ej: RPE 7-8"
@@ -1721,8 +1761,9 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
                   type="number"
                   value={activeWorkout.macros_objetivo_kcal || 0}
                   onChange={(e) => {
-                    activeWorkout.macros_objetivo_kcal = Number(e.target.value)
-                    setUpdateTick(t => t + 1)
+                    updateActiveWorkoutField(() => {
+                      activeWorkout.macros_objetivo_kcal = Number(e.target.value)
+                    })
                   }}
                   disabled={readOnly}
                 />
@@ -1737,8 +1778,9 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
                   <select
                     value={activeWorkout.estado?.toLowerCase() || 'pendiente'}
                     onChange={(e) => {
-                      activeWorkout.estado = e.target.value
-                      setUpdateTick(t => t + 1)
+                      updateActiveWorkoutField(() => {
+                        activeWorkout.estado = e.target.value
+                      })
                     }}
                     className="form-input text-[12px] py-2 bg-surface-card border border-surface-border font-semibold text-white outline-none transition-colors focus:border-brand-orange"
                     disabled={readOnly}
@@ -1753,8 +1795,9 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
                   <textarea
                     value={activeWorkout.descripcion}
                     onChange={(e) => {
-                      activeWorkout.descripcion = e.target.value
-                      setUpdateTick(t => t + 1)
+                      updateActiveWorkoutField(() => {
+                        activeWorkout.descripcion = e.target.value
+                      })
                     }}
                     rows={2}
                     className="bg-surface-card2 border border-surface-border rounded-lg p-2.5 text-[11px] text-white outline-none focus:border-brand-orange resize-none"
@@ -1949,79 +1992,140 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
           specialistName={specialistName}
           specialistSpecialty={specialistSpecialty}
           onSave={async (updated) => {
-            if (activeWorkout) {
-              try {
-                const isNew = updated.id_entrenamiento_ejercicio.startsWith('we-');
-                    
-                if (isNew) {
-                  if (updated.ejercicio.id_ejercicio === 'otro') {
-                    const newExerciseId = await specialistsService.registerNewExercise({
-                      nombre: updated.ejercicio.nombre,
-                      descripcion: updated.ejercicio.descripcion || '',
-                      tipo: updated.ejercicio.tipo || 'Fuerza',
-                      necesita_mapa: updated.ejercicio.necesita_mapa || false,
-                      instrucciones: {
-                        objetivo: updated.ejercicio.instrucciones?.objetivo || '',
-                        ejecucion: updated.ejercicio.instrucciones?.ejecucion || '',
-                        errores_comunes: updated.ejercicio.instrucciones?.errores_comunes || '',
-                        posicion_inicial: updated.ejercicio.instrucciones?.posicion_inicial || '',
-                        consejos_tecnicos: updated.ejercicio.instrucciones?.consejos_tecnicos || []
-                      }
-                    });
+            if (!activeWorkout) return;
+            try {
+              let workoutId = activeWorkout.id_entrenamiento;
+              const isWorkoutDraft = workoutId.startsWith('draft-') || workoutId.startsWith('temp-') || workoutId.startsWith('wk-');
+
+              // 1. Si el entrenamiento todavía es un borrador (no existe en backend), persistirlo primero
+              if (isWorkoutDraft) {
+                const sessionIdx = dayWorkouts.findIndex(w => w.id_entrenamiento === activeWorkout.id_entrenamiento);
+                const sessionNumber = activeWorkout.numero_sesion || String(sessionIdx >= 0 ? sessionIdx + 1 : dayWorkouts.length);
+                const planId = (planData as any)?.id_plan_entrenamiento ||
+                               (planData as any)?.entrenamientos?.find((e: any) => e?.id_plan_entrenamiento)?.id_plan_entrenamiento ||
+                               (planItems.find(p => (p as any).id_plan_entrenamiento) as any)?.id_plan_entrenamiento ||
+                               (activeWorkout as any).id_plan_entrenamiento ||
+                               (planData as any)?.id_plan ||
+                               null;
+
+                const workoutPayload: AddWorkoutSessionPayload = {
+                  id_plan_entrenamiento: planId ?? null,
+                  fecha_programada: activeWorkout.fecha_programada,
+                  tipo: activeWorkout.tipo || activeWorkout.tipo_entrenamiento || 'Fuerza',
+                  nombre: activeWorkout.nombre || activeWorkout.titulo_entrenamiento || activeWorkout.tipo || `Sesión ${sessionNumber}`,
+                  numero_sesion: String(sessionNumber),
+                  descripcion: activeWorkout.descripcion || '',
+                  zona_esfuerzo: activeWorkout.zona_esfuerzo || '',
+                  calorias_objetivo: Number(activeWorkout.macros_objetivo_kcal ?? (activeWorkout as any).calorias_objetivo ?? 0),
+                  nivel: activeWorkout.nivel || 'Intermedio'
+                };
+
+                const res = await specialistsService.addWorkoutSession(userId, workoutPayload);
+                const newWorkoutId = res?.id_entrenamiento || res?.id || res?.data?.id_entrenamiento;
+                if (newWorkoutId) {
+                  activeWorkout.id_entrenamiento = newWorkoutId;
+                  workoutId = newWorkoutId;
+                  setSelectedWorkoutId(newWorkoutId);
+                }
+                if (res?.id_plan_entrenamiento || res?.data?.id_plan_entrenamiento) {
+                  activeWorkout.id_plan_entrenamiento = res?.id_plan_entrenamiento || res?.data?.id_plan_entrenamiento;
+                }
+              }
+
+              const isNew = updated.id_entrenamiento_ejercicio.startsWith('we-');
+              const originalWeId = updated.id_entrenamiento_ejercicio;
+
+              if (isNew) {
+                // 2. Si el ejercicio no existe en el catálogo, registrarlo primero para obtener UUID real
+                const needsRegistration = updated.ejercicio.id_ejercicio === 'otro' || !isUUID(updated.ejercicio.id_ejercicio);
+                if (needsRegistration) {
+                  const newExerciseId = await specialistsService.registerNewExercise({
+                    nombre: updated.ejercicio.nombre || 'Nuevo Ejercicio',
+                    descripcion: updated.ejercicio.descripcion || '',
+                    tipo: updated.ejercicio.tipo || 'Fuerza',
+                    necesita_mapa: updated.ejercicio.necesita_mapa || false,
+                    instrucciones: {
+                      objetivo: updated.ejercicio.instrucciones?.objetivo || '',
+                      ejecucion: updated.ejercicio.instrucciones?.ejecucion || '',
+                      errores_comunes: updated.ejercicio.instrucciones?.errores_comunes || '',
+                      posicion_inicial: updated.ejercicio.instrucciones?.posicion_inicial || '',
+                      consejos_tecnicos: updated.ejercicio.instrucciones?.consejos_tecnicos || []
+                    }
+                  });
+                  if (newExerciseId) {
                     updated.ejercicio.id_ejercicio = newExerciseId;
                   }
-                  const payload = {
-                    id_ejercicio: updated.ejercicio.id_ejercicio,
-                    orden: updated.orden || 1,
-                    series: updated.series || 4,
-                    descanso_segundos: updated.descanso_segundos || 60,
-                    repeticiones: parseInt(String(updated.repeticiones)) || 0,
-                    distancia_metros: (updated as any).distancia_metros || 0,
-                    peso_objetivo: updated.peso_objetivo || 0,
-                    duracion_segundos: updated.duracion_segundos || 0,
-                    comentario: updated.comentario || '',
-                    estado: updated.estado || 'pendiente'
-                  };
-                  const response = await specialistsService.addExerciseToWorkout(activeWorkout.id_entrenamiento, payload);
-                  if (response && (typeof response === 'string' || response.id_entrenamiento_ejercicio)) {
-                    updated.id_entrenamiento_ejercicio = typeof response === 'string' ? response : response.id_entrenamiento_ejercicio;
-                  }
-                } else {
-                  const payload = {
-                    orden: updated.orden || 1,
-                    series: updated.series || 4,
-                    descanso_segundos: updated.descanso_segundos || 60,
-                    repeticiones: parseInt(String(updated.repeticiones)) || 0,
-                    distancia_metros: (updated as any).distancia_metros || 0,
-                    peso_objetivo: updated.peso_objetivo || 0,
-                    duracion_segundos: updated.duracion_segundos || 0,
-                    comentario: updated.comentario || '',
-                    estado: updated.estado || 'pendiente'
-                  };
-                  await specialistsService.updateExerciseInWorkout(updated.id_entrenamiento_ejercicio, payload);
                 }
-              } catch (apiErr) {
-                console.error('Failed to save exercise on backend:', apiErr);
-              }
-                  
-               // Immutable update
-               const updatedPlanItems = planItems.map(item => {
-                 if ('id_entrenamiento' in item && item.id_entrenamiento === activeWorkout.id_entrenamiento) {
-                   return {
-                     ...item,
-                     ejercicios_asociados: (item.ejercicios_asociados || []).map(we =>
-                       we.id_entrenamiento_ejercicio === updated.id_entrenamiento_ejercicio ? updated : we
-                     )
-                   }
-                 }
-                 return item
-               })
 
-               setPlanItems(updatedPlanItems)
-               await repos.workouts.saveWorkout(activeWorkout)
-               setSelectedExercise(null)
-               setUpdateTick(t => t + 1)
-              toast.show('Cambios de ejercicio guardados con éxito', 'success')
+                // 3. Asociar ejercicio al entrenamiento en la base de datos
+                const payload = {
+                  id_ejercicio: updated.ejercicio.id_ejercicio,
+                  orden: updated.orden || 1,
+                  series: Number(updated.series) || 4,
+                  descanso_segundos: Number(updated.descanso_segundos) || 60,
+                  repeticiones: parseInt(String(updated.repeticiones)) || 0,
+                  distancia_metros: Number((updated as any).distancia_metros) || 0,
+                  peso_objetivo: Number(updated.peso_objetivo) || 0,
+                  duracion_segundos: Number(updated.duracion_segundos) || 0,
+                  comentario: updated.comentario || '',
+                  estado: (updated.estado || 'pendiente').toLowerCase()
+                };
+                const response = await specialistsService.addExerciseToWorkout(workoutId, payload);
+                const backendWeId = typeof response === 'string' ? response : (response?.id_entrenamiento_ejercicio || response?.id);
+                if (backendWeId) {
+                  updated.id_entrenamiento_ejercicio = backendWeId;
+                }
+              } else {
+                // 4. Actualizar ejercicio ya existente
+                const payload = {
+                  orden: updated.orden || 1,
+                  series: Number(updated.series) || 4,
+                  descanso_segundos: Number(updated.descanso_segundos) || 60,
+                  repeticiones: parseInt(String(updated.repeticiones)) || 0,
+                  distancia_metros: Number((updated as any).distancia_metros) || 0,
+                  peso_objetivo: Number(updated.peso_objetivo) || 0,
+                  duracion_segundos: Number(updated.duracion_segundos) || 0,
+                  comentario: updated.comentario || '',
+                  estado: (updated.estado || 'pendiente').toLowerCase()
+                };
+                await specialistsService.updateExerciseInWorkout(updated.id_entrenamiento_ejercicio, payload);
+              }
+
+              // 5. Actualizar estado local inmutable
+              const updatedPlanItems = planItems.map(item => {
+                if ('id_entrenamiento' in item && (item.id_entrenamiento === activeWorkout.id_entrenamiento || item.id_entrenamiento === workoutId)) {
+                  const existingList = item.ejercicios_asociados || [];
+                  const exists = existingList.some(we => we.id_entrenamiento_ejercicio === originalWeId || we.id_entrenamiento_ejercicio === updated.id_entrenamiento_ejercicio);
+                  const updatedList = exists
+                    ? existingList.map(we => (we.id_entrenamiento_ejercicio === originalWeId || we.id_entrenamiento_ejercicio === updated.id_entrenamiento_ejercicio) ? updated : we)
+                    : [...existingList, updated];
+                  return {
+                    ...item,
+                    id_entrenamiento: workoutId,
+                    ejercicios_asociados: updatedList
+                  };
+                }
+                return item;
+              });
+
+              setPlanItems(updatedPlanItems);
+              await repos.workouts.saveWorkout({ ...activeWorkout, id_entrenamiento: workoutId });
+              setSelectedExercise(null);
+              queryClient.invalidateQueries({ queryKey: ['userPlanTab', userId] });
+              setUpdateTick(t => t + 1);
+              toast.show('Ejercicio asociado y guardado con éxito', 'success');
+            } catch (apiErr: any) {
+              console.error('Failed to save exercise on backend:', apiErr);
+              const detail = apiErr?.response?.data?.detail;
+              let errorMsg = 'Error al asociar el ejercicio al entrenamiento';
+              if (typeof detail === 'string') {
+                errorMsg = detail;
+              } else if (Array.isArray(detail)) {
+                errorMsg = detail.map((d: any) => `${d.loc ? d.loc.slice(1).join('.') : ''}: ${d.msg}`).join(', ');
+              } else if (apiErr?.response?.data?.message) {
+                errorMsg = apiErr.response.data.message;
+              }
+              toast.show(errorMsg, 'error');
             }
           }}
           readOnly={readOnly}
