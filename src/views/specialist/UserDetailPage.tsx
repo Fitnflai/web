@@ -200,7 +200,7 @@ const PerfilTab = ({ u }: { u: User }) => (
         </div>
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Plan Activo</span>
-          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.nombre_plan_activo || PLAN_NAMES[u.plan_idx] || 'Essential'}</span>
+          <span className="text-[13px] font-medium text-gray-900 dark:text-white">{u.nombre_plan_activo || u.membresia || 'Coach'}</span>
         </div>
         <div className="border-b border-surface-border/30 pb-2">
           <span className="block text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-1">Estado Suscripción</span>

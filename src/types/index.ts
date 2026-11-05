@@ -56,6 +56,7 @@ export interface User {
   fecha_nacimiento?: string
   id_objetivo_principal?: string
   nombre_plan_activo?: string
+  membresia?: string
   fecha_fin_suscripcion?: string
   estado_suscripcion?: string
   tiene_plan_activo?: boolean

@@ -63,8 +63,8 @@ export function UsersTable({ users, origin, onSelect, isPacientes = false, page,
                   <td className="p-2.5 border-b border-surface-border text-[11px] text-surface-muted">{u.ciudad || ''}</td>
                   <td className="p-2.5 border-b border-surface-border">
                     {u.membresia && u.membresia !== 'Ninguna' ? (
-                      <Badge variant={(u.membresia === 'Pro' || u.membresia === 'Elite') ? 'yellow' : 'muted'}>
-                        {(u.membresia === 'Pro' || u.membresia === 'Elite') ? <><Crown size={9} className="mr-0.5 inline-block" />{u.membresia}</> : u.membresia}
+                      <Badge variant={u.membresia === 'Coach' ? 'purple' : (u.membresia === 'Pro' || u.membresia === 'Elite') ? 'yellow' : 'muted'}>
+                        {(u.membresia === 'Pro' || u.membresia === 'Elite' || u.membresia === 'Coach') ? <><Crown size={9} className="mr-0.5 inline-block" />{u.membresia}</> : u.membresia}
                       </Badge>
                     ) : ''}
                   </td>

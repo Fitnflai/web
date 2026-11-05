@@ -107,6 +107,8 @@ export function MisPacientesPage() {
         last_strava_sync: null,
         last_garmin_sync: null,
         foto_avatar_url: p.avatar_url || '',
+        membresia: p.membresia || 'Coach',
+        nombre_plan_activo: p.membresia || 'Coach',
         plan_idx: p.membresia === 'Elite' ? 2 : p.membresia === 'Pro' ? 1 : 0,
         color: color,
         initials: initials,
