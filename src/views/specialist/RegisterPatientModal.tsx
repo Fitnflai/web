@@ -325,6 +325,8 @@ const TIMEZONES: SelectOption[] = [
   { value: 'Europe/Madrid', label: 'Europe/Madrid (UTC+1)' },
 ];
 
+const todayStr = new Date().toISOString().split('T')[0];
+
 const initialPayload: RegisterPatientPayload = {
   nombre: '',
   email: '',
@@ -341,14 +343,14 @@ const initialPayload: RegisterPatientPayload = {
   timezone: 'America/Guayaquil',
   id_disciplina: 1,
   nivel_dificultad: 'intermedio',
-  fecha_inicio_deseada: new Date().toISOString().split('T')[0],
+  fecha_inicio_deseada: todayStr,
   tiempo_por_sesion: 60,
   dias_disponibles: ['lunes', 'miercoles', 'viernes'],
   equipamiento_ids: [1, 2],
-  id_objetivo: 'competencia',
+  id_objetivo: 1,
   detalles_objetivo: {
     nombre_competencia: '',
-    fecha_competencia: '',
+    fecha_competencia: todayStr,
     distancia_objetivo: 10,
     unidad_distancia: 'km',
     desnivel_m: 0,
@@ -456,23 +458,40 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
 
   const [selectedObjectiveType, setSelectedObjectiveType] = useState<ObjectiveType>('competencia');
 
-  const handleSelectObjectiveType = (type: ObjectiveType) => {
-    setSelectedObjectiveType(type);
-
-    // Sync id_objetivo with backend catalog if available
-    let matchedId: string | number = type;
+  const resolveObjectiveId = (type: ObjectiveType = selectedObjectiveType): string | number => {
     if (objectivesData && objectivesData.length > 0) {
       const matched = objectivesData.find(o => {
-        const n = o.nombre.toLowerCase();
-        if (type === 'competencia') return n.includes('competenc') || n.includes('evento');
-        if (type === 'mejorar_tiempo') return n.includes('tiempo') || n.includes('rendimiento') || n.includes('marca');
-        if (type === 'condicion_general') return n.includes('condici') || n.includes('general') || n.includes('fuerza') || n.includes('grasa');
+        const n = (o.nombre || '').toLowerCase();
+        if (type === 'competencia') return n.includes('competenc') || n.includes('evento') || n.includes('carrera');
+        if (type === 'mejorar_tiempo') return n.includes('tiempo') || n.includes('rendimiento') || n.includes('marca') || n.includes('resistencia');
+        if (type === 'condicion_general') return n.includes('condici') || n.includes('general') || n.includes('fuerza') || n.includes('salud') || n.includes('grasa');
         return n.includes('otro');
       });
-      if (matched) matchedId = matched.id_objetivo;
+      if (matched) {
+        const asNum = Number(matched.id_objetivo);
+        return !isNaN(asNum) ? asNum : matched.id_objetivo;
+      }
+      const first = objectivesData[0];
+      const asNum = Number(first.id_objetivo);
+      return !isNaN(asNum) ? asNum : first.id_objetivo;
     }
-    updateField('id_objetivo', matchedId);
+    if (type === 'competencia') return 1;
+    if (type === 'mejorar_tiempo') return 2;
+    if (type === 'condicion_general') return 3;
+    return 4;
   };
+
+  const handleSelectObjectiveType = (type: ObjectiveType) => {
+    setSelectedObjectiveType(type);
+    const resolved = resolveObjectiveId(type);
+    updateField('id_objetivo', resolved);
+  };
+
+  // Sync id_objetivo immediately whenever objectivesData or selectedObjectiveType updates
+  useEffect(() => {
+    const resolved = resolveObjectiveId(selectedObjectiveType);
+    updateField('id_objetivo', resolved);
+  }, [objectivesData, selectedObjectiveType]);
 
   // Auto-fallback if current objective is not allowed in new discipline
   useEffect(() => {
@@ -682,7 +701,93 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
       toast.show('Por favor verifica los campos obligatorios', 'error');
       return;
     }
-    mutation.mutate(formData);
+
+    const currentToday = new Date().toISOString().split('T')[0];
+    const finalIdObjetivo = resolveObjectiveId(selectedObjectiveType);
+
+    // Generate compliant title for nombre_competencia
+    let compName = formData.detalles_objetivo?.nombre_competencia?.trim() || '';
+    if (selectedObjectiveType === 'mejorar_tiempo') {
+      const mod = formData.detalles_objetivo?.modalidad_mejora_tiempo || 'Personalizado';
+      const act = formData.detalles_objetivo?.tiempo_actual || '00:00:00';
+      const meta = formData.detalles_objetivo?.tiempo_meta || '00:00:00';
+      compName = `Mejorar tiempo: ${mod} (${act} -> ${meta})`;
+    } else if (selectedObjectiveType === 'condicion_general') {
+      const cat = formData.detalles_objetivo?.que_quieres_mejorar_cg || 'Salud';
+      const sub = formData.detalles_objetivo?.objetivo_especifico_cg || 'General';
+      compName = `Condición general: ${cat} - ${sub}`;
+    } else if (selectedObjectiveType === 'otro') {
+      compName = formData.detalles_objetivo?.descripcion_otro_objetivo?.trim() || 'Objetivo personalizado';
+    } else if (!compName) {
+      compName = formData.detalles_objetivo?.prueba_preconfigurada
+        ? `Competencia ${formData.detalles_objetivo.prueba_preconfigurada}`
+        : 'Preparación para competencia';
+    }
+
+    // fecha_competencia MUST be a valid date string (YYYY-MM-DD), never empty ""
+    const compDate = (selectedObjectiveType === 'competencia' && formData.detalles_objetivo?.fecha_competencia?.trim())
+      ? formData.detalles_objetivo.fecha_competencia.trim()
+      : currentToday;
+
+    // Strict 6 fields expected by backend schema
+    const cleanedDetallesObjetivo: DetallesObjetivo = {
+      nombre_competencia: compName,
+      fecha_competencia: compDate,
+      distancia_objetivo: Number(formData.detalles_objetivo?.distancia_objetivo) || 0,
+      unidad_distancia: formData.detalles_objetivo?.unidad_distancia || 'km',
+      desnivel_m: Number(formData.detalles_objetivo?.desnivel_m) || 0,
+      altitud_destino_m: Number(formData.detalles_objetivo?.altitud_destino_m) || 0,
+    };
+
+    // Keep supplementary pacing and clinical data in notes
+    const notesArr: string[] = [];
+    if (formData.notas?.trim()) notesArr.push(formData.notas.trim());
+    if (selectedObjectiveType === 'competencia') {
+      if (formData.detalles_objetivo?.requiere_aclimatacion_calor) {
+        notesArr.push('[Competencia: Requiere aclimatación al calor]');
+      }
+      if (formData.detalles_objetivo?.prueba_preconfigurada) {
+        notesArr.push(`[Competencia: Prueba ${formData.detalles_objetivo.prueba_preconfigurada}]`);
+      }
+    } else if (selectedObjectiveType === 'mejorar_tiempo') {
+      notesArr.push(`[Mejora de tiempo: Actual ${formData.detalles_objetivo?.tiempo_actual || '00:00:00'} -> Meta ${formData.detalles_objetivo?.tiempo_meta || '00:00:00'}]`);
+    } else if (selectedObjectiveType === 'condicion_general') {
+      notesArr.push(`[Condición general: ${formData.detalles_objetivo?.que_quieres_mejorar_cg} -> ${formData.detalles_objetivo?.objetivo_especifico_cg}]`);
+    }
+
+    const cleanedPayload: RegisterPatientPayload = {
+      nombre: formData.nombre.trim(),
+      email: formData.email.trim(),
+      apodo: formData.apodo?.trim() || '',
+      telefono: formData.telefono?.trim() || '',
+      genero: formData.genero || 'Masculino',
+      fecha_nacimiento: formData.fecha_nacimiento || currentToday,
+      peso: Number(formData.peso) || 0,
+      unidad_peso: formData.unidad_peso || 'kg',
+      altura: Number(formData.altura) || 0,
+      unidad_altura: formData.unidad_altura || 'cm',
+      ciudad: formData.ciudad?.trim() || '',
+      altitud_msnm: Number(formData.altitud_msnm) || 0,
+      timezone: formData.timezone || 'America/Guayaquil',
+      id_disciplina: Number(formData.id_disciplina) || 1,
+      nivel_dificultad: formData.nivel_dificultad || 'intermedio',
+      fecha_inicio_deseada: currentToday,
+      tiempo_por_sesion: Number(formData.tiempo_por_sesion) || 60,
+      dias_disponibles: formData.dias_disponibles || ['lunes', 'miercoles', 'viernes'],
+      equipamiento_ids: (formData.equipamiento_ids || []).map(Number),
+      id_objetivo: finalIdObjetivo,
+      detalles_objetivo: cleanedDetallesObjetivo,
+      detalles_lesiones: (formData.detalles_lesiones || []).map(l => ({
+        zona_afectada: l.zona_afectada,
+        descripcion_molestia: l.descripcion_molestia || '',
+        nivel_dolor_eva: Number(l.nivel_dolor_eva) || 1,
+        tipo_lesion: l.tipo_lesion || 'activa',
+      })),
+      adaptacion_ciclo_menstrual: Boolean(formData.adaptacion_ciclo_menstrual),
+      notas: notesArr.join('\n'),
+    };
+
+    mutation.mutate(cleanedPayload);
   };
 
   const renderStepIndicators = () => {
@@ -995,10 +1100,10 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <Input
-                  label="Fecha de Inicio Deseada"
+                  label="Fecha de Inicio (Registro)"
                   type="date"
-                  value={formData.fecha_inicio_deseada || ''}
-                  onChange={e => updateField('fecha_inicio_deseada', e.target.value)}
+                  value={formData.fecha_inicio_deseada || todayStr}
+                  disabled
                   iconPrefix={<Calendar size={14} />}
                 />
                 <Input
