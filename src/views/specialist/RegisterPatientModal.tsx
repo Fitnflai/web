@@ -17,9 +17,11 @@ import {
   ChevronRight,
   ChevronLeft,
   Sparkles,
-  HeartPulse,
   Info,
-  Loader2
+  Loader2,
+  Timer,
+  Sun,
+  Mountain,
 } from 'lucide-react';
 import { searchCitiesGeocoding, GeocodingResult } from '@/services/api/geocoding';
 import { Modal } from '@/components/ui/Modal';
@@ -44,6 +46,231 @@ interface RegisterPatientModalProps {
   onSuccess?: () => void;
 }
 
+export type DisciplineCategory =
+  | 'trail_running'
+  | 'triatlon'
+  | 'ciclismo_ruta'
+  | 'mtb'
+  | 'senderismo'
+  | 'acondicionamiento'
+  | 'deportiva_general';
+
+export type ObjectiveType = 'competencia' | 'mejorar_tiempo' | 'condicion_general' | 'otro';
+
+export function getDisciplineCategory(disciplines: DisciplinaItem[], id?: number): DisciplineCategory {
+  if (!id) return 'trail_running';
+  const found = disciplines.find(d => d.id_disciplina === id);
+  const name = (found?.nombre || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  if (name.includes('senderismo') || name.includes('trekking') || name.includes('hiking')) {
+    return 'senderismo';
+  }
+  if (name.includes('acondicionamiento') || name.includes('fuerza') || name.includes('funcional') || name.includes('gimnasio')) {
+    return 'acondicionamiento';
+  }
+  if (name.includes('trail')) {
+    return 'trail_running';
+  }
+  if (name.includes('triat')) {
+    return 'triatlon';
+  }
+  if (name.includes('mtb') || name.includes('montana')) {
+    return 'mtb';
+  }
+  if (name.includes('ruta') || name.includes('ciclismo')) {
+    return 'ciclismo_ruta';
+  }
+  return 'deportiva_general';
+}
+
+export interface PreconfiguredTest {
+  id: string;
+  label: string;
+  distanceKm?: number;
+}
+
+export const SPORT_TESTS: Record<DisciplineCategory, PreconfiguredTest[]> = {
+  trail_running: [
+    { id: '5k', label: '5K', distanceKm: 5 },
+    { id: '10k', label: '10K', distanceKm: 10 },
+    { id: '21k', label: '21K', distanceKm: 21 },
+    { id: '42k', label: '42K', distanceKm: 42.195 },
+    { id: 'otro', label: 'Otro' },
+  ],
+  triatlon: [
+    { id: 'sprint', label: 'Sprint', distanceKm: 25.75 },
+    { id: 'olimpico', label: 'Olímpico', distanceKm: 51.5 },
+    { id: '70.3', label: '70.3', distanceKm: 113 },
+    { id: 'ironman', label: 'Ironman Completo', distanceKm: 226 },
+    { id: 'otro', label: 'Otro' },
+  ],
+  ciclismo_ruta: [
+    { id: 'paseo_salud', label: 'Paseo/Salud (30-60 km)', distanceKm: 45 },
+    { id: 'fondo_medio', label: 'Fondo medio (80-120 km)', distanceKm: 100 },
+    { id: 'gran_fondo', label: 'Gran Fondo (160-200 km)', distanceKm: 180 },
+    { id: 'otro', label: 'Otro' },
+  ],
+  mtb: [
+    { id: 'xc_corto', label: 'Cross-Country corto (<30 km)', distanceKm: 25 },
+    { id: 'xc_largo', label: 'XC largo (30-60 km)', distanceKm: 45 },
+    { id: 'enduro', label: 'Enduro' },
+    { id: 'descenso', label: 'Descenso' },
+    { id: 'otro', label: 'Otro' },
+  ],
+  senderismo: [
+    { id: 'corta', label: 'Ruta corta (<10 km)', distanceKm: 8 },
+    { id: 'media', label: 'Ruta media (10-20 km)', distanceKm: 15 },
+    { id: 'larga', label: 'Trekking largo (>20 km)', distanceKm: 25 },
+    { id: 'otro', label: 'Otro' },
+  ],
+  acondicionamiento: [
+    { id: 'general', label: 'General' },
+    { id: 'otro', label: 'Otro' },
+  ],
+  deportiva_general: [
+    { id: '5k', label: '5K', distanceKm: 5 },
+    { id: '10k', label: '10K', distanceKm: 10 },
+    { id: '21k', label: '21K', distanceKm: 21 },
+    { id: '42k', label: '42K', distanceKm: 42.195 },
+    { id: 'otro', label: 'Otro' },
+  ],
+};
+
+export const CG_CATEGORIES: SelectOption[] = [
+  { value: 'Fuerza / Musculación', label: 'Fuerza / Musculación' },
+  { value: 'Movilidad, Flexibilidad y Respiración', label: 'Movilidad, Flexibilidad y Respiración' },
+  { value: 'Cardio General', label: 'Cardio General' },
+];
+
+export const CG_SUBCATEGORIES: Record<string, SelectOption[]> = {
+  'Fuerza / Musculación': [
+    { value: 'Tonificación / salud general', label: 'Tonificación / salud general' },
+    { value: 'Hipertrofia (masa muscular)', label: 'Hipertrofia (masa muscular)' },
+    { value: 'Fuerza máxima', label: 'Fuerza máxima' },
+    { value: 'Recomposición corporal', label: 'Recomposición corporal' },
+  ],
+  'Movilidad, Flexibilidad y Respiración': [
+    { value: 'Movilidad articular básica', label: 'Movilidad articular básica' },
+    { value: 'Yoga funcional / Flexibilidad', label: 'Yoga funcional / Flexibilidad' },
+    { value: 'Respiración / Mindfulness activo', label: 'Respiración / Mindfulness activo' },
+  ],
+  'Cardio General': [
+    { value: 'Salud CV básica (20-30 min x3/sem)', label: 'Salud CV básica (20-30 min x3/sem)' },
+    { value: 'Cardio zona 2 (fat burning, 45-60 min)', label: 'Cardio zona 2 (fat burning, 45-60 min)' },
+    { value: 'Cardio largo (>60 min constante)', label: 'Cardio largo (>60 min constante)' },
+  ],
+};
+
+function parseTimeToSeconds(timeStr?: string): number {
+  if (!timeStr) return 0;
+  const parts = timeStr.split(':').map(val => parseInt(val, 10) || 0);
+  const h = parts[0] || 0;
+  const m = parts[1] || 0;
+  const s = parts[2] || 0;
+  return h * 3600 + m * 60 + s;
+}
+
+function formatSecondsToHMS(seconds: number): string {
+  const isNegative = seconds < 0;
+  const abs = Math.abs(seconds);
+  const h = Math.floor(abs / 3600);
+  const m = Math.floor((abs % 3600) / 60);
+  const s = abs % 60;
+  const sign = isNegative ? '-' : '+';
+  if (h > 0) {
+    return `${sign}${h}h ${m}m ${s}s`;
+  }
+  return `${sign}${m}m ${s}s`;
+}
+
+interface TimeInputProps {
+  label: string;
+  value: string;
+  onChange: (val: string) => void;
+  error?: string;
+}
+
+const TimeInput: React.FC<TimeInputProps> = ({ label, value, onChange, error }) => {
+  const parts = (value || '00:00:00').split(':');
+  const [hh, setHh] = useState(parts[0] || '00');
+  const [mm, setMm] = useState(parts[1] || '00');
+  const [ss, setSs] = useState(parts[2] || '00');
+
+  useEffect(() => {
+    const p = (value || '00:00:00').split(':');
+    setHh(p[0] || '00');
+    setMm(p[1] || '00');
+    setSs(p[2] || '00');
+  }, [value]);
+
+  const update = (newH: string, newM: string, newS: string) => {
+    const h = newH.replace(/\D/g, '').slice(0, 2).padStart(2, '0');
+    const mNum = Math.min(59, Math.max(0, parseInt(newM.replace(/\D/g, '') || '0', 10)));
+    const m = String(mNum).padStart(2, '0');
+    const sNum = Math.min(59, Math.max(0, parseInt(newS.replace(/\D/g, '') || '0', 10)));
+    const s = String(sNum).padStart(2, '0');
+    onChange(`${h}:${m}:${s}`);
+  };
+
+  return (
+    <div className="flex flex-col gap-1 w-full">
+      <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider">
+        {label}
+      </label>
+      <div
+        className={`flex items-center justify-between bg-surface-card border rounded-lg px-2.5 py-1.5 ${
+          error ? 'border-red-500' : 'border-surface-border focus-within:border-purple-500'
+        }`}
+      >
+        <div className="flex items-center gap-1.5 font-mono text-sm text-white">
+          <input
+            type="text"
+            inputMode="numeric"
+            maxLength={2}
+            value={hh}
+            onChange={e => {
+              setHh(e.target.value);
+              update(e.target.value, mm, ss);
+            }}
+            className="w-7 text-center bg-transparent focus:outline-none focus:text-purple-300 font-mono font-semibold"
+            placeholder="00"
+          />
+          <span className="text-surface-muted font-bold">:</span>
+          <input
+            type="text"
+            inputMode="numeric"
+            maxLength={2}
+            value={mm}
+            onChange={e => {
+              setMm(e.target.value);
+              update(hh, e.target.value, ss);
+            }}
+            className="w-7 text-center bg-transparent focus:outline-none focus:text-purple-300 font-mono font-semibold"
+            placeholder="00"
+          />
+          <span className="text-surface-muted font-bold">:</span>
+          <input
+            type="text"
+            inputMode="numeric"
+            maxLength={2}
+            value={ss}
+            onChange={e => {
+              setSs(e.target.value);
+              update(hh, mm, e.target.value);
+            }}
+            className="w-7 text-center bg-transparent focus:outline-none focus:text-purple-300 font-mono font-semibold"
+            placeholder="00"
+          />
+        </div>
+        <span className="text-[10px] text-surface-muted font-mono uppercase tracking-wider">
+          HH:MM:SS
+        </span>
+      </div>
+      {error && <span className="text-[10px] text-red-400">{error}</span>}
+    </div>
+  );
+};
+
 const DAYS_OF_WEEK = [
   { id: 'lunes', label: 'Lun', full: 'Lunes' },
   { id: 'martes', label: 'Mar', full: 'Martes' },
@@ -66,20 +293,12 @@ const AVAILABLE_EQUIPMENT_FALLBACK: EquipmentItem[] = [
 ];
 
 const DISCIPLINES_FALLBACK: SelectOption[] = [
-  { value: '1', label: 'Running / Atletismo' },
-  { value: '2', label: 'Trail Running' },
-  { value: '3', label: 'Ciclismo de Ruta / MTB' },
-  { value: '4', label: 'Triatlón' },
-  { value: '5', label: 'Natación' },
-  { value: '6', label: 'Fuerza / Funcional' },
-];
-
-const OBJECTIVES_FALLBACK: SelectOption[] = [
-  { value: '1', label: 'Preparación para competencia' },
-  { value: '2', label: 'Rendimiento y resistencia aeróbica' },
-  { value: '3', label: 'Pérdida de grasa / Composición corporal' },
-  { value: '4', label: 'Ganancia muscular y fuerza' },
-  { value: '5', label: 'Readaptación física y prevención' },
+  { value: '1', label: 'Trail running' },
+  { value: '2', label: 'Triatlón' },
+  { value: '3', label: 'Ciclismo de ruta' },
+  { value: '4', label: 'MTB' },
+  { value: '5', label: 'Senderismo' },
+  { value: '6', label: 'Acondicionamiento' },
 ];
 
 const DIFFICULTY_LEVELS: SelectOption[] = [
@@ -126,7 +345,7 @@ const initialPayload: RegisterPatientPayload = {
   tiempo_por_sesion: 60,
   dias_disponibles: ['lunes', 'miercoles', 'viernes'],
   equipamiento_ids: [1, 2],
-  id_objetivo: '1',
+  id_objetivo: 'competencia',
   detalles_objetivo: {
     nombre_competencia: '',
     fecha_competencia: '',
@@ -134,6 +353,14 @@ const initialPayload: RegisterPatientPayload = {
     unidad_distancia: 'km',
     desnivel_m: 0,
     altitud_destino_m: 0,
+    requiere_aclimatacion_calor: false,
+    prueba_preconfigurada: '10K',
+    modalidad_mejora_tiempo: '10K',
+    tiempo_actual: '00:50:00',
+    tiempo_meta: '00:45:00',
+    que_quieres_mejorar_cg: 'Fuerza / Musculación',
+    objetivo_especifico_cg: 'Tonificación / salud general',
+    descripcion_otro_objetivo: '',
   },
   detalles_lesiones: [],
   adaptacion_ciclo_menstrual: false,
@@ -193,34 +420,70 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
     return equipmentsData;
   }, [equipmentsData]);
 
-  const { data: objectivesData, isLoading: isLoadingObjectives } = useQuery<ObjectiveItem[]>({
+  const { data: objectivesData } = useQuery<ObjectiveItem[]>({
     queryKey: ['onboardingObjectives'],
     queryFn: () => specialistsService.getObjectives(),
     staleTime: 10 * 60 * 1000,
   });
 
-  const [customObjectiveText, setCustomObjectiveText] = useState('');
-
-  const objectiveOptions: SelectOption[] = useMemo(() => {
-    const list: SelectOption[] = (!objectivesData || objectivesData.length === 0)
-      ? OBJECTIVES_FALLBACK
-      : objectivesData.map(o => ({
-          value: String(o.id_objetivo),
-          label: o.nombre,
+  // Calculate Discipline Category dynamically
+  const disciplineCategory = useMemo<DisciplineCategory>(() => {
+    const list = disciplinasData && disciplinasData.length > 0
+      ? disciplinasData
+      : DISCIPLINES_FALLBACK.map(d => ({
+          id_disciplina: Number(d.value),
+          nombre: d.label,
+          descripcion: '',
         }));
+    return getDisciplineCategory(list, formData.id_disciplina);
+  }, [disciplinasData, formData.id_disciplina]);
 
-    if (!list.some(opt => opt.value === 'otro' || opt.label.toLowerCase() === 'otro')) {
-      return [...list, { value: 'otro', label: 'Otro' }];
+  const selectedDisciplineName = useMemo(() => {
+    const found = disciplineOptions.find(d => Number(d.value) === formData.id_disciplina);
+    return found?.label || 'Trail running';
+  }, [disciplineOptions, formData.id_disciplina]);
+
+  // Allowed objectives according to discipline rules
+  const allowedObjectiveTypes = useMemo<ObjectiveType[]>(() => {
+    if (disciplineCategory === 'acondicionamiento') {
+      return ['condicion_general', 'otro'];
     }
-    return list;
-  }, [objectivesData]);
+    if (disciplineCategory === 'senderismo') {
+      return ['mejorar_tiempo', 'condicion_general', 'otro'];
+    }
+    return ['competencia', 'mejorar_tiempo', 'condicion_general', 'otro'];
+  }, [disciplineCategory]);
 
+  const [selectedObjectiveType, setSelectedObjectiveType] = useState<ObjectiveType>('competencia');
+
+  const handleSelectObjectiveType = (type: ObjectiveType) => {
+    setSelectedObjectiveType(type);
+
+    // Sync id_objetivo with backend catalog if available
+    let matchedId: string | number = type;
+    if (objectivesData && objectivesData.length > 0) {
+      const matched = objectivesData.find(o => {
+        const n = o.nombre.toLowerCase();
+        if (type === 'competencia') return n.includes('competenc') || n.includes('evento');
+        if (type === 'mejorar_tiempo') return n.includes('tiempo') || n.includes('rendimiento') || n.includes('marca');
+        if (type === 'condicion_general') return n.includes('condici') || n.includes('general') || n.includes('fuerza') || n.includes('grasa');
+        return n.includes('otro');
+      });
+      if (matched) matchedId = matched.id_objetivo;
+    }
+    updateField('id_objetivo', matchedId);
+  };
+
+  // Auto-fallback if current objective is not allowed in new discipline
   useEffect(() => {
-    if (objectiveOptions.length > 0 && !formData.id_objetivo) {
-      setFormData(prev => ({ ...prev, id_objetivo: objectiveOptions[0].value }));
+    if (!allowedObjectiveTypes.includes(selectedObjectiveType)) {
+      const fallback = allowedObjectiveTypes[0];
+      setSelectedObjectiveType(fallback);
+      handleSelectObjectiveType(fallback);
     }
-  }, [objectiveOptions, formData.id_objetivo]);
+  }, [allowedObjectiveTypes, selectedObjectiveType]);
 
+  // City geocoding search
   useEffect(() => {
     if (isCitySelectedRef.current) {
       isCitySelectedRef.current = false;
@@ -249,7 +512,7 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
       } finally {
         setIsSearchingCity(false);
       }
-    }, 300);
+    }, 350);
 
     return () => {
       clearTimeout(timer);
@@ -269,21 +532,20 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
 
   const handleSelectCityResult = (item: GeocodingResult) => {
     isCitySelectedRef.current = true;
-    const formattedCity = [item.name, item.admin1, item.country].filter(Boolean).join(', ');
-    const altitude = item.elevation !== undefined ? Math.round(item.elevation) : 0;
-    const timezone = item.timezone || 'America/Guayaquil';
+    setShowCityDropdown(false);
+
+    const fullCityName = item.country ? `${item.name}, ${item.country}` : item.name;
+    const elevation = item.elevation !== undefined ? Math.round(item.elevation) : 0;
+    const tz = item.timezone || formData.timezone || 'America/Guayaquil';
 
     setFormData(prev => ({
       ...prev,
-      ciudad: formattedCity,
-      altitud_msnm: altitude,
-      timezone: timezone,
+      ciudad: fullCityName,
+      altitud_msnm: elevation,
+      timezone: tz,
     }));
-    setShowCityDropdown(false);
-    toast.show(`Altitud (${altitude} msnm) y zona horaria (${timezone}) autocompletadas`, 'info');
   };
 
-  // Injury form temporary state
   const [injuryForm, setInjuryForm] = useState<DetalleLesion>({
     zona_afectada: '',
     descripcion_molestia: '',
@@ -295,8 +557,9 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
   const mutation = useMutation({
     mutationFn: (payload: RegisterPatientPayload) => specialistsService.registerPatient(payload),
     onSuccess: () => {
-      toast.show('¡Paciente registrado con éxito! Credenciales enviadas por correo.', 'success');
+      toast.show('¡Paciente registrado exitosamente!', 'success');
       queryClient.invalidateQueries({ queryKey: ['specialistPatients'] });
+      queryClient.invalidateQueries({ queryKey: ['specialistDashboard'] });
       onSuccess?.();
       handleClose();
     },
@@ -310,10 +573,10 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
     setFormData(initialPayload);
     setCityResults([]);
     setShowCityDropdown(false);
-    setCustomObjectiveText('');
     setErrors({});
     setStep(1);
     setShowAddInjury(false);
+    setSelectedObjectiveType('competencia');
     onClose();
   };
 
@@ -452,17 +715,16 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
                 {step > s.num ? <Check size={14} /> : s.icon}
               </div>
               <span
-                className={`text-[10px] font-bold uppercase tracking-wider mt-1 transition-colors ${
-                  step === s.num ? 'text-white' : 'text-surface-muted'
+                className={`text-[10px] mt-1 font-semibold uppercase tracking-wider ${
+                  step === s.num ? 'text-purple-400' : 'text-surface-muted'
                 }`}
-                style={step === s.num ? { color: '#9B59B6' } : undefined}
               >
                 {s.label}
               </span>
             </div>
             {idx < steps.length - 1 && (
               <div
-                className={`flex-1 h-[2px] mx-2 -mt-3.5 transition-colors ${
+                className={`h-0.5 flex-1 mx-2 -mt-3.5 transition-all ${
                   step > s.num ? 'bg-emerald-500' : 'bg-surface-border'
                 }`}
               />
@@ -473,25 +735,40 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
     );
   };
 
+  // Preconfigured tests for current sport
+  const currentSportTests = SPORT_TESTS[disciplineCategory] || SPORT_TESTS.deportiva_general;
+
+  // Time difference metrics for 'mejorar_tiempo'
+  const timeDifferenceSec = useMemo(() => {
+    if (selectedObjectiveType !== 'mejorar_tiempo') return null;
+    const actualSec = parseTimeToSeconds(formData.detalles_objetivo?.tiempo_actual);
+    const metaSec = parseTimeToSeconds(formData.detalles_objetivo?.tiempo_meta);
+    if (!actualSec || !metaSec) return null;
+    return metaSec - actualSec;
+  }, [selectedObjectiveType, formData.detalles_objetivo?.tiempo_actual, formData.detalles_objetivo?.tiempo_meta]);
+
+  const activeCgCategory = formData.detalles_objetivo?.que_quieres_mejorar_cg || 'Fuerza / Musculación';
+  const availableCgSubcategories = CG_SUBCATEGORIES[activeCgCategory] || CG_SUBCATEGORIES['Fuerza / Musculación'];
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
       title="Registrar Nuevo Paciente"
-      className="max-w-2xl max-h-[90vh]"
+      className="max-w-2xl w-full"
     >
-      <div className="flex flex-col h-full text-white">
-        {/* Banner informativo de reglas de negocio */}
-        <div className="flex items-start gap-2.5 p-2.5 mb-3 rounded-lg bg-surface-card border border-surface-border text-[11px] text-surface-muted">
-          <Info size={15} className="shrink-0 mt-0.5" style={{ color: '#9B59B6' }} />
-          <span>
+      <div className="space-y-4 max-h-[75vh] overflow-y-auto scrollbar-thin px-1">
+        {/* Banner informativo coach */}
+        <div className="p-3 rounded-lg bg-surface-card border border-surface-border flex items-start gap-2.5 text-xs text-surface-muted">
+          <Info size={16} className="shrink-0 text-purple-400 mt-0.5" />
+          <div>
             El paciente será asignado directamente bajo tu cargo con <strong className="text-white">membresía Coach</strong> y acceso automático a la app mediante credenciales generadas por correo.
-          </span>
+          </div>
         </div>
 
         {renderStepIndicators()}
 
-        <div className="flex-1 overflow-y-auto max-h-[56vh] pr-1 scrollbar-thin">
+        <form onSubmit={e => e.preventDefault()}>
           {/* STEP 1: DATOS PERSONALES */}
           {step === 1 && (
             <div className="space-y-3.5 animate-fadeIn">
@@ -820,99 +1097,384 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
             </div>
           )}
 
-          {/* STEP 4: OBJETIVO, LESIONES Y NOTAS */}
+          {/* STEP 4: OBJETIVO ACOPLADO, LESIONES Y NOTAS */}
           {step === 4 && (
             <div className="space-y-4 animate-fadeIn">
-              <div className="space-y-2">
-                <Select
-                  label="Objetivo Principal"
-                  options={objectiveOptions}
-                  value={formData.id_objetivo !== undefined ? String(formData.id_objetivo) : (objectiveOptions[0]?.value || '1')}
-                  onChange={val => updateField('id_objetivo', val)}
-                  placeholder={isLoadingObjectives ? 'Cargando objetivos...' : 'Selecciona un objetivo...'}
-                />
-
-                {String(formData.id_objetivo) === 'otro' && (
-                  <div className="animate-fadeIn">
-                    <Input
-                      label="Especificar Otro Objetivo *"
-                      placeholder="Describe el objetivo personalizado del paciente..."
-                      value={customObjectiveText}
-                      onChange={e => {
-                        const val = e.target.value;
-                        setCustomObjectiveText(val);
-                        updateDetalleObjetivo('nombre_competencia', val);
-                      }}
-                      required
-                    />
-                  </div>
-                )}
+              {/* Contexto de la disciplina */}
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-surface-card border border-surface-border text-xs">
+                <div className="flex items-center gap-2 text-surface-muted">
+                  <Activity size={14} className="text-purple-400" />
+                  <span>Disciplina seleccionada:</span>
+                  <strong className="text-white">{selectedDisciplineName}</strong>
+                </div>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-purple-950/40 border border-purple-800/40 text-purple-300 font-semibold uppercase tracking-wider">
+                  {disciplineCategory === 'acondicionamiento' ? 'Acondicionamiento' : disciplineCategory === 'senderismo' ? 'Senderismo' : 'Deporte'}
+                </span>
               </div>
 
-              {/* Detalles de objetivo / competencia */}
-              <div className="p-3 rounded-lg bg-surface-card border border-surface-border space-y-3">
-                <div className="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-wider">
-                  <Trophy size={14} style={{ color: '#9B59B6' }} />
-                  <span>Detalles de la Competencia / Meta</span>
-                </div>
+              {/* Selector de Objetivos Acoplados a la Disciplina */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider block">
+                  Objetivo Principal del Paciente *
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
+                  {/* Tarjeta Competencia (Solo para deportes) */}
+                  {allowedObjectiveTypes.includes('competencia') && (
+                    <button
+                      type="button"
+                      onClick={() => handleSelectObjectiveType('competencia')}
+                      className={`p-3 rounded-lg border text-left flex flex-col justify-between transition-all ${
+                        selectedObjectiveType === 'competencia'
+                          ? 'border-purple-500 bg-purple-950/25 ring-1 ring-purple-500'
+                          : 'border-surface-border bg-surface-card hover:border-surface-border/80 text-surface-muted hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <Trophy size={16} className={selectedObjectiveType === 'competencia' ? 'text-purple-400' : 'text-surface-muted'} />
+                        {selectedObjectiveType === 'competencia' && <Check size={14} className="text-purple-400" />}
+                      </div>
+                      <span className="text-xs font-bold text-white block mb-0.5">Competencia</span>
+                      <span className="text-[10px] text-surface-muted leading-tight">
+                        Preparar carrera o evento
+                      </span>
+                    </button>
+                  )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                  <Input
-                    label="Nombre de la Competencia"
-                    placeholder="Ej: Maratón Quito 2026"
-                    value={formData.detalles_objetivo?.nombre_competencia || ''}
-                    onChange={e => updateDetalleObjetivo('nombre_competencia', e.target.value)}
-                  />
-                  <Input
-                    label="Fecha de la Competencia"
-                    type="date"
-                    value={formData.detalles_objetivo?.fecha_competencia || ''}
-                    onChange={e => updateDetalleObjetivo('fecha_competencia', e.target.value)}
-                  />
-                </div>
+                  {/* Tarjeta Mejorar Tiempo */}
+                  {allowedObjectiveTypes.includes('mejorar_tiempo') && (
+                    <button
+                      type="button"
+                      onClick={() => handleSelectObjectiveType('mejorar_tiempo')}
+                      className={`p-3 rounded-lg border text-left flex flex-col justify-between transition-all ${
+                        selectedObjectiveType === 'mejorar_tiempo'
+                          ? 'border-purple-500 bg-purple-950/25 ring-1 ring-purple-500'
+                          : 'border-surface-border bg-surface-card hover:border-surface-border/80 text-surface-muted hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <Timer size={16} className={selectedObjectiveType === 'mejorar_tiempo' ? 'text-purple-400' : 'text-surface-muted'} />
+                        {selectedObjectiveType === 'mejorar_tiempo' && <Check size={14} className="text-purple-400" />}
+                      </div>
+                      <span className="text-xs font-bold text-white block mb-0.5">Mejorar tiempo</span>
+                      <span className="text-[10px] text-surface-muted leading-tight">
+                        Ritmo actual vs meta
+                      </span>
+                    </button>
+                  )}
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
-                  <div className="flex gap-1.5">
-                    <div className="flex-1">
+                  {/* Tarjeta Condición General */}
+                  {allowedObjectiveTypes.includes('condicion_general') && (
+                    <button
+                      type="button"
+                      onClick={() => handleSelectObjectiveType('condicion_general')}
+                      className={`p-3 rounded-lg border text-left flex flex-col justify-between transition-all ${
+                        selectedObjectiveType === 'condicion_general'
+                          ? 'border-purple-500 bg-purple-950/25 ring-1 ring-purple-500'
+                          : 'border-surface-border bg-surface-card hover:border-surface-border/80 text-surface-muted hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <Dumbbell size={16} className={selectedObjectiveType === 'condicion_general' ? 'text-purple-400' : 'text-surface-muted'} />
+                        {selectedObjectiveType === 'condicion_general' && <Check size={14} className="text-purple-400" />}
+                      </div>
+                      <span className="text-xs font-bold text-white block mb-0.5">Condición general</span>
+                      <span className="text-[10px] text-surface-muted leading-tight">
+                        Fuerza, movilidad o cardio
+                      </span>
+                    </button>
+                  )}
+
+                  {/* Tarjeta Otro */}
+                  {allowedObjectiveTypes.includes('otro') && (
+                    <button
+                      type="button"
+                      onClick={() => handleSelectObjectiveType('otro')}
+                      className={`p-3 rounded-lg border text-left flex flex-col justify-between transition-all ${
+                        selectedObjectiveType === 'otro'
+                          ? 'border-purple-500 bg-purple-950/25 ring-1 ring-purple-500'
+                          : 'border-surface-border bg-surface-card hover:border-surface-border/80 text-surface-muted hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <Sparkles size={16} className={selectedObjectiveType === 'otro' ? 'text-purple-400' : 'text-surface-muted'} />
+                        {selectedObjectiveType === 'otro' && <Check size={14} className="text-purple-400" />}
+                      </div>
+                      <span className="text-xs font-bold text-white block mb-0.5">Otro</span>
+                      <span className="text-[10px] text-surface-muted leading-tight">
+                        Objetivo a medida
+                      </span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* 1. SECCIÓN COMPETENCIA */}
+              {selectedObjectiveType === 'competencia' && (
+                <div className="p-3.5 rounded-lg bg-surface-card border border-surface-border space-y-3.5 animate-fadeIn">
+                  <div className="flex items-center justify-between border-b border-surface-border pb-2">
+                    <div className="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-wider">
+                      <Trophy size={14} className="text-purple-400" />
+                      <span>Preparar Evento / Carrera</span>
+                    </div>
+                    <span className="text-[10px] text-surface-muted">
+                      Pruebas preconfiguradas para {selectedDisciplineName}
+                    </span>
+                  </div>
+
+                  {/* Selector de pruebas preconfiguradas según el deporte */}
+                  <div>
+                    <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider block mb-1.5">
+                      Prueba Preconfigurada de la Disciplina
+                    </label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {currentSportTests.map(test => {
+                        const isSelected = formData.detalles_objetivo?.prueba_preconfigurada === test.label;
+                        return (
+                          <button
+                            key={test.id}
+                            type="button"
+                            onClick={() => {
+                              updateDetalleObjetivo('prueba_preconfigurada', test.label);
+                              if (test.distanceKm !== undefined) {
+                                updateDetalleObjetivo('distancia_objetivo', test.distanceKm);
+                              }
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+                              isSelected
+                                ? 'text-white border-transparent'
+                                : 'bg-surface-panel border-surface-border text-surface-muted hover:text-white'
+                            }`}
+                            style={isSelected ? { background: '#9B59B6' } : undefined}
+                          >
+                            {test.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                    <Input
+                      label="Nombre de la Competencia *"
+                      placeholder="Ej: Maratón de Montaña, Ironman 70.3..."
+                      value={formData.detalles_objetivo?.nombre_competencia || ''}
+                      onChange={e => updateDetalleObjetivo('nombre_competencia', e.target.value)}
+                    />
+                    <Input
+                      label="Fecha de la Competencia"
+                      type="date"
+                      value={formData.detalles_objetivo?.fecha_competencia || ''}
+                      onChange={e => updateDetalleObjetivo('fecha_competencia', e.target.value)}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                    <div className="flex gap-1.5">
+                      <div className="flex-1">
+                        <Input
+                          label="Distancia Objetivo (km) *"
+                          type="number"
+                          step="0.1"
+                          placeholder="42.2"
+                          value={formData.detalles_objetivo?.distancia_objetivo ?? ''}
+                          onChange={e => updateDetalleObjetivo('distancia_objetivo', parseFloat(e.target.value) || 0)}
+                        />
+                      </div>
+                      <div className="w-20">
+                        <Select
+                          label="Unidad"
+                          options={[
+                            { value: 'km', label: 'km' },
+                            { value: 'mi', label: 'mi' },
+                          ]}
+                          value={formData.detalles_objetivo?.unidad_distancia || 'km'}
+                          onChange={val => updateDetalleObjetivo('unidad_distancia', val)}
+                        />
+                      </div>
+                    </div>
+
+                    <Input
+                      label="Desnivel (+m)"
+                      type="number"
+                      placeholder="Ej: 450"
+                      value={formData.detalles_objetivo?.desnivel_m ?? ''}
+                      onChange={e => updateDetalleObjetivo('desnivel_m', parseInt(e.target.value) || 0)}
+                      iconPrefix={<Mountain size={13} className="text-surface-muted" />}
+                    />
+
+                    <Input
+                      label="Altitud Destino (msnm)"
+                      type="number"
+                      placeholder="Ej: 2850"
+                      value={formData.detalles_objetivo?.altitud_destino_m ?? ''}
+                      onChange={e => updateDetalleObjetivo('altitud_destino_m', parseInt(e.target.value) || 0)}
+                    />
+                  </div>
+
+                  {/* Toggle Aclimatación al calor */}
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-surface-panel border border-surface-border">
+                    <div className="flex items-center gap-2">
+                      <Sun size={15} className="text-amber-400" />
+                      <div>
+                        <span className="text-xs font-semibold text-white block">
+                          Requiere aclimatación al calor
+                        </span>
+                        <span className="text-[10px] text-surface-muted block">
+                          Ajusta la hidratación y adaptación térmica si el evento es en clima cálido o húmedo.
+                        </span>
+                      </div>
+                    </div>
+                    <Toggle
+                      checked={formData.detalles_objetivo?.requiere_aclimatacion_calor ?? false}
+                      onChange={v => updateDetalleObjetivo('requiere_aclimatacion_calor', v)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* 2. SECCIÓN MEJORAR TIEMPO */}
+              {selectedObjectiveType === 'mejorar_tiempo' && (
+                <div className="p-3.5 rounded-lg bg-surface-card border border-surface-border space-y-3.5 animate-fadeIn">
+                  <div className="flex items-center justify-between border-b border-surface-border pb-2">
+                    <div className="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-wider">
+                      <Timer size={14} className="text-purple-400" />
+                      <span>Mejorar Tiempo (Ritmo Actual vs Meta)</span>
+                    </div>
+                    <span className="text-[10px] text-surface-muted">
+                      {selectedDisciplineName}
+                    </span>
+                  </div>
+
+                  {/* Modalidad / distancia de la disciplina */}
+                  <div>
+                    <label className="text-[11px] font-bold text-surface-muted uppercase tracking-wider block mb-1.5">
+                      Distancia / Modalidad de Mejora
+                    </label>
+                    <div className="flex flex-wrap gap-1.5 mb-2.5">
+                      {currentSportTests.map(test => {
+                        const isSelected = formData.detalles_objetivo?.modalidad_mejora_tiempo === test.label;
+                        return (
+                          <button
+                            key={test.id}
+                            type="button"
+                            onClick={() => {
+                              updateDetalleObjetivo('modalidad_mejora_tiempo', test.label);
+                              if (test.distanceKm !== undefined) {
+                                updateDetalleObjetivo('distancia_objetivo', test.distanceKm);
+                              }
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+                              isSelected
+                                ? 'text-white border-transparent'
+                                : 'bg-surface-panel border-surface-border text-surface-muted hover:text-white'
+                            }`}
+                            style={isSelected ? { background: '#9B59B6' } : undefined}
+                          >
+                            {test.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
                       <Input
-                        label="Distancia"
+                        label="Distancia Objetivo (km) *"
                         type="number"
-                        step="0.01"
-                        placeholder="42.195"
+                        step="0.1"
+                        placeholder="10"
                         value={formData.detalles_objetivo?.distancia_objetivo ?? ''}
                         onChange={e => updateDetalleObjetivo('distancia_objetivo', parseFloat(e.target.value) || 0)}
                       />
-                    </div>
-                    <div className="w-20">
-                      <Select
-                        label="Unidad"
-                        options={[
-                          { value: 'km', label: 'km' },
-                          { value: 'mi', label: 'mi' },
-                        ]}
-                        value={formData.detalles_objetivo?.unidad_distancia || 'km'}
-                        onChange={val => updateDetalleObjetivo('unidad_distancia', val)}
+                      <TimeInput
+                        label="Tiempo Actual (HH:MM:SS) *"
+                        value={formData.detalles_objetivo?.tiempo_actual || '00:50:00'}
+                        onChange={val => updateDetalleObjetivo('tiempo_actual', val)}
+                      />
+                      <TimeInput
+                        label="Tiempo Meta Deseado (HH:MM:SS) *"
+                        value={formData.detalles_objetivo?.tiempo_meta || '00:45:00'}
+                        onChange={val => updateDetalleObjetivo('tiempo_meta', val)}
                       />
                     </div>
                   </div>
 
-                  <Input
-                    label="Desnivel (+m)"
-                    type="number"
-                    placeholder="450"
-                    value={formData.detalles_objetivo?.desnivel_m ?? ''}
-                    onChange={e => updateDetalleObjetivo('desnivel_m', parseInt(e.target.value) || 0)}
-                  />
+                  {/* Resumen de contraste de ritmo */}
+                  {timeDifferenceSec !== null && (
+                    <div className="flex items-center justify-between p-2.5 rounded-lg bg-surface-panel border border-surface-border text-xs">
+                      <span className="text-surface-muted">Diferencia de tiempo proyectada:</span>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`font-mono font-bold px-2 py-0.5 rounded text-[11px] ${
+                            timeDifferenceSec < 0
+                              ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-800/40'
+                              : 'bg-amber-950/40 text-amber-400 border border-amber-800/40'
+                          }`}
+                        >
+                          {formatSecondsToHMS(timeDifferenceSec)}
+                        </span>
+                        {timeDifferenceSec < 0 && (
+                          <span className="text-[10px] text-emerald-400 font-medium">
+                            (Mejora deseada)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
+              {/* 3. SECCIÓN CONDICIÓN GENERAL (Cascada 2 niveles) */}
+              {selectedObjectiveType === 'condicion_general' && (
+                <div className="p-3.5 rounded-lg bg-surface-card border border-surface-border space-y-3.5 animate-fadeIn">
+                  <div className="flex items-center justify-between border-b border-surface-border pb-2">
+                    <div className="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-wider">
+                      <Dumbbell size={14} className="text-purple-400" />
+                      <span>Condición General (Enfoque en Salud y Rendimiento)</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <Select
+                      label="¿Qué quieres mejorar? (Categoría) *"
+                      options={CG_CATEGORIES}
+                      value={activeCgCategory}
+                      onChange={val => {
+                        updateDetalleObjetivo('que_quieres_mejorar_cg', val);
+                        const firstSub = CG_SUBCATEGORIES[val]?.[0]?.value || '';
+                        updateDetalleObjetivo('objetivo_especifico_cg', firstSub);
+                      }}
+                    />
+
+                    <Select
+                      label="Objetivo Específico (Subcategoría) *"
+                      options={availableCgSubcategories}
+                      value={formData.detalles_objetivo?.objetivo_especifico_cg || availableCgSubcategories[0]?.value || ''}
+                      onChange={val => updateDetalleObjetivo('objetivo_especifico_cg', val)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* 4. SECCIÓN OTRO */}
+              {selectedObjectiveType === 'otro' && (
+                <div className="p-3.5 rounded-lg bg-surface-card border border-surface-border space-y-2.5 animate-fadeIn">
+                  <div className="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-wider border-b border-surface-border pb-2">
+                    <Sparkles size={14} className="text-purple-400" />
+                    <span>Objetivo Personalizado</span>
+                  </div>
                   <Input
-                    label="Altitud Destino (m)"
-                    type="number"
-                    placeholder="2850"
-                    value={formData.detalles_objetivo?.altitud_destino_m ?? ''}
-                    onChange={e => updateDetalleObjetivo('altitud_destino_m', parseInt(e.target.value) || 0)}
+                    label="Especificar Objetivo *"
+                    placeholder="Describe detalladamente la meta o propósito del paciente..."
+                    value={formData.detalles_objetivo?.descripcion_otro_objetivo || ''}
+                    onChange={e => {
+                      const val = e.target.value;
+                      updateDetalleObjetivo('descripcion_otro_objetivo', val);
+                      updateDetalleObjetivo('nombre_competencia', val);
+                    }}
+                    required
                   />
                 </div>
-              </div>
+              )}
 
               {/* Lesiones y Molestias */}
               <div className="p-3 rounded-lg bg-surface-card border border-surface-border space-y-3">
@@ -1053,61 +1615,68 @@ export function RegisterPatientModal({ isOpen, onClose, onSuccess }: RegisterPat
                   rows={2}
                   value={formData.notas || ''}
                   onChange={e => updateField('notas', e.target.value)}
-                  placeholder="Ej: Paciente con buena base aeróbica, cuidar articulaciones de rodilla..."
-                  className="w-full text-[12px] bg-surface-card border border-surface-border rounded-lg p-2.5 text-white focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 placeholder:text-surface-muted resize-none"
+                  placeholder="Anotaciones adicionales del especialista para la prescripción del plan..."
+                  className="w-full px-3 py-2 text-xs bg-surface-card border border-surface-border rounded-lg text-white placeholder-surface-muted focus:outline-none focus:border-purple-500 transition-colors resize-none"
                 />
               </div>
             </div>
           )}
-        </div>
 
-        {/* FOOTER ACTIONS */}
-        <div className="mt-4 pt-3 border-t border-surface-border flex items-center justify-between">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={handlePrev}
-            disabled={step === 1 || mutation.isPending}
-            className="text-surface-muted hover:text-white"
-          >
-            <ChevronLeft size={14} className="mr-1" />
-            Anterior
-          </Button>
-
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={handleClose}
-              disabled={mutation.isPending}
-              className="text-surface-muted hover:text-white"
-            >
-              Cancelar
-            </Button>
-
-            {step < 4 ? (
+          {/* FOOTER ACTIONS */}
+          <div className="flex items-center justify-between pt-4 mt-4 border-t border-surface-border">
+            {step > 1 ? (
               <Button
                 type="button"
-                variant="primary"
-                onClick={handleNext}
-                style={{ background: '#9B59B6' }}
+                variant="ghost"
+                size="sm"
+                onClick={handlePrev}
+                className="text-xs"
               >
-                Siguiente
-                <ChevronRight size={14} className="ml-1" />
+                <ChevronLeft size={14} />
+                <span>Anterior</span>
               </Button>
             ) : (
+              <div />
+            )}
+
+            <div className="flex items-center gap-2">
               <Button
                 type="button"
-                variant="primary"
-                onClick={handleSubmit}
-                disabled={mutation.isPending}
-                style={{ background: '#9B59B6' }}
+                variant="ghost"
+                size="sm"
+                onClick={handleClose}
+                className="text-xs"
               >
-                {mutation.isPending ? 'Registrando...' : 'Registrar Paciente'}
+                Cancelar
               </Button>
-            )}
+
+              {step < 4 ? (
+                <Button
+                  type="button"
+                  variant="purple"
+                  size="sm"
+                  onClick={handleNext}
+                  className="text-xs text-white"
+                >
+                  <span>Siguiente</span>
+                  <ChevronRight size={14} />
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="purple"
+                  size="sm"
+                  onClick={handleSubmit}
+                  isLoading={mutation.isPending}
+                  className="text-xs text-white font-bold shadow-lg shadow-purple-900/30"
+                >
+                  <Sparkles size={14} />
+                  <span>Registrar Paciente</span>
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
+        </form>
       </div>
     </Modal>
   );

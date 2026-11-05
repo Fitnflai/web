@@ -332,6 +332,14 @@ export interface DetallesObjetivo {
   unidad_distancia?: string;
   desnivel_m?: number;
   altitud_destino_m?: number;
+  requiere_aclimatacion_calor?: boolean;
+  prueba_preconfigurada?: string;
+  modalidad_mejora_tiempo?: string;
+  tiempo_actual?: string;
+  tiempo_meta?: string;
+  que_quieres_mejorar_cg?: string;
+  objetivo_especifico_cg?: string;
+  descripcion_otro_objetivo?: string;
 }
 
 export interface DetalleLesion {
@@ -1096,12 +1104,12 @@ export const specialistsService = {
   getDisciplines: async (): Promise<DisciplinaItem[]> => {
     if (USE_MOCK) {
       return [
-        { id_disciplina: 1, nombre: 'Running / Atletismo', descripcion: 'Entrenamiento de carrera y pista' },
-        { id_disciplina: 2, nombre: 'Trail Running', descripcion: 'Carrera de montaña y senderos' },
-        { id_disciplina: 3, nombre: 'Ciclismo de Ruta / MTB', descripcion: 'Ciclismo de ruta y montaña' },
-        { id_disciplina: 4, nombre: 'Triatlón', descripcion: 'Natación, ciclismo y carrera' },
-        { id_disciplina: 5, nombre: 'Natación', descripcion: 'Entrenamiento en piscina y aguas abiertas' },
-        { id_disciplina: 6, nombre: 'Fuerza / Funcional', descripcion: 'Acondicionamiento físico general y fuerza' },
+        { id_disciplina: 1, nombre: 'Trail running', descripcion: 'Carrera de montaña y senderos' },
+        { id_disciplina: 2, nombre: 'Triatlón', descripcion: 'Natación, ciclismo y carrera' },
+        { id_disciplina: 3, nombre: 'Ciclismo de ruta', descripcion: 'Ciclismo en ruta y fondo' },
+        { id_disciplina: 4, nombre: 'MTB', descripcion: 'Ciclismo de montaña y cross-country' },
+        { id_disciplina: 5, nombre: 'Senderismo', descripcion: 'Senderismo y trekking' },
+        { id_disciplina: 6, nombre: 'Acondicionamiento', descripcion: 'Acondicionamiento físico general y fuerza' },
       ];
     }
     const { data } = await apiClient.get<DisciplinaItem[]>('/onboarding/obtener-disciplinas');
@@ -1128,11 +1136,10 @@ export const specialistsService = {
   getObjectives: async (): Promise<ObjectiveItem[]> => {
     if (USE_MOCK) {
       return [
-        { id_objetivo: '1', nombre: 'Preparación para competencia', descripcion: 'Entrenamiento enfocado a eventos y carreras' },
-        { id_objetivo: '2', nombre: 'Rendimiento y resistencia aeróbica', descripcion: 'Mejora de capacidad cardiovascular' },
-        { id_objetivo: '3', nombre: 'Pérdida de grasa / Composición corporal', descripcion: 'Optimización de masa grasa y tono' },
-        { id_objetivo: '4', nombre: 'Ganancia muscular y fuerza', descripcion: 'Hipertrofia y fuerza muscular' },
-        { id_objetivo: '5', nombre: 'Readaptación física y prevención', descripcion: 'Movilidad y prevención de lesiones' },
+        { id_objetivo: 'competencia', nombre: 'Competencia (Preparar un evento / carrera)', descripcion: 'Entrenamiento enfocado a eventos y carreras' },
+        { id_objetivo: 'mejorar_tiempo', nombre: 'Mejorar tiempo', descripcion: 'Optimizar ritmo y crono en distancias clave' },
+        { id_objetivo: 'condicion_general', nombre: 'Condición general', descripcion: 'Fuerza, movilidad o cardio general' },
+        { id_objetivo: 'otro', nombre: 'Otro', descripcion: 'Objetivo personalizado' },
       ];
     }
     const { data } = await apiClient.get<ObjectiveItem[]>('/onboarding/objectives');
