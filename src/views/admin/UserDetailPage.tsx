@@ -1351,7 +1351,7 @@ export function UserDetailPage() {
 
       {tab === 'progreso' && <ProgressTab patientId={u.id_usuario} readOnly={true} />}
 
-      {tab === 'reporte-clinico' && <ClinicalReportTab patientId={u.id_usuario} readOnly={true} />}
+      {tab === 'reporte-clinico' && <ClinicalReportTab patientId={u.id_usuario} patient={u} readOnly={true} />}
 
       {tab === 'dispositivos' && (
         <div className="space-y-6 text-left">

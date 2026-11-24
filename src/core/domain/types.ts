@@ -140,7 +140,7 @@ export interface WeeklyProgressData {
 }
 
 export interface CompositionActivityRow {
-  metric: string; label: string; target: string; actual: string; S_1: string; S_4: string;
+  metric: string; label: string; target: string; actual: string; S_1: string; S_2?: string; S_4?: string;
 }
 export interface CompositionActivitySection {
   rows: CompositionActivityRow[]; comment: string;

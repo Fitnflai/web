@@ -28,6 +28,7 @@ interface MealModalProps {
 }
 import { ProgressTab } from '@/components/patient/ProgressTab';
 import { ClinicalReportTab } from '@/components/patient/ClinicalReportTab';
+import { usePlanWeekNavigation } from '@/hooks/usePlanWeekNavigation';
 
 const renderChipItem = (item: any): string => {
   if (item && typeof item === 'object') {
@@ -985,7 +986,7 @@ disabled={readOnly}
 }
 
 // ─── Plan Tab (Continuous Calendar with Drag & Drop) ─────────────
-export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: { userId: string; readOnly?: boolean; gender?: string; idioma?: string }) {
+export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma, patient }: { userId: string; readOnly?: boolean; gender?: string; idioma?: string; patient?: any }) {
   const { data: specialistProfile } = useQuery<any>({
     queryKey: ['specialistProfile'],
     queryFn: specialistsService.getSpecialistProfile,
@@ -994,13 +995,27 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
   const specialistSpecialty = specialistProfile?.especialidad || 'Pro';
   const repos = useRepositories()
   const queryClient = useQueryClient()
-  const [weekOffset, setWeekOffset] = useState(0)
   const [isSavingWorkout, setIsSavingWorkout] = useState(false)
   const [isDeletingWorkout, setIsDeletingWorkout] = useState(false)
 
-  const queryWeekDates = useMemo(() => getWeekDates(weekOffset), [weekOffset])
-  const startDate = useMemo(() => formatDateISO(queryWeekDates[0]), [queryWeekDates])
-  const endDate = useMemo(() => formatDateISO(queryWeekDates[6]), [queryWeekDates])
+  const {
+    selectedWeek,
+    canGoPrev,
+    canGoNext,
+    goToPrevWeek,
+    goToNextWeek,
+    weekDates,
+    startDate,
+    endDate,
+    planStartDate,
+    formattedDateRange,
+    formatDateFriendly,
+  } = usePlanWeekNavigation({
+    userId,
+    patient,
+    allowFuture: true,
+  });
+
   const [planItems, setPlanItems] = useState<PlanItem[]>([])
   const [selectedDateStr, setSelectedDateStr] = useState(formatDateISO(new Date()))
   const [updateTick, setUpdateTick] = useState(0)
@@ -1013,20 +1028,33 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
   const [comments, setComments] = useState<Comment[]>([])
   const [newCommentText, setNewCommentText] = useState('')
 
-  const { data: planData, isLoading: isPlanLoading } = useQuery({
-    queryKey: ['userPlanTab', userId, startDate, endDate],
-    queryFn: () => usersService.getUserTabDetalle(userId, 'plan', startDate, endDate),
+  const { data: rawPlanData, isLoading: isPlanLoading } = useQuery({
+    queryKey: ['userPlanTab', userId, planStartDate, endDate],
+    queryFn: () => usersService.getUserTabDetalle(userId, 'plan', planStartDate, endDate),
     enabled: !!userId,
   })
+
+  const planData = useMemo(() => {
+    if (!rawPlanData) return undefined;
+    if (Array.isArray(rawPlanData)) {
+      const matchingWeek = rawPlanData.find(w => {
+        const inicio = (w?.semana_rango?.inicio || w?.fecha_inicio || w?.fecha_inicio_plan)?.substring(0, 10);
+        const fin = (w?.semana_rango?.fin || w?.fecha_fin || w?.fecha_fin_plan)?.substring(0, 10);
+        return (
+          w?.semana_numero === selectedWeek ||
+          (inicio && fin && selectedDateStr >= inicio && selectedDateStr <= fin)
+        );
+      });
+      return matchingWeek || rawPlanData.find(w => w?.semana_numero === selectedWeek) || rawPlanData[rawPlanData.length - 1] || rawPlanData[0];
+    }
+    return rawPlanData;
+  }, [rawPlanData, selectedWeek, selectedDateStr]);
 
   const { data: availableExerciseTypes = [] } = useQuery<string[]>({
     queryKey: ['exerciseTypes'],
     queryFn: () => specialistsService.getExerciseTypes(),
     staleTime: 1000 * 60 * 10,
   })
-
-  // Set weekDates dynamically from the active weekOffset, matching the Admin panel and preventing double offsets
-  const weekDates = useMemo(() => getWeekDates(weekOffset), [weekOffset])
 
   // Select initial date from returned semana_rango or today, prioritizing days with scheduled items
   useEffect(() => {
@@ -1538,13 +1566,32 @@ export function SpecialistPlanTab({ userId, readOnly = false, gender, idioma }: 
           <span className="text-[12px] font-bold text-white">Planificación de Rutina</span>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => setWeekOffset(w => w - 1)}><ChevronLeft size={13} /></Button>
-          <span className="text-[11px] font-medium text-surface-muted uppercase tracking-wider">
-            {weekOffset === 0 
-              ? (planData?.semana_numero ? `Semana ${planData.semana_numero}` : 'Semana Actual') 
-              : weekOffset > 0 ? `Semana +${weekOffset}` : `Semana ${weekOffset}`}
-          </span>
-          <Button variant="ghost" size="sm" onClick={() => setWeekOffset(w => w + 1)}><ChevronRight size={13} /></Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={goToPrevWeek}
+            disabled={!canGoPrev}
+            className={cn(!canGoPrev && "opacity-30 cursor-not-allowed")}
+          >
+            <ChevronLeft size={13} />
+          </Button>
+          <div className="flex flex-col items-center min-w-[110px] text-center">
+            <span className="text-[11px] font-bold text-white uppercase tracking-wider">
+              SEMANA {selectedWeek}
+            </span>
+            <span className="text-[9px] text-surface-muted mt-0.5">
+              {formattedDateRange}
+            </span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={goToNextWeek}
+            disabled={!canGoNext}
+            className={cn(!canGoNext && "opacity-30 cursor-not-allowed")}
+          >
+            <ChevronRight size={13} />
+          </Button>
         </div>
       </div>
 
@@ -2287,7 +2334,7 @@ function MealDetailModal({ isOpen, onClose, meal, onSave, readOnly = false, onDe
 }
 
 // ─── Nutrition & Hydration Tab (Continuous Calendar + Rich Meals + Overrides) ───
-export function SpecialistNutritionTab({ userId, readOnly = false }: { userId: string; readOnly?: boolean }) {
+export function SpecialistNutritionTab({ userId, readOnly = false, patient }: { userId: string; readOnly?: boolean; patient?: any }) {
   const { data: specialistProfile } = useQuery<any>({
     queryKey: ['specialistProfile'],
     queryFn: specialistsService.getSpecialistProfile,
@@ -2296,26 +2343,10 @@ export function SpecialistNutritionTab({ userId, readOnly = false }: { userId: s
   const specialistSpecialty = specialistProfile?.especialidad || 'Pro';
   const repos = useRepositories()
   const queryClient = useQueryClient()
-  const [weekOffset, setWeekOffset] = useState(0)
   const [generatedNutrition, setGeneratedNutrition] = useState<any>(null)
-
-  const formatDateFriendly = (d: Date): string => {
-    return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
-  }
 
   const todayStr = useMemo(() => formatDateISO(new Date()), [])
   const lastProcessedWeek = useRef('')
-  const [selectedDateStr, setSelectedDateStr] = useState(() => {
-    const initialWeekDates = getWeekDates(0)
-    const initialStart = formatDateISO(initialWeekDates[0])
-    const initialEnd = formatDateISO(initialWeekDates[6])
-    const currentToday = formatDateISO(new Date())
-    if (currentToday >= initialStart && currentToday <= initialEnd) {
-      return currentToday
-    }
-    return initialStart
-  })
-  
   const [log, setLog] = useState<DailyNutritionHydrationLog | null>(null)
   const [updateTick, setUpdateTick] = useState(0)
 
@@ -2332,14 +2363,32 @@ export function SpecialistNutritionTab({ userId, readOnly = false }: { userId: s
   const [dietComments, setDietComments] = useState<Comment[]>([])
   const [newDietCommentText, setNewDietCommentText] = useState('')
 
-  const weekDates = useMemo(() => getWeekDates(weekOffset), [weekOffset])
-  const startDate = useMemo(() => formatDateISO(weekDates[0]), [weekDates])
-  const endDate = useMemo(() => formatDateISO(weekDates[6]), [weekDates])
+  const {
+    selectedWeek,
+    canGoPrev,
+    canGoNext,
+    goToPrevWeek,
+    goToNextWeek,
+    weekDates,
+    startDate,
+    endDate,
+    planStartDate,
+    formattedDateRange,
+    formatDateFriendly,
+  } = usePlanWeekNavigation({
+    userId,
+    patient,
+    allowFuture: true,
+  });
+
+  const [selectedDateStr, setSelectedDateStr] = useState(() => {
+    return formatDateISO(new Date());
+  })
 
   const { data: rawNutritionData, error: nutritionError, isLoading: isNutritionLoading } = useQuery({
-    queryKey: ['userNutritionTab', userId, startDate, endDate],
-    queryFn: () => usersService.getUserTabDetalle(userId, 'nutricion', startDate, endDate),
-    enabled: !!userId && !!startDate && !!endDate,
+    queryKey: ['userNutritionTab', userId, planStartDate, endDate],
+    queryFn: () => usersService.getUserTabDetalle(userId, 'nutricion', planStartDate, endDate),
+    enabled: !!userId && !!planStartDate && !!endDate,
   })
 
   useEffect(() => {
@@ -2355,14 +2404,14 @@ export function SpecialistNutritionTab({ userId, readOnly = false }: { userId: s
         const matchingWeek = dataToProcess.find(week => {
           const inicio = (week?.semana_rango?.inicio || week?.semana_rango?.fecha_inicio || week?.fecha_inicio || week?.fecha_inicio_plan)?.substring(0, 10)
           const fin = (week?.semana_rango?.fin || week?.semana_rango?.fecha_fin || week?.fecha_fin || week?.fecha_fin_plan)?.substring(0, 10)
-          return inicio && fin && selectedDateStr >= inicio && selectedDateStr <= fin
+          return week?.semana_numero === selectedWeek || (inicio && fin && selectedDateStr >= inicio && selectedDateStr <= fin)
         })
-        return matchingWeek || dataToProcess[0]
+        return matchingWeek || dataToProcess.find((w: any) => w?.semana_numero === selectedWeek) || dataToProcess[dataToProcess.length - 1] || dataToProcess[0]
       }
       return dataToProcess
     }
     return undefined;
-  }, [rawNutritionData, generatedNutrition, selectedDateStr])
+  }, [rawNutritionData, generatedNutrition, selectedDateStr, selectedWeek])
 
 
   // Sync selectedDateStr to today (if in range) or startDate (if not) when week changes
@@ -2396,7 +2445,7 @@ export function SpecialistNutritionTab({ userId, readOnly = false }: { userId: s
 
   useEffect(() => {
     setGeneratedNutrition(null)
-  }, [weekOffset])
+  }, [selectedWeek])
 
   // Dynamic log fetching based on selected calendar date and API response
   useEffect(() => {
@@ -2636,11 +2685,32 @@ export function SpecialistNutritionTab({ userId, readOnly = false }: { userId: s
           <span className="text-[12px] font-bold text-white">Calendario Nutricional</span>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => setWeekOffset(w => w - 1)}><ChevronLeft size={13} /></Button>
-          <span className="text-[11px] font-medium text-surface-muted uppercase tracking-wider">
-            Semana {weekOffset === 0 ? 'Actual' : weekOffset > 0 ? `+${weekOffset}` : weekOffset}
-          </span>
-          <Button variant="ghost" size="sm" onClick={() => setWeekOffset(w => w + 1)}><ChevronRight size={13} /></Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={goToPrevWeek}
+            disabled={!canGoPrev}
+            className={cn(!canGoPrev && "opacity-30 cursor-not-allowed")}
+          >
+            <ChevronLeft size={13} />
+          </Button>
+          <div className="flex flex-col items-center min-w-[110px] text-center">
+            <span className="text-[11px] font-bold text-white uppercase tracking-wider">
+              SEMANA {selectedWeek}
+            </span>
+            <span className="text-[9px] text-surface-muted mt-0.5">
+              {formattedDateRange}
+            </span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={goToNextWeek}
+            disabled={!canGoNext}
+            className={cn(!canGoNext && "opacity-30 cursor-not-allowed")}
+          >
+            <ChevronRight size={13} />
+          </Button>
         </div>
       </div>
 
@@ -3334,9 +3404,9 @@ export function UserDetailPage() {
           <PerfilTab u={mergedPatient} />
         )
       )}
-      {tab === 'plan' && <SpecialistPlanTab key={mergedPatient.id_usuario} userId={mergedPatient.id_usuario} gender={mergedPatient.genero} idioma={mergedPatient.idioma} />}
-      {tab === 'nutricion' && <SpecialistNutritionTab key={mergedPatient.id_usuario} userId={mergedPatient.id_usuario} />}
-      {tab === 'reporte-clinico' && <ClinicalReportTab patientId={mergedPatient.id_usuario} />}
+      {tab === 'plan' && <SpecialistPlanTab key={mergedPatient.id_usuario} userId={mergedPatient.id_usuario} gender={mergedPatient.genero} idioma={mergedPatient.idioma} patient={mergedPatient} />}
+      {tab === 'nutricion' && <SpecialistNutritionTab key={mergedPatient.id_usuario} userId={mergedPatient.id_usuario} patient={mergedPatient} />}
+      {tab === 'reporte-clinico' && <ClinicalReportTab patientId={mergedPatient.id_usuario} patient={mergedPatient} />}
       {tab === 'notificaciones' && <NotificacionesTab userId={mergedPatient.id_usuario} />}
     </div>
   )

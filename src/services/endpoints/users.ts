@@ -524,9 +524,6 @@ export const usersService = {
     const { data } = await apiClient.get(url, {
       params
     });
-    if ((tab === 'plan' || tab === 'nutricion') && Array.isArray(data)) {
-      return data[0];
-    }
     return data;
   },
   getUserHeaderDetalle: async (id_usuario: string): Promise<any> => {
